@@ -33,6 +33,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DemoInfo, Version=1.0.0.0, Culture=neutral, PublicKeyToken=dc7de83c756ec63d, processorArchitecture=MSIL">
+      <HintPath>..\packages\DemoInfo.1.2.0\lib\net45\DemoInfo.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Npgsql, Version=3.1.6.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
       <HintPath>..\packages\Npgsql.3.1.6\lib\net451\Npgsql.dll</HintPath>
       <Private>True</Private>
@@ -88,6 +92,12 @@
   <ItemGroup>
     <Folder Include="src\encounterdetect\" />
     <Folder Include="src\math\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\CSGO_ED\demojsonparser\demojsonparser\demojsonparser.csproj">
+      <Project>{1f5e5c98-a49a-4927-87b0-4931b77c7dad}</Project>
+      <Name>demojsonparser</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
