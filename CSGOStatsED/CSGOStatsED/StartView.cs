@@ -7,14 +7,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using CSGOStatsED.src;
 
 namespace CSGOStatsED
 {
-    public partial class Form1 : Form
+    public partial class StartView : Form
     {
-        public Form1()
+        public StartView()
         {
             InitializeComponent();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            NPGSQLTest.test();
         }
     }
 }
