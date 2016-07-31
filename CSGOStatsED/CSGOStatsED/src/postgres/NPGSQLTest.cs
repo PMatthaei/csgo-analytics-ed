@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
 
-namespace CSGOStatsED.src
+namespace CSGOStatsED.src.postgres
 {
     class NPGSQLTest
     {
@@ -57,7 +57,7 @@ namespace CSGOStatsED.src
         /// Uploads the json at path to the DB
         /// </summary>
         /// <param name="path"></param>
-        public void commitJson(string path)
+        public void commitJSON(string path)
         {
             using (StreamReader r = new StreamReader(path)) //read json
             {
