@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSGOStatsED", "CSGOStatsED\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demojsonparser", "..\..\..\CS GO Demo Parsers\CSGO_ED\demojsonparser\demojsonparser\demojsonparser.csproj", "{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demojsonparser-console", "..\..\..\CS GO Demo Parsers\CSGO_ED\demojsonparser\demojsonparser-console\demojsonparser-console.csproj", "{FD8FDF2C-E75B-49A6-85B9-08F8986291AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD8FDF2C-E75B-49A6-85B9-08F8986291AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD8FDF2C-E75B-49A6-85B9-08F8986291AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD8FDF2C-E75B-49A6-85B9-08F8986291AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD8FDF2C-E75B-49A6-85B9-08F8986291AA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

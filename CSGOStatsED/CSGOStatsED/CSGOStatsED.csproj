@@ -93,12 +93,6 @@
     <Folder Include="src\encounterdetect\" />
     <Folder Include="src\math\" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\CSGO_ED\demojsonparser\demojsonparser\demojsonparser.csproj">
-      <Project>{1f5e5c98-a49a-4927-87b0-4931b77c7dad}</Project>
-      <Name>demojsonparser</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
