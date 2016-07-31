@@ -1,2 +1,2 @@
-# Analyse your CS:GO Replays with Encounter Detection Algorithms
+# Analyse CS:GO Replays with Encounter Detection
 CSGO Stats tool using encounter detection
