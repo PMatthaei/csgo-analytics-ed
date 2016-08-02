@@ -8,5 +8,17 @@ namespace CSGOStatsED.src.data.gameobjects
 {
     class Player
     {
+        public string name;
+        public int entityid;
+        public Weapon weapon;
+
+        //public position;
+        //public facing;
+
+
+        public Vector getAimVector()
+        {
+            return null;
+        }
     }
 }

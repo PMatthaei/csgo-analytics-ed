@@ -8,7 +8,7 @@ using Npgsql;
 
 namespace CSGOStatsED.src.postgres
 {
-    class NPGSQLTest
+    class NPGSQLDelegator
     {
 
         private static string CONN_STRING = "Host=" + host + ";Port=" + port + ";Username=" + user + ";Password=" + pw + ";Database=" + db + "";
@@ -31,12 +31,22 @@ namespace CSGOStatsED.src.postgres
 
                 using (var cmd = createSQLCommand(conn, commandtext))
                 {
-                    using (var reader = cmd.ExecuteReader())
+
+                    try //false command?
                     {
-                        Stream s = reader.GetStream(0);
-                        conn.Close();
-                        return s;
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            Stream s = reader.GetStream(0);
+                            conn.Close();
+                            return s;
+                        }
                     }
+                    catch (NpgsqlException e)
+                    {
+                        return null;
+                    }
+
+
                 }
             }
         }

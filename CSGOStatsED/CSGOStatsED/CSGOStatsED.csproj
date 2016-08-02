@@ -55,7 +55,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\data\gameobjects\Player.cs" />
+    <Compile Include="src\data\gameobjects\Weapon.cs" />
     <Compile Include="src\encounterdetect\Combatlink.cs" />
+    <Compile Include="src\encounterdetect\EncounterDetection.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\Supportlink.cs" />
     <Compile Include="StartView.cs">
@@ -66,7 +68,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\postgres\NPGSQLTest.cs" />
+    <Compile Include="src\postgres\NPGSQLDelegator.cs" />
     <EmbeddedResource Include="StartView.resx">
       <DependentUpon>StartView.cs</DependentUpon>
     </EmbeddedResource>
@@ -95,6 +97,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\math\" />
+    <Folder Include="src\physics\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\demojsonparser-console\demojsonparser-console.csproj">
