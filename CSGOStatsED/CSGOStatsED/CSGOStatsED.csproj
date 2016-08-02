@@ -54,6 +54,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\data\gameobjects\Player.cs" />
+    <Compile Include="src\encounterdetect\Combatlink.cs" />
+    <Compile Include="src\encounterdetect\Link.cs" />
+    <Compile Include="src\encounterdetect\Supportlink.cs" />
     <Compile Include="StartView.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -90,7 +94,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="src\encounterdetect\" />
     <Folder Include="src\math\" />
   </ItemGroup>
   <ItemGroup>

@@ -23,13 +23,13 @@ namespace CSGOStatsED.src.postgres
         /// </summary>
         /// <param name="commandtext"></param>
         /// <returns></returns>
-        public static Stream fetchCommandStream(string commandtext)
+        public static Stream fetchSQLCommandStream(string commandtext)
         {
             using (var conn = new NpgsqlConnection(CONN_STRING))
             {
                 conn.Open();
 
-                using (var cmd = createCommand(conn, commandtext))
+                using (var cmd = createSQLCommand(conn, commandtext))
                 {
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -41,7 +41,7 @@ namespace CSGOStatsED.src.postgres
             }
         }
 
-        private static NpgsqlCommand createCommand(NpgsqlConnection pConnection, string pCommand)
+        private static NpgsqlCommand createSQLCommand(NpgsqlConnection pConnection, string pCommand)
         {
             NpgsqlCommand cmd = pConnection.CreateCommand();
             cmd.CommandText = pCommand;
@@ -57,7 +57,7 @@ namespace CSGOStatsED.src.postgres
         /// Uploads the json at path to the DB
         /// </summary>
         /// <param name="path"></param>
-        public void commitJSON(string path)
+        public static void commitJSON(string path)
         {
             using (StreamReader r = new StreamReader(path)) //read json
             {
@@ -66,7 +66,7 @@ namespace CSGOStatsED.src.postgres
                 {
                     conn.Open();
 
-                    using (var cmd = createCommand(conn, COMMIT)) //commit the json to db
+                    using (var cmd = createSQLCommand(conn, COMMIT)) //commit the json to db
                     {
                         cmd.Parameters.Add(new NpgsqlParameter("jsondata", json));
                         cmd.ExecuteNonQuery();
