@@ -67,7 +67,7 @@
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\Supportlink.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
-    <Page Include="MainWindow.xaml">
+    <Page Include="StartView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -75,8 +75,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
+    <Compile Include="StartView.xaml.cs">
+      <DependentUpon>StartView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
