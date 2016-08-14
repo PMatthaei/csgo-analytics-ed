@@ -24,5 +24,15 @@ namespace CSGO_Analytics
         {
             InitializeComponent();
         }
+
+        private void manage_click(object sender, RoutedEventArgs e)
+        {
+            _mainFrame.NavigationService.Navigate(new Uri("src/views/ManageDemosView.xaml", UriKind.Relative));
+        }
+
+        private void analyse_click(object sender, RoutedEventArgs e)
+        {
+            _mainFrame.NavigationService.Navigate(new Uri("src/views/AnalyseDemosView.xaml", UriKind.Relative));
+        }
     }
 }

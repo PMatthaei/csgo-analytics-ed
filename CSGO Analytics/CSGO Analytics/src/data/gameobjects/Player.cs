@@ -4,17 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CSGOStatsED.src.data.gameobjects
+namespace CSGO_Analytics.src.data.gameobjects
 {
-    class Player
+    enum Team { T, CT };
+
+    class Player : GameObject
     {
-        public string name;
-        public int entityid;
-        public Weapon weapon;
+        private Weapon weapon;
 
-        //public position;
-        //public facing;
+        private Team team;
 
+        //private facing;
 
         /*public Vector getAimVector()
         {

@@ -5,6 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CSGO_Analytics"
         mc:Ignorable="d"
-        Title="CS:GO Analytics" Height="800" Width="1280" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
-    <Grid/>
+        Title="CS:GO Analytics" Height="800" Width="1440" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid Margin="0,80,1024,0">
+            <Menu x:Name="menu" HorizontalAlignment="Left" Height="690" VerticalAlignment="Top" Width="250" Margin="0,1,0,0">
+                <MenuItem Header="Manage Demos" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff" Click="manage_click" />
+                <MenuItem Header="Analyse Demos" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff" Click="analyse_click" />
+                <MenuItem Header="Generate Analysisvideo" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff"/>
+                <MenuItem Header="Impressum" Height="45" Width="250" Margin="0,500,0,0" VerticalAlignment="Bottom"/>
+            </Menu>
+        </Grid>
+        <Grid HorizontalAlignment="Left" Height="771" VerticalAlignment="Top" Width="1274">
+            <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" Margin="264,86,-130,0" VerticalAlignment="Top" Width="1140">
+                <Frame x:Name="_mainFrame" />
+            </DockPanel>
+        </Grid>
+    </Grid>
 </Window>

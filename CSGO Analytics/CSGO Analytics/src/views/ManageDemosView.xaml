@@ -1,0 +1,18 @@
+﻿<Page x:Class="CSGO_Analytics.src.views.ManageDemosView"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:CSGO_Analytics.src.views"
+      mc:Ignorable="d" 
+      d:DesignHeight="660" d:DesignWidth="1140"
+      Title="ManageDemosView">
+
+    <Grid>
+        <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" VerticalAlignment="Top" Width="1140" Background="Gainsboro">
+            <Grid Height="660" VerticalAlignment="Top" Width="1140">
+                <Button x:Name="button" Content="Upload Demo" HorizontalAlignment="Left" Margin="699,91,0,0" VerticalAlignment="Top" Width="90" Background="#FFFFD489" Height="30"/>
+            </Grid>
+        </DockPanel>
+    </Grid>
+</Page>

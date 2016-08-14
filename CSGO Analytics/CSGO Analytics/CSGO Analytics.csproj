@@ -62,11 +62,19 @@
     <Compile Include="src\data\gameobjects\GameObject.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
-    <Compile Include="src\encounterdetect\Combatlink.cs" />
+    <Compile Include="src\encounterdetect\Encounter.cs" />
     <Compile Include="src\encounterdetect\EncounterDetection.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
-    <Compile Include="src\encounterdetect\Supportlink.cs" />
+    <Compile Include="src\math\MathUtils.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
+    <Page Include="src\views\AnalyseDemosView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\views\ManageDemosView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="StartView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -74,6 +82,12 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\views\AnalyseDemosView.xaml.cs">
+      <DependentUpon>AnalyseDemosView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\views\ManageDemosView.xaml.cs">
+      <DependentUpon>ManageDemosView.xaml</DependentUpon>
     </Compile>
     <Compile Include="StartView.xaml.cs">
       <DependentUpon>StartView.xaml</DependentUpon>
@@ -109,7 +123,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="src\math\" />
     <Folder Include="src\physics\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

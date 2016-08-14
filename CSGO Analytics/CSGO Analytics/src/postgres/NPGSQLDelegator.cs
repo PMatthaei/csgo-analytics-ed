@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
 
-namespace CSGOStatsED.src.postgres
+namespace CSGO_Analytics.src.postgres
 {
     class NPGSQLDelegator
     {
@@ -67,7 +67,7 @@ namespace CSGOStatsED.src.postgres
         /// Uploads the json at path to the DB
         /// </summary>
         /// <param name="path"></param>
-        public static void commitJSON(string path)
+        public static void commitJSONFile(string path)
         {
             using (StreamReader r = new StreamReader(path)) //read json
             {
