@@ -11,7 +11,46 @@
     <Grid>
         <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" VerticalAlignment="Top" Width="1140" Background="Gainsboro">
             <Grid Height="660" VerticalAlignment="Top" Width="1140">
-                <Button x:Name="button" Content="Upload Demo" HorizontalAlignment="Left" Margin="699,91,0,0" VerticalAlignment="Top" Width="90" Background="#FFFFD489" Height="30"/>
+                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="640" Margin="10,10,0,0" VerticalAlignment="Top" Width="1120">
+                    <TabItem Header="Upload Demos">
+                        <Grid Background="#FFE5E5E5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="133*"/>
+                                <ColumnDefinition Width="982*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="search_button" Content="Choose" HorizontalAlignment="Left" Margin="525.5,142,0,0" VerticalAlignment="Top" Width="95" Height="23" Click="onChooseClick" Grid.Column="1"/>
+                            <TextBox x:Name="filenames_box" HorizontalAlignment="Left" Height="23" Margin="72.5,142,0,0" Text="" VerticalAlignment="Top" Width="433" UndoLimit="997" Grid.Column="1"/>
+                            <Label x:Name="label" Content="Demofile location(s):" HorizontalAlignment="Left" Margin="68,139,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+                            <ListView x:Name="demofile_list" HorizontalAlignment="Left" Height="340" Margin="68,187,0,0" VerticalAlignment="Top" Width="985" Grid.ColumnSpan="2">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn x:Name="filename" Width="200" Header="FileName" DisplayMemberBinding="{Binding FileName}" />
+                                        <GridViewColumn x:Name="filepath" Width="780" Header="FilePath" DisplayMemberBinding="{Binding FilePath}" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                            <TextBlock Width="985" Height="52" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="68,45,61,0" Grid.ColumnSpan="2">Upload your demo file to your own database to manage, organise and analyse your demos. To do so, choose your files by clicking on the button "Choose".<LineBreak/>Manage your choosen files in the list below and press "Upload" when your are satisfied with your selection.<LineBreak/>All previous uploaded demos can be viewd at the "View demos"-tab</TextBlock>
+                            <Button x:Name="upload_button" Content="Upload Demos" Margin="324.5,0,457,20" VerticalAlignment="Bottom" Width="200" Height="47" HorizontalAlignment="Center" Click="onUploadClick" Grid.Column="1"/>
+                            <ProgressBar HorizontalAlignment="Center" Height="10" Margin="124.5,0,257,0" VerticalAlignment="Bottom" Width="600" Background="#FF8394FF" Grid.Column="1"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="View demos">
+                        <Grid Background="#FFE5E5E5">
+                            <ListView x:Name="demofile_list_manage" HorizontalAlignment="Left" Height="440" Margin="25,50,0,0" VerticalAlignment="Top" Width="800">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn x:Name="filename_manage" Width="150" Header="FileName" DisplayMemberBinding="{Binding FileName}" />
+                                        <GridViewColumn x:Name="filepath_manage" Width="500" Header="FilePath" DisplayMemberBinding="{Binding FilePath}" />
+                                        <GridViewColumn x:Name="filedate" Width="150" Header="Upload date" DisplayMemberBinding="{Binding FilePath}" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                            <Button x:Name="remove_button" Content="Remove demo" HorizontalAlignment="Right" Margin="0,100,55,0" VerticalAlignment="Top" Height="25" Width="175"/>
+                            <Button x:Name="analyse_button" Content="Analyse demo" HorizontalAlignment="Right" Margin="0,135,55,0" VerticalAlignment="Top" Height="25" Width="175"/>
+                            <Button x:Name="generatemovie_button" Content="Generate video" HorizontalAlignment="Right" Margin="0,170,55,0" VerticalAlignment="Top" Height="25" Width="175"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
             </Grid>
         </DockPanel>
     </Grid>

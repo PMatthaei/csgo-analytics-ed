@@ -5,63 +5,80 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
+using System.Net.Sockets;
 
 namespace CSGO_Analytics.src.postgres
 {
     class NPGSQLDelegator
     {
 
-        private static string CONN_STRING = "Host=" + host + ";Port=" + port + ";Username=" + user + ";Password=" + pw + ";Database=" + db + "";
-        private static string host = "localhost";
-        private static string port = "5432";
-        private static string user = "postgres";
-        private static string pw = "arcoavid";
-        private static string db = "CSGODemos";
+        private static string CONN_STRING = "Host=localhost" + ";Port=5432" + ";Username=postgres" + ";Password=arcoavid" + ";Database=CSGODemos";
 
         /// <summary>
-        /// returns a stream containing the result of a sql command
+        /// Timeout for commands sent to the database
+        /// </summary>
+        private static int TIMEOUT = 40;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pConnection"></param>
+        /// <param name="pCommand"></param>
+        /// <returns></returns>
+        private static NpgsqlCommand createCommand(NpgsqlConnection pConnection, string pCommand)
+        {
+            NpgsqlCommand cmd = new NpgsqlCommand(pCommand, pConnection);
+            cmd.CommandText = pCommand;
+            cmd.CommandTimeout = TIMEOUT;
+            cmd.CommandType = System.Data.CommandType.Text;
+            return cmd;
+        }
+
+        /// <summary>
+        /// Returns a stream containing the result of a sql command
         /// </summary>
         /// <param name="commandtext"></param>
         /// <returns></returns>
-        public static Stream fetchSQLCommandStream(string commandtext)
+        public static Stream fetchCommandStream(string commandtext)
         {
             using (var conn = new NpgsqlConnection(CONN_STRING))
             {
                 conn.Open();
 
-                using (var cmd = createSQLCommand(conn, commandtext))
+                using (var cmd = createCommand(conn, commandtext))
                 {
-
-                    try //false command?
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        using (var reader = cmd.ExecuteReader())
+                        MemoryStream stream = new MemoryStream();
+                        StreamWriter writer = new StreamWriter(stream);
+                        while (reader.Read())
                         {
-                            Stream s = reader.GetStream(0);
-                            conn.Close();
-                            return s;
+                            /*
+                            //Not supported yet -.-
+                            using (var results = reader.GetStream(0))
+                            {
+                                results.CopyTo(stream);
+                            }*/
+                            //Flush every string recieved from the reader into the stream
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                Console.WriteLine("Write and Flush to stream at index: " + i);
+                                writer.Write(reader[i]);
+                                writer.Flush();
+                            }
                         }
-                    }
-                    catch (NpgsqlException e)
-                    {
-                        return null;
-                    }
 
+                        stream.Position = 0;
 
+                        reader.Close();
+                        conn.Close();
+                        return stream;
+                    }
                 }
             }
         }
 
-        private static NpgsqlCommand createSQLCommand(NpgsqlConnection pConnection, string pCommand)
-        {
-            NpgsqlCommand cmd = pConnection.CreateCommand();
-            cmd.CommandText = pCommand;
-            cmd.CommandTimeout = 30;
-            cmd.CommandType = System.Data.CommandType.Text;
-            return cmd;
-        }
-
-
-        private const string COMMIT = "INSERT INTO stats_data(data) VALUES(:jsondata) ";
+        private static string COMMIT = "INSERT INTO demodata(jsondata) VALUES(:jsondata) ";
 
         /// <summary>
         /// Uploads the json at path to the DB
@@ -69,21 +86,32 @@ namespace CSGO_Analytics.src.postgres
         /// <param name="path"></param>
         public static void commitJSONFile(string path)
         {
-            using (StreamReader r = new StreamReader(path)) //read json
+            using (var r = new StreamReader(path)) //read json
             {
                 string json = r.ReadToEnd();
                 using (var conn = new NpgsqlConnection(CONN_STRING)) //establish connection to db
                 {
+
                     conn.Open();
 
-                    using (var cmd = createSQLCommand(conn, COMMIT)) //commit the json to db
+                    using (var cmd = createCommand(conn, COMMIT)) //commit the json to db
                     {
-                        cmd.Parameters.Add(new NpgsqlParameter("jsondata", json));
+                        var parameter = new NpgsqlParameter();
+                        parameter.ParameterName = "jsondata";
+                        parameter.Value = json;
+                        parameter.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Jsonb;
+                        cmd.Parameters.Add(parameter);
                         cmd.ExecuteNonQuery();
                     }
+
+                    conn.Close();
                 }
+
             }
         }
+
+
+
 
 
         public void setConnectionString(string s)
@@ -96,45 +124,5 @@ namespace CSGO_Analytics.src.postgres
             return CONN_STRING;
         }
 
-        public void setHost(string s)
-        {
-            host = s;
-        }
-
-        public string getHost()
-        {
-            return host;
-        }
-
-        public void setPW(string s)
-        {
-            pw = s;
-        }
-
-        public string getPW()
-        {
-            return pw;
-        }
-
-        public void setUser(string s)
-        {
-            user = s;
-        }
-
-        public string getUser()
-        {
-            return user;
-        }
-
-
-        public void setDB(string s)
-        {
-            db = s;
-        }
-
-        public string getDB()
-        {
-            return db;
-        }
     }
 }

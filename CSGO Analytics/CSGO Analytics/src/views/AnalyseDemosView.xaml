@@ -5,10 +5,31 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:CSGO_Analytics.src.views"
       mc:Ignorable="d" 
-      d:DesignHeight="300" d:DesignWidth="300"
+      d:DesignHeight="660" d:DesignWidth="1140"
       Title="AnalyseDemosView">
 
     <Grid>
-        
+        <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" VerticalAlignment="Top" Width="1140" Background="Gainsboro">
+            <Grid Height="660" VerticalAlignment="Top" Width="1140">
+                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="640" Margin="10,10,0,0" VerticalAlignment="Top" Width="1120">
+                    <TabItem Header="Live view">
+                        <Grid Background="#FFE5E5E5">
+                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="522" Margin="175,10,0,0" VerticalAlignment="Top" Width="928" Background="Black"/>
+                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="193,579,0,0" VerticalAlignment="Top" Width="865"/>
+                            <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="193,551,0,0" VerticalAlignment="Top"/>
+                            <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="1016,551,0,0" VerticalAlignment="Top"/>
+                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="593,0,446,41" VerticalAlignment="Bottom" Width="75"/>
+                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="688,551,0,0" VerticalAlignment="Top" Width="40"/>
+                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="738,551,0,0" VerticalAlignment="Top" Width="40"/>
+                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="535,551,0,0" VerticalAlignment="Top" Width="40"/>
+                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="485,551,0,0" VerticalAlignment="Top" Width="40"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Heatmap">
+                        <Grid Background="#FFE5E5E5"/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </DockPanel>
     </Grid>
 </Page>

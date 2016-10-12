@@ -23,6 +23,14 @@ namespace CSGO_Analytics.src.views
         public AnalyseDemosView()
         {
             InitializeComponent();
+            test();
+        }
+
+        public void test()
+        {
+            Ellipse e = new Ellipse { Fill = new SolidColorBrush(Colors.Red),Width = 200, Height = 200, Margin = new Thickness { Left=200, Top = 200 } };
+
+            canvas.Children.Add(e);
         }
     }
 }

@@ -7,18 +7,18 @@ using CSGO_Analytics.src.data.gameobjects;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
-    enum LinkType { COMBATLINK, SUPPORTLINK };
-    enum Direction { INITIATOR, RECIPIENT, NONE };
+    enum ComponentType { COMBATLINK, SUPPORTLINK };
+    enum Direction { UNDIRECTED, DEFAULT };
 
-    class Link
+    class EncounterComponent
     {
         /// <summary>
-        /// Type of the link - combat or support
+        /// Type of the component - combat or supportlink
         /// </summary>
-        private LinkType linktype;
+        private ComponentType componentType;
 
         /// <summary>
-        /// Player who initated the link by attacking or supporting
+        /// Player who initated the component by attacking or supporting
         /// </summary>
         private Player initiator;
 
@@ -28,12 +28,12 @@ namespace CSGO_Analytics.src.encounterdetect
         private Player recipient;
 
         /// <summary>
-        /// Time link occured
+        /// Time component occured
         /// </summary>
         private DateTime timestamp;
 
         /// <summary>
-        /// Time to die for this link
+        /// Time to die for this component
         /// </summary>
         private float TTD;
 
@@ -42,5 +42,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// To whom is the link directed - Initiator, Recipient or none(undirected)
         /// </summary>
         private Direction direction;
+
     }
 }

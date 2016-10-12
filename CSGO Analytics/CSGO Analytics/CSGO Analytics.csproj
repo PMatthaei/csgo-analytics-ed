@@ -35,8 +35,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Npgsql, Version=3.1.6.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Npgsql.3.1.6\lib\net451\Npgsql.dll</HintPath>
+    <Reference Include="Npgsql, Version=3.1.7.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Npgsql.3.1.7\lib\net451\Npgsql.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -63,9 +63,12 @@
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
     <Compile Include="src\encounterdetect\Encounter.cs" />
-    <Compile Include="src\encounterdetect\EncounterDetection.cs" />
-    <Compile Include="src\encounterdetect\Link.cs" />
+    <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
+    <Compile Include="src\encounterdetect\EncounterComponent.cs" />
+    <Compile Include="src\encounterdetect\TickStream.cs" />
     <Compile Include="src\math\MathUtils.cs" />
+    <Compile Include="src\math\Vector.cs" />
+    <Compile Include="src\postgres\CommandText.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
     <Page Include="src\views\AnalyseDemosView.xaml">
       <SubType>Designer</SubType>
