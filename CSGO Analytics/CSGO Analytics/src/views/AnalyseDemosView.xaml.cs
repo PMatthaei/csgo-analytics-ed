@@ -29,8 +29,10 @@ namespace CSGO_Analytics.src.views
         public void test()
         {
             Ellipse e = new Ellipse { Fill = new SolidColorBrush(Colors.Red),Width = 200, Height = 200, Margin = new Thickness { Left=200, Top = 200 } };
-
+            Line l = new Line { Stroke = new SolidColorBrush(Colors.Blue), X1 = 0, X2 = 600, Y1 = 0, Y2 = 600};
             canvas.Children.Add(e);
+            canvas.Children.Add(l);
+
         }
     }
 }

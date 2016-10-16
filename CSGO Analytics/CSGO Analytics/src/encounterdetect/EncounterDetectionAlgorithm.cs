@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.encounterdetect;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -43,10 +44,13 @@ namespace CSGO_Analytics.src.encounterdetect
         /// f.e. [[231.23, 12.23], [... , ...], ...]
         /// 
         /// </summary>
-        private float[][] direction_table;
+        private float[][] facing_table;
 
 
-
+        public EncounterDetectionAlgorithm(TickStream tstream)
+        {
+            this.tickstream = tstream;
+        }
 
         public void run()
         {
@@ -59,7 +63,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 foreach (Player p in tick.getPlayerUpdates()) // Update tables
                 {
                     updatePosition(p.getID(), p.getPosition().getAsArray());
-                    updateDirection(p.getID(), p.getFacing().getAsArray()); //TODO: facing class?
+                    updateFacing(p.getID(), p.getFacing().getAsArray()); //TODO: facing class? and how handle player id
                 }
 
                 foreach (Gameevent g in tick.getGameEvents()) // Read all gameevents in that tick
@@ -81,15 +85,14 @@ namespace CSGO_Analytics.src.encounterdetect
                         open_encounters.Add(joint_encounter);
                     }
 
-
-                    foreach (Encounter e in open_encounters)
+                    for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
+                        Encounter e = open_encounters[i];
                         if (e.hasTimeout())
                         {
-                            open_encounters.Remove(e); // TODO might be a problem without iterator!!
+                            open_encounters.Remove(e);
                             closed_encounters.Add(e);
                         }
-
                     }
 
                     predecessors.Clear();
@@ -111,6 +114,27 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private EncounterComponent buildComponent(Gameevent g)
         {
+            switch (g.gtype)
+            {
+                case GameeventType.PLAYER_HURT:
+                    break;
+                case GameeventType.PLAYER_KILLED:
+                    break;
+                case GameeventType.PLAYER_JUMPED:
+                    break;
+                case GameeventType.PLAYER_STEPPED:
+                    break;
+                case GameeventType.PLAYER_POSITIONUPDATE:
+                    break;
+                case GameeventType.WEAPON_FIRE:
+                    break;
+                case GameeventType.GRENADE_START:
+                    break;
+                case GameeventType.GRENADE_STOP:
+                    break;
+                default:
+                    break;
+            }
             return null;
         }
 
@@ -132,16 +156,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 position_table[i] = new float[3]; // x, y , z
             }
 
-            direction_table = new float[playeramount][];
-            for (int i = 0; i < direction_table.Length; i++)
+            facing_table = new float[playeramount][];
+            for (int i = 0; i < facing_table.Length; i++)
             {
                 position_table[i] = new float[2]; // yaw , pitch
             }
-        }
-
-
-        private void updateTables()
-        {
         }
 
 
@@ -154,11 +173,11 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
-        private void updateDirection(int entityid, float[] newpos)
+        private void updateFacing(int entityid, float[] newpos)
         {
-            for (int i = 0; i < direction_table[entityid].Length; i++)
+            for (int i = 0; i < facing_table[entityid].Length; i++)
             {
-                direction_table[entityid][i] = newpos[i];
+                facing_table[entityid][i] = newpos[i];
             }
         }
     }

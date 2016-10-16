@@ -39,7 +39,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// To whom is the link directed - Initiator, Recipient or none(undirected)
+        /// To whom is the link directed - undirected or to the recipient (default)
         /// </summary>
         private Direction direction;
 

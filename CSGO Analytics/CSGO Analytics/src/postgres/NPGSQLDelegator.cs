@@ -62,7 +62,7 @@ namespace CSGO_Analytics.src.postgres
                             //Flush every string recieved from the reader into the stream
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                Console.WriteLine("Write and Flush to stream at index: " + i);
+                                Console.WriteLine("Write: "+ reader[i]+ " and Flush to stream at index: " + i);
                                 writer.Write(reader[i]);
                                 writer.Flush();
                             }
