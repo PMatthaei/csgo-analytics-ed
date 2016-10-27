@@ -7,7 +7,8 @@ using CSGO_Analytics.src.data.gameobjects;
 
 namespace CSGO_Analytics.src.postgres
 {
-    enum Events { };
+    enum Events {
+    };
 
     class CommandText
     {

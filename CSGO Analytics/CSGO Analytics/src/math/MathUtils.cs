@@ -8,6 +8,18 @@ namespace CSGO_Analytics.src.math
 {
     class MathUtils
     {
+        public static float tickrate;
+
+        /// <summary>
+        /// Returns the time at which a tick at tickid happend.
+        /// </summary>
+        /// <param name="tickid"></param>
+        /// <returns></returns>
+        public static float TickToTime(int tickid)
+        {
+            return tickid * tickrate;
+        }
+
         /// <summary>
         /// Returns euclid distance between point p1 and p2
         /// </summary>

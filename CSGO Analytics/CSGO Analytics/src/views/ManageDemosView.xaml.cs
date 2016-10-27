@@ -59,14 +59,15 @@ namespace CSGO_Analytics.src.views
         {
             foreach (DemoListEntry dem in demofile_list.ItemsSource)
             {
-                //todo parse dem files to json and handle them(manage,save etc)
+                //TODO: parse dem files to json and handle them(manage,save etc)
                 NPGSQLDelegator.commitJSONFile(dem.FilePath);
             }
         }
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
-            Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'meta'->'players' FROM demodata");
+            //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'meta'->'players' FROM demodata");
+            Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds' FROM demodata");
             //NPGSQLDelegator.fetchCommandStream("SELECT * FROM demodata WHERE jsondata@> '[{\"round_id\": \"1\"}]'");
             StreamReader reader = new StreamReader(s);
             string MSG = reader.ReadLine();

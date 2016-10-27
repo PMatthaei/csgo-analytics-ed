@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using CSGO_Analytics.src.encounterdetect;
 
 namespace CSGO_Analytics.src.views
 {
@@ -20,19 +21,34 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
+        private EncounterDetectionAlgorithm e;
         public AnalyseDemosView()
         {
             InitializeComponent();
-            test();
+            InitializeCanvas();
+            InitializeEncounterDetection();
         }
 
-        public void test()
+        private void InitializeCanvas()
         {
-            Ellipse e = new Ellipse { Fill = new SolidColorBrush(Colors.Red),Width = 200, Height = 200, Margin = new Thickness { Left=200, Top = 200 } };
+            ImageBrush ib = new ImageBrush();
+            ib.ImageSource = new BitmapImage(new Uri(@"..\maps\de_dust2_map.jpg", UriKind.Absolute));
+            canvas.Background = ib;
+        }
+
+        public Canvas getCanvas()
+        {
+            return canvas;
+        }
+
+        public void InitializeEncounterDetection()
+        {
+            //e = new EncounterDetectionAlgorithm(new TickStream()); // TODO fill
+            //e.run();
+            /*Ellipse e = new Ellipse { Fill = new SolidColorBrush(Colors.Red),Width = 200, Height = 200, Margin = new Thickness { Left=200, Top = 200 } };
             Line l = new Line { Stroke = new SolidColorBrush(Colors.Blue), X1 = 0, X2 = 600, Y1 = 0, Y2 = 600};
             canvas.Children.Add(e);
-            canvas.Children.Add(l);
-
+            canvas.Children.Add(l);*/
         }
     }
 }

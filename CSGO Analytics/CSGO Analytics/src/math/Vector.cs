@@ -12,6 +12,19 @@ namespace CSGO_Analytics.src.math
         public float y { get; set; }
         public float z { get; set; }
 
+        public Vector(float nx, float ny, float nz)
+        {
+            x = nx;
+            y = ny;
+            z = nz;
+        }
+        public Vector(float[] arr)
+        {
+            x = arr[0];
+            y = arr[1];
+            z = arr[2];
+        }
+
         public double Angle2D
         {
             get

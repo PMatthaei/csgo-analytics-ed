@@ -7,45 +7,65 @@ using CSGO_Analytics.src.data.gameobjects;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
+    /// <summary>
+    /// Graph showing one Encounter at a tick tick_id
+    /// </summary>
     class Encounter
     {
         /// <summary>
         /// Components which form this encounter
         /// </summary>
-        private List<EncounterComponent> comps;
+        public List<CombatComponent> cs;
 
         /// <summary>
-        /// Units which form this encounter
+        /// Tick in which this encounter arised
         /// </summary>
-        private List<Player> units;
+        public int tick_id;
 
         /// <summary>
         /// Is this encounter closed 
         /// </summary>
-        private bool isClosed;
-
-        /// <summary>
-        /// Time encounter occured
-        /// </summary>
-        private DateTime timestamp;
+        public bool isClosed;
 
         /// <summary>
         /// Time to die for this encounter
         /// </summary>
-        private float TTD;
+        public float TTD;
 
+        public Encounter(CombatComponent comp)
+        {
+            this.tick_id = comp.tick_id;
+            cs = new List<CombatComponent>();
+            cs.Add(comp);
+        }
+
+        public Encounter(int tick_id, List<CombatComponent> newcs)
+        {
+            this.tick_id = tick_id;
+            cs = newcs;
+        }
         /// <summary>
         /// 
         /// </summary>
         /// <param name="update"></param>
-        public void update(EncounterComponent update)
+        public void update(CombatComponent update)
         {
-
+            cs.Add(update);
+            //TODO: reset timeout?
         }
 
-        public bool hasTimeout()
+
+        public void orderByTick()
         {
-            return true;
+            cs.OrderBy(x => x.tick_id); //TODO evtl descending?
+        }
+
+        public bool hasTimeout(int currenttick)
+        {
+            if(tick_id+TTD >= currenttick)
+                return true;
+
+            return false;
         }
     }
 }

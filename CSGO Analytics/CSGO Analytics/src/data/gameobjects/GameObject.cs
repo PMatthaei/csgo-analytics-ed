@@ -7,22 +7,22 @@ using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
-    class GameObject
+    public class GameObject
     {
         /// <summary>
         /// Name of the object
         /// </summary>
-        private string name;
+        public string name;
 
         /// <summary>
         /// ID given by CS:GO and parsed by DemoInfo
         /// </summary>
-        private int entityid;
+        public int entityid;
 
         /// <summary>
         /// Current position of the gameobject
         /// </summary>
-        private Vector position;
+        public Vector position;
 
         /// <summary>
         /// Time till the object loses relevance and needs to be destroyed(nades, projectiles etc)

@@ -9,6 +9,11 @@ namespace CSGO_Analytics.src.data.gameobjects
     enum WeaponCategorie { NADE, RIFLE, PISTOL, KNIFE, SHOTGUN, MG, SMG, TAZER };
 
     enum WeaponType {
+        HEGrenade,
+        Flash,
+        Smoke,
+        Molotov,
+        Decoy,
         AK_47,
         TEC_9,
         PP_BIZON,
@@ -26,7 +31,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     };
 
-    class Weapon : GameObject
+    public class Weapon : GameObject
     {
         /// <summary>
         /// Type of the weapon to distinguish it later
@@ -34,21 +39,15 @@ namespace CSGO_Analytics.src.data.gameobjects
         private WeaponType weaponType;
 
         /// <summary>
-        /// 
+        /// Owner of this weapon
         /// </summary>
         private Player owner;
 
-        /// <summary>
-        /// Ammo left in magazine
-        /// </summary>
+        // Weapon data
         private int currentAmmo;
 
-        /// <summary>
-        /// Ammo magazine has after reloading 
-        /// </summary>
         private int maxAmmo;
-
-
+        
         private bool isSilenced;
     }
 }

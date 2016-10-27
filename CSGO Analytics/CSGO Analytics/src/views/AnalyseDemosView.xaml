@@ -14,15 +14,27 @@
                 <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="640" Margin="10,10,0,0" VerticalAlignment="Top" Width="1120">
                     <TabItem Header="Live view">
                         <Grid Background="#FFE5E5E5">
-                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="522" Margin="175,10,0,0" VerticalAlignment="Top" Width="928" Background="Black"/>
-                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="193,579,0,0" VerticalAlignment="Top" Width="865"/>
-                            <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="193,551,0,0" VerticalAlignment="Top"/>
-                            <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="1016,551,0,0" VerticalAlignment="Top"/>
-                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="593,0,446,41" VerticalAlignment="Bottom" Width="75"/>
-                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="688,551,0,0" VerticalAlignment="Top" Width="40"/>
-                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="738,551,0,0" VerticalAlignment="Top" Width="40"/>
-                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="535,551,0,0" VerticalAlignment="Top" Width="40"/>
-                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="485,551,0,0" VerticalAlignment="Top" Width="40"/>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="79*"/>
+                                <ColumnDefinition Width="1036*"/>
+                            </Grid.ColumnDefinitions>
+                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="522" Margin="96.5,10,0,0" VerticalAlignment="Top" Width="928" Background="Black" Grid.Column="1"/>
+                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114.5,579,0,0" VerticalAlignment="Top" Width="865" Grid.Column="1"/>
+                            <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114.5,551,0,0" VerticalAlignment="Top" Grid.Column="1"/>
+                            <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="937.5,551,0,0" VerticalAlignment="Top" Grid.Column="1"/>
+                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="514.5,0,446,41" VerticalAlignment="Bottom" Width="75" Grid.Column="1"/>
+                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="609.5,551,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="659.5,551,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="456.5,551,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="406.5,551,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Menu x:Name="menu" HorizontalAlignment="Left" Height="592" Margin="10,10,0,0" VerticalAlignment="Top" Width="160" Grid.ColumnSpan="2">
+                                <Label Content="Terrorists:"/>
+                                <ListBoxItem Content="Player1"/>
+                                <ListBoxItem Content="Player2"/>
+                                <ListBoxItem Content="Player3"/>
+                                <ListBoxItem Content="Player 4"/>
+                                <ListBoxItem Content="Player 5"/>
+                            </Menu>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Heatmap">

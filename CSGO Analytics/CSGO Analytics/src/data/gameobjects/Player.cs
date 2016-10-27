@@ -8,39 +8,40 @@ using System.Windows.Shapes;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
-    enum Team { T, CT };
+    public enum Team { T, CT, None };
 
-    class Player : GameObject
+    public class Player : GameObject
     {
         // Player data
-        private int health;
+        public int health;
 
-        private int armor;
+        public int armor;
 
-        private bool hasHelmet;
+        public bool hasHelmet;
 
-        private bool hasDefuser;
+        public bool hasDefuser;
 
-        private bool hasBomb;
+        public bool hasBomb;
 
-
-        /// <summary>
-        /// Current facing of the player //TODO
-        /// </summary>
-        private Vector facing;
-
-        /// <summary>
-        /// List of equipement - first weapon is primary
-        /// </summary>
-        private List<Weapon> weapons;
+        public int attackrange;
 
         /// <summary>
         /// Team player belongs to
         /// </summary>
-        private Team team;
-        
+        public Team team;
 
-       public bool isDead()
+        /// <summary>
+        /// Current facing of the player //TODO
+        /// </summary>
+        public Vector facing;
+
+        /// <summary>
+        /// List of equipement - first weapon is primary
+        /// </summary>
+        public List<Weapon> weapons;
+
+
+        public bool isDead()
         {
             if (health == 0)
                 return true;
@@ -60,6 +61,28 @@ namespace CSGO_Analytics.src.data.gameobjects
         public Vector getFacing()
         {
             return facing;
+        }
+
+        public bool sameTeam(Player p)
+        {
+            if (team == p.team)
+                return true;
+
+            return false;
+        }
+
+        public override bool Equals(object obj)
+        {
+            var p = (Player)obj;
+            if (entityid == p.entityid && name == p.name && team == p.team)
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.entityid.GetHashCode();
         }
     }
 }

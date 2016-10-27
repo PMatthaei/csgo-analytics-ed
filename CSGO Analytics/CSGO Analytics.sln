@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demojsonparser-console", "demojsonparser-console\demojsonparser-console.csproj", "{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSGO Analytics", "CSGO Analytics\CSGO Analytics.csproj", "{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csgo-analytics-console", "csgo-analytics-console\csgo-analytics-console.csproj", "{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
