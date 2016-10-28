@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CSGO_Analytics.src.encounterdetect.datasource;
 
 namespace CSGO_Analytics.src.json
 {
@@ -11,17 +12,16 @@ namespace CSGO_Analytics.src.json
     {
         private StreamReader reader;
 
+        dynamic deserializedGamestate;
+
         /// <summary>
         /// Deserializes CSGO JSON replay data
         /// </summary>
         /// <param name="jsonpath"></param>
         public CSGOReplayDeserializer(string jsonpath)
         {
-            using (var stream = File.OpenRead(jsonpath)) //TODO change to DB reader or DB String
-            {
-                reader = new StreamReader(stream);
-            }
-
+            reader = new StreamReader(File.OpenRead(jsonpath));
+            deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject(reader.ReadLine());
         }
 
         /// <summary>
@@ -42,10 +42,9 @@ namespace CSGO_Analytics.src.json
         /// <returns></returns>
         public dynamic deserializeGamestate()
         {
-            dynamic deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject(reader.ReadLine()); //Runtime!! TODO: make known(non-dynamic objects of it?)
-            var mapname = deserializedGamestate.match.mapname;
-            var tickrate = deserializedGamestate.match.tickrate;
-            var players = deserializedGamestate.match.players;
+            var mapname = deserializedGamestate.meta.mapname;
+            var tickrate = deserializedGamestate.meta.tickrate;
+            var players = deserializedGamestate.meta.players;
             foreach (var round in deserializedGamestate.match.rounds) //all rounds
             {
                 var round_id = round.round_id;
@@ -62,6 +61,35 @@ namespace CSGO_Analytics.src.json
             }
 
             return null; //TODO object holding the non dynamic gamestate
+        }
+
+        /// <summary>
+        /// Returns a list of all ticksas dynamic objects
+        /// </summary>
+        /// <param name="rounds"></param>
+        /// <returns></returns>
+        public List<Tick> deserializeTicks()
+        {
+            List<Tick> ticks = new List<Tick>();
+
+            foreach (var round in deserializedGamestate.match.rounds)
+            {
+                foreach (var tick in round.ticks)
+                {
+                    ticks.Add(new Tick(tick.tick_id, tick.tickevents));
+                }
+            }
+            return ticks;
+        }
+
+        public Tick deserializeRound()
+        {
+            dynamic round = null;
+            foreach (var tick in round.ticks)//all ticks in a round
+            {
+
+            }
+            return null;
         }
     }
 }

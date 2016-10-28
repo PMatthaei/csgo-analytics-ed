@@ -9,10 +9,10 @@ using System.Net.Sockets;
 
 namespace CSGO_Analytics.src.postgres
 {
-    class NPGSQLDelegator
+    public class NPGSQLDelegator
     {
 
-        private static string CONN_STRING = "Host=localhost" + ";Port=5432" + ";Username=postgres" + ";Password=arcoavid" + ";Database=CSGODemos";
+        private static string CONN_STRING = "Host=localhost" + ";Port=5432" + ";Username=postgres" + ";Password=arco" + ";Database=CSGODemos";
 
         /// <summary>
         /// Timeout for commands sent to the database
@@ -62,8 +62,8 @@ namespace CSGO_Analytics.src.postgres
                             //Flush every string recieved from the reader into the stream
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                Console.WriteLine("Write: "+ reader[i]+ " and Flush to stream at index: " + i);
-                                writer.Write(reader[i]);
+                                Console.WriteLine("Write:\n " + reader[i] + "\n and Flush to stream at index: " + i +"\n");
+                                writer.Write(reader[i]); //TODO: Wrong order
                                 writer.Flush();
                             }
                         }
@@ -86,28 +86,39 @@ namespace CSGO_Analytics.src.postgres
         /// <param name="path"></param>
         public static void commitJSONFile(string path)
         {
+
             using (var r = new StreamReader(path)) //read json
             {
                 string json = r.ReadToEnd();
                 using (var conn = new NpgsqlConnection(CONN_STRING)) //establish connection to db
                 {
-
-                    conn.Open();
-
-                    using (var cmd = createCommand(conn, COMMIT)) //commit the json to db
+                    try
                     {
-                        var parameter = new NpgsqlParameter();
-                        parameter.ParameterName = "jsondata";
-                        parameter.Value = json;
-                        parameter.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Jsonb;
-                        cmd.Parameters.Add(parameter);
-                        cmd.ExecuteNonQuery();
-                    }
+                        conn.Open();
 
+                        using (var cmd = createCommand(conn, COMMIT)) //commit the json to db
+                        {
+                            var parameter = new NpgsqlParameter();
+                            parameter.ParameterName = "jsondata";
+                            parameter.Value = json;
+                            parameter.NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Jsonb;
+                            cmd.Parameters.Add(parameter);
+                            cmd.ExecuteNonQuery();
+                        }
+                        json = null;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e.StackTrace);
+                        conn.Close();
+                    }
                     conn.Close();
                 }
 
             }
+
+
         }
 
 

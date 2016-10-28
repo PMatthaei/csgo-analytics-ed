@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demojsonparser-console", "demojsonparser-console\demojsonparser-console.csproj", "{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSGO Analytics", "CSGO Analytics\CSGO Analytics.csproj", "{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csgo-analytics-console", "csgo-analytics-console\csgo-analytics-console.csproj", "{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demojsonparser", "..\..\..\CS GO Demo Parsers\demojsonparser\demojsonparser\demojsonparser.csproj", "{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "demoinfo-modded", "..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj", "{859F0C7D-A7D5-4209-ABAE-3140A70C7AFB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +17,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{40B9BD6B-DD5D-4910-892C-5B45BD9DDEA4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03E855AC-39CE-42E3-BD61-7A57E9B8CA34}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -27,6 +25,14 @@ Global
 		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E1FEAE27-1926-4BFC-91A2-DBD40AB6204D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F5E5C98-A49A-4927-87B0-4931B77C7DAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{859F0C7D-A7D5-4209-ABAE-3140A70C7AFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{859F0C7D-A7D5-4209-ABAE-3140A70C7AFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{859F0C7D-A7D5-4209-ABAE-3140A70C7AFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{859F0C7D-A7D5-4209-ABAE-3140A70C7AFB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

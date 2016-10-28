@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
+using CSGO_Analytics.src.encounterdetect.datasource;
 using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.encounterdetect
@@ -29,6 +30,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         private TickStream tickstream;
+        private List<Tick> ticks;
 
         private List<Encounter> open_encounters = new List<Encounter>();
         private List<Encounter> closed_encounters = new List<Encounter>();
@@ -63,6 +65,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private bool[][] spotted_table;
 
+        public EncounterDetectionAlgorithm(List<Tick> ticks)
+        {
+            this.ticks = ticks;
+            players = new Player[10];
+        }
+
         public EncounterDetectionAlgorithm(TickStream tstream)
         {
             this.tickstream = tstream;
@@ -73,9 +81,9 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             initTables(10); //Initalize tables for 10 players
 
-            while (tickstream.hasNextTick()) // Read all ticks
+            for (int t = 0; t < ticks.Count; t++) // Read all ticks
             {
-                using (var tick = tickstream.readTick())
+                using (var tick = ticks[t])
                 {
 
                     foreach (var p in tick.getUpdatedPlayers()) // Update tables
@@ -83,10 +91,9 @@ namespace CSGO_Analytics.src.encounterdetect
                         updatePosition(p.getID(), p.getPosition().getAsArray()); //Evtl anders als mit matrizen machen
                         updateFacing(p.getID(), p.getFacing().getAsArray()); //TODO: facing class? and how handle player id -> ids sind unterschiedlich von game zu game und nicht von 0-9
                         updateSpotted(); //TODO
-
-                        updateDistances(); //TODO: 
-
+                        updateDistance(); //TODO: 
                     }
+
 
                     CombatComponent component = null;
 
@@ -135,7 +142,7 @@ namespace CSGO_Analytics.src.encounterdetect
             open_encounters.Clear();
 
             //TODO: dispose everything else. tickstream etc!!
-            tickstream.Dispose();
+            //tickstream.Dispose();
         }
 
         /// <summary>
@@ -287,8 +294,9 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
-        private void updateDistances() //TODO
+        private void updateDistance() //TODO
         {
+
         }
 
         private void updateSpotted()//TODO

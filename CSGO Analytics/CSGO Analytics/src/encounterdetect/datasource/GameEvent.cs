@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.math;
 
-namespace CSGO_Analytics.src.encounterdetect
+namespace CSGO_Analytics.src.encounterdetect.datasource
 {
     public enum Hitgroup
     {
@@ -21,8 +21,12 @@ namespace CSGO_Analytics.src.encounterdetect
         Gear = 10,
     };
 
+    public enum NadeEventType
+    {
+        HEGRENADE, SMOKE, FIRE, FLASH, DECOY
+    };
 
-    class GameEvent
+    public class GameEvent
     {
         /// <summary>
         /// Ticks in range N around this gameevent
@@ -41,27 +45,63 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public virtual Link createLink() { return null; }
 
+        public static GameEvent build(dynamic devent)
+        {
+            string eventtype = devent.gameevent;
+            switch (eventtype)
+            {
+                //ALL CSGO EVENTS
+                case "player_jumped":
+                    return new PlayerJumped();
+                case "player_position":
+                    return new PlayerPositionUpdate();
+                case "player_stepped":
+                    return new PlayerStepped();
+                case "player_spotted":
+                    return new PlayerSpotted();
+                case "player_killed":
+                    return new PlayerKilledEvent();
+                case "player_hurt":
+                    return new PlayerHurtEvent();
+                case "weapon_fire":
+                    return new WeaponFireEvent();
+                case "smoke_started":
+                case "smoke_ended":
+                case "fire_started":
+                case "fire_ended":
+                case "flashbang_exploded":
+                    return new NadeEvent();
+                default:
+                    return null;
+            }
+        }
+
     }
 
-    class PlayerJumped : GameEvent { }
+    public class PlayerJumped : GameEvent { }
 
-    class PlayerStepped : GameEvent { }
+    public class PlayerStepped : GameEvent { }
 
-    class PlayerPositionUpdate : GameEvent { }
+    public class PlayerPositionUpdate : GameEvent { }
 
     /// <summary>
     /// Event for the case, that a player saw another player from a different team.
     /// Here we build a combatlink directly
     /// </summary>
-    class PlayerSpotted : GameEvent {
+    public class PlayerSpotted : GameEvent {
         /// <summary>
         /// Player who spotted the actor
         /// </summary>
         public Player spotter { get; set; }
 
+        override public Link createLink()
+        {
+            Console.WriteLine("createLink PlayerSpotted");
+            return new Link(actor, spotter, ComponentType.COMBATLINK, Direction.DEFAULT);
+        }
     }
 
-    class WeaponFireEvent : GameEvent // TODO:Check if a playerspotted or playerhurt event is near, if so he tried to shoot at sb but missed
+    public class WeaponFireEvent : GameEvent // TODO:Check if a playerspotted or playerhurt event is near, if so he tried to shoot at sb but missed
     {
         /// <summary>
         /// Weapon which was fired in the event
@@ -70,7 +110,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
         override public Link createLink()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("createLink WeaponFireEvent");
+            return null;
         }
     }
 
@@ -78,7 +119,7 @@ namespace CSGO_Analytics.src.encounterdetect
     /// Event for the case, that a player hit another player from a different team.
     /// Here we build a combatlink directly
     /// </summary>
-    class PlayerHurtEvent : WeaponFireEvent
+    public class PlayerHurtEvent : WeaponFireEvent
     {
         /// <summary>
         /// Victim hit by the actor
@@ -94,26 +135,43 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Hitgroup where the shoot hit
         /// </summary>
         public Hitgroup hitgroup { get; set; }
+
+        override public Link createLink()
+        {
+            Console.WriteLine("createLink PlayerHurtEvent");
+            return new Link(actor,victim, ComponentType.COMBATLINK, Direction.DEFAULT);
+        }
     }
 
     /// <summary>
     /// Event for the case, that a player killed another player from a different team.
     /// Here we build a combatlink directly
     /// </summary>
-    class PlayerKilledEvent : PlayerHurtEvent
+    public class PlayerKilledEvent : PlayerHurtEvent
     {
         /// <summary>
         /// Whether the bullet who killed penetrated a gameobject first
         /// </summary>
         public bool penetrated { get; set; }
 
+        override public Link createLink()
+        {
+            Console.WriteLine("createLink PlayerKilledEvent");
+            return new Link(actor, victim, ComponentType.COMBATLINK, Direction.DEFAULT);
+        }
+
     }
 
     /// <summary>
     /// 
     /// </summary>
-    class NadeEvent : GameEvent
+    public class NadeEvent : GameEvent
     {
+        /// <summary>
+        /// Player who eventually got supported by the actor//TODO:! wie finden!!!
+        /// </summary>
+        public Player supportedplayer { get; set; }
+
         /// <summary>
         /// Position from where the nade has been thrown
         /// </summary>
@@ -137,5 +195,11 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Tickid where nade exploded
         /// </summary>
         public int explodetick_id { get; set; }
+
+        override public Link createLink()
+        {
+            Console.WriteLine("createLink PlayerKilledEvent");
+            return new Link(actor, supportedplayer, ComponentType.SUPPORTLINK, Direction.DEFAULT);
+        }
     }
 }

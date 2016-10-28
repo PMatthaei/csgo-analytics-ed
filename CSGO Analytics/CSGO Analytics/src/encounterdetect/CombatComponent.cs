@@ -47,5 +47,15 @@ namespace CSGO_Analytics.src.encounterdetect
             tick_id = -1; // -1 indicates a non-initalized tickid as we wont allocate negative tickids
             TTD = -1;
         }
+
+        override public string ToString()
+        {
+            string s = "Component: \n";
+            foreach (var l in links)
+            {
+                s += l.ToString()+"\n";
+            }
+            return s;
+        }
     }
 }

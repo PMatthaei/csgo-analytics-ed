@@ -66,6 +66,7 @@
     <Compile Include="src\data\gameobjects\GameObject.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
+    <Compile Include="src\encounterdetect\datasource\Tick.cs" />
     <Compile Include="src\encounterdetect\datasource\TickObject.cs" />
     <Compile Include="src\encounterdetect\Encounter.cs" />
     <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
@@ -73,7 +74,7 @@
     <Compile Include="src\encounterdetect\datasource\GameEvent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\datasource\TickStream.cs" />
-    <Compile Include="src\json\ReplayDeserializer.cs" />
+    <Compile Include="src\json\CSGOReplayDeserializer.cs" />
     <Compile Include="src\math\MathUtils.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\postgres\CommandText.cs" />

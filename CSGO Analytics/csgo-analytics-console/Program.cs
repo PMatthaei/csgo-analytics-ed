@@ -1,10 +1,15 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.json;
+using CSGO_Analytics.src.encounterdetect;
+using CSGO_Analytics.src.postgres;
+using CSGO_Analytics.src.encounterdetect.datasource;
 
 namespace csgo_analytics_console
 {
@@ -12,15 +17,31 @@ namespace csgo_analytics_console
     {
         static void Main(string[] args)
         {
-            dynamic deserializedTick = CSGOReplayDeserializer.deserializeJSONString("{\"tick_id\": 1,\"tickevents\": [{ \"player\": {\"HP\": 14,\"armor\": 0,\"hasHelmet\": false,\"hasDefuser\": false, \"hasBomb\": false,\"isDucking\": false,\"isWalking\": false,\"isSpotted\": false,\"isScoped\": false,\"velocity\": 0.0,\"playername\": \"iNSANEwithin\",\"player_id\": 3,\"team\": \"Terrorist\",\"position\": {\"x\": -35.4354248,\"y\": -1883.96875,\"z\": -167.96875},\"facing\": {\"yaw\": 5.976563,\"pitch\": 278.085938}},\"gameevent\": \"bomb_picked\"}]}");
-            var tick_id = deserializedTick.tick_id;
-            Console.WriteLine(tick_id);
 
-            foreach (var e in deserializedTick.tickevents){
-                Console.WriteLine(e.gameevent);
-                Console.WriteLine(e.player.position.x);
+            /*CSGOReplayDeserializer cs = new CSGOReplayDeserializer(args[0]);
+            foreach (var tick in cs.deserializeTicks())
+            {
+                Console.WriteLine(tick.tick_id);
+
+            }*/
+            List<GameEvent> gs = new List<GameEvent>();
+            gs.Add(new PlayerSpotted());
+            gs.Add(new PlayerKilledEvent());
+            gs.Add(new WeaponFireEvent());
+
+            foreach(var g in gs)
+            {
+                g.createLink();
             }
+            //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'meta'->'players'->> 2 FROM demodata"); //Hole 3. spieler aus meta array
+            //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> 1 FROM demodata"); //Zweite Runde
+            //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> 1 -> 'ticks' -> 3 FROM demodata"); //Zweite Runde 3. tick
+            //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> ticks' FROM demodata"); //Zweite Runde 3. tick
+            //Stream s = NPGSQLDelegator.fetchCommandStream("DECLARE js jsonb:= SELECT jsondata->'match'->'rounds' FROM demodata;  i record; BEGIN FOR i IN SELECT* FROM jsonb_each(js) LOOP SELECT i->'ticks'; END LOOP; END;");
+            //NPGSQLDelegator.fetchCommandStream("SELECT * FROM demodata WHERE jsondata@> '[{\"round_id\": \"1\"}]'");
+
             Console.ReadLine();
+
         }
     }
 }

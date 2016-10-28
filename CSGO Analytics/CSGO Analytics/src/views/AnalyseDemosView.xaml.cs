@@ -22,6 +22,9 @@ namespace CSGO_Analytics.src.views
     public partial class AnalyseDemosView : Page
     {
         private EncounterDetectionAlgorithm e;
+
+        private Image map;
+        private double scalefactor_map = 0.5;
         public AnalyseDemosView()
         {
             InitializeComponent();
@@ -31,9 +34,20 @@ namespace CSGO_Analytics.src.views
 
         private void InitializeCanvas()
         {
-            ImageBrush ib = new ImageBrush();
-            ib.ImageSource = new BitmapImage(new Uri(@"..\maps\de_dust2_map.jpg", UriKind.Absolute));
-            canvas.Background = ib;
+            canvas.ClipToBounds = true;
+
+            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\de_dust2_map.jpg", UriKind.Relative));
+
+            map = new Image();
+            map.Source = bi;
+            map.Width = bi.Width * scalefactor_map;
+            map.Height = bi.Height * scalefactor_map;
+
+            double maxX = canvas.Width - map.Width;
+            double maxY = canvas.Height - map.Height;
+            Canvas.SetLeft(map, maxX / 2);
+            Canvas.SetTop(map, maxY / 2);
+            canvas.Children.Add(map);
         }
 
         public Canvas getCanvas()

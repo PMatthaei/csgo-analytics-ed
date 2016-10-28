@@ -7,76 +7,40 @@ using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.json;
 
-namespace CSGO_Analytics.src.encounterdetect
+namespace CSGO_Analytics.src.encounterdetect.datasource
 {
 
 
-    class TickStream : MemoryStream, IDisposable //TODO: is this useful? if so -> implement it
+    public class TickStream : MemoryStream, IDisposable //TODO: is this useful? if so -> implement it
     {
-        public Tick readTick()
-        {
-            using (StreamReader reader = new StreamReader(this))
-            {
-                string tickstring = reader.ReadLine(); //Correct position?
-                dynamic deserializedTick = CSGOReplayDeserializer.deserializeJSONString(tickstring);
+        private StreamReader reader;
 
-                this.Position = this.Position + 1;
-                return new Tick(deserializedTick.tick_id, deserializedTick.gameevents);
-            }
+        public TickStream(Stream s)
+        {
+            s.CopyTo(this);
+            this.Position = 0;
+            reader = new StreamReader(this);
+        }
+
+        public Tick ReadTick()
+        {
+
+            string tickstring = reader.ReadLine(); //Correct position?
+            dynamic deserializedTick = CSGOReplayDeserializer.deserializeJSONString(tickstring);
+
+            this.Position = this.Position + 1;
+            var id = deserializedTick.tick_id;
+            return new Tick(id, deserializedTick.gameevents);
+
         }
 
         public bool hasNextTick()
         {
-            if(this.Position < this.Length)
+            if (this.Position < this.Length)
                 return true;
 
+            reader.Close();
             return false;
-        }
-    }
-
-    class Tick : IDisposable // Maybe a superclass tickobject (use it for gameevent, tick, combatcomponent, encounter, link
-    {
-        /// <summary>
-        /// Id of this tick
-        /// </summary>
-        public int tick_id;
-
-        public List<GameEvent> gameevents;
-
-        public Tick(int tick_id, dynamic dGameevents)
-        {
-            this.tick_id = tick_id;
-            this.gameevents = new List<GameEvent>();
-            foreach (var e in dGameevents)
-            {
-                Console.WriteLine(e.gameevent);
-                Console.WriteLine(e.player.position.x);
-            }
-        }
-
-        /// <summary>
-        /// All gameevents happend in that tick
-        /// </summary>
-        /// <returns></returns>
-        public List<GameEvent> getGameEvents()
-        {
-            return gameevents;
-        }
-
-        /// <summary>
-        /// Returns all players mentioned in this tick
-        /// </summary>
-        /// <returns></returns>
-        public List<Player> getUpdatedPlayers()
-        {
-            return null;
-        }
-
-        public void Dispose()
-        {
-            gameevents.Clear();
-            gameevents = null;
-            tick_id = -1;
         }
     }
 }
