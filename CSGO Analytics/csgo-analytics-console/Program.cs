@@ -10,6 +10,7 @@ using CSGO_Analytics.src.json;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.postgres;
 using CSGO_Analytics.src.encounterdetect.datasource;
+using demojsonparser.src.JSON.objects;
 
 namespace csgo_analytics_console
 {
@@ -24,15 +25,26 @@ namespace csgo_analytics_console
                 Console.WriteLine(tick.tick_id);
 
             }*/
-            List<GameEvent> gs = new List<GameEvent>();
-            gs.Add(new PlayerSpotted());
-            gs.Add(new PlayerKilledEvent());
-            gs.Add(new WeaponFireEvent());
 
-            foreach(var g in gs)
+            using (var reader = new StreamReader(File.OpenRead(args[0])))
             {
-                g.createLink();
+                JSONGamestate deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<JSONGamestate>(reader.ReadLine());
+
+                foreach (var r in deserializedGamestate.match.rounds)
+                {
+                    foreach (var ts in r.ticks)
+                    {
+                        foreach (var g in ts.tickevents)
+                        {
+                            Console.WriteLine(g.gameevent);
+                        }
+                    }
+                }
+
+                deserializedGamestate = null;
+
             }
+
             //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'meta'->'players'->> 2 FROM demodata"); //Hole 3. spieler aus meta array
             //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> 1 FROM demodata"); //Zweite Runde
             //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> 1 -> 'ticks' -> 3 FROM demodata"); //Zweite Runde 3. tick

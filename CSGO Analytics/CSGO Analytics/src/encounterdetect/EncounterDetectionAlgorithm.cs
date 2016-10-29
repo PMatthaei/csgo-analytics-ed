@@ -6,8 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
-using CSGO_Analytics.src.encounterdetect.datasource;
 using CSGO_Analytics.src.math;
+using demojsonparser.src.JSON.objects;
+using demojsonparser.src.JSON.events;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -29,12 +30,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
 
-        private TickStream tickstream;
-        private List<Tick> ticks;
+        private List<JSONTick> ticks;
 
         private List<Encounter> open_encounters = new List<Encounter>();
         private List<Encounter> closed_encounters = new List<Encounter>();
-
         private List<Encounter> predecessors = new List<Encounter>();
 
 
@@ -65,17 +64,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private bool[][] spotted_table;
 
-        public EncounterDetectionAlgorithm(List<Tick> ticks)
+        public EncounterDetectionAlgorithm(List<JSONTick> ticks)
         {
             this.ticks = ticks;
             players = new Player[10];
         }
 
-        public EncounterDetectionAlgorithm(TickStream tstream)
-        {
-            this.tickstream = tstream;
-            players = new Player[10];
-        }
 
         public void run()
         {
@@ -83,57 +77,51 @@ namespace CSGO_Analytics.src.encounterdetect
 
             for (int t = 0; t < ticks.Count; t++) // Read all ticks
             {
-                using (var tick = ticks[t])
+
+                var tick = ticks[t];
+
+                foreach (var p in getUpdatedPlayers(tick)) // Update tables
                 {
+                    updatePosition(p.getID(), p.getPosition().getAsArray()); //Evtl anders als mit matrizen machen
+                    updateFacing(p.getID(), p.getFacing().getAsArray()); //TODO: facing class? and how handle player id -> ids sind unterschiedlich von game zu game und nicht von 0-9
+                    updateSpotted(); //TODO
+                    updateDistance(); //TODO: 
+                }
 
-                    foreach (var p in tick.getUpdatedPlayers()) // Update tables
+
+                CombatComponent component = buildComponent(tick);
+                
+
+                if (!(component is CombatComponent)) //TODO: makes no sense? see schubert code
+                    continue;
+
+                predecessors = searchPredecessors(component); // Check if this component has predecessors
+
+                if (predecessors.Count == 0)
+                    open_encounters.Add(new Encounter(component));
+
+                if (predecessors.Count == 1)
+                    predecessors.ElementAt(0).update(component);
+
+                if (predecessors.Count > 1)
+                {
+                    // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
+                    open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); });
+                    var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
+                    joint_encounter.update(component);
+                    open_encounters.Add(joint_encounter);
+                }
+                predecessors.Clear();
+
+
+                for (int i = open_encounters.Count - 1; i >= 0; i--)
+                {
+                    Encounter e = open_encounters[i];
+                    if (e.hasTimeout(tick.tick_id)) //test is encounter e hast timeout at tick tick_id
                     {
-                        updatePosition(p.getID(), p.getPosition().getAsArray()); //Evtl anders als mit matrizen machen
-                        updateFacing(p.getID(), p.getFacing().getAsArray()); //TODO: facing class? and how handle player id -> ids sind unterschiedlich von game zu game und nicht von 0-9
-                        updateSpotted(); //TODO
-                        updateDistance(); //TODO: 
+                        open_encounters.Remove(e);
+                        closed_encounters.Add(e);
                     }
-
-
-                    CombatComponent component = null;
-
-                    foreach (var g in tick.getGameEvents()) // Read all gameevents in that tick and build a component with it
-                    {
-                        buildComponent(component, g); //maybe call this feedComponent() (with gameevent links)
-                    }
-
-                    if (!(component is CombatComponent)) //TODO: makes no sense? see schubert code
-                        continue;
-
-                    predecessors = searchPredecessors(component); // Check if this component has predecessors
-
-                    if (predecessors.Count == 0)
-                        open_encounters.Add(new Encounter(component));
-
-                    if (predecessors.Count == 1)
-                        predecessors.ElementAt(0).update(component);
-
-                    if (predecessors.Count > 1)
-                    {
-                        // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
-                        open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); });
-                        var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
-                        joint_encounter.update(component);
-                        open_encounters.Add(joint_encounter);
-                    }
-                    predecessors.Clear();
-
-
-                    for (int i = open_encounters.Count - 1; i >= 0; i--)
-                    {
-                        Encounter e = open_encounters[i];
-                        if (e.hasTimeout(tick.tick_id))
-                        {
-                            open_encounters.Remove(e);
-                            closed_encounters.Add(e);
-                        }
-                    }
-
                 }
             } //NO TICKS LEFT
 
@@ -143,6 +131,21 @@ namespace CSGO_Analytics.src.encounterdetect
 
             //TODO: dispose everything else. tickstream etc!!
             //tickstream.Dispose();
+        }
+
+        /// <summary>
+        /// Return all players mentioned in a given tick.
+        /// </summary>
+        /// <param name="tick"></param>
+        /// <returns></returns>
+        private List<Player> getUpdatedPlayers(JSONTick tick)
+        {
+            List<Player> ps = new List<Player>();
+            foreach (var g in tick.tickevents)
+            {
+                ps.AddRange(g.getPlayers());
+            }
+            return ps;
         }
 
         /// <summary>
@@ -212,30 +215,31 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="component"></param>
         /// <param name="g"></param>
-        private void buildComponent(CombatComponent component, GameEvent g)
+        private CombatComponent buildComponent(JSONTick tick)
         {
-            switch (mode)
+            CombatComponent combcomp = new CombatComponent(tick.tick_id);
+            foreach (var g in tick.tickevents) // Read all gameevents in that tick and build a component with it
             {
-                case AlgorithmMode.EUCLID_COMBATLINKS:
-                    float[] playerpos = position_table[g.actor.entityid];
-                    for (int i = 0; i < position_table.Length; i++)
-                    {
-                        if (i == g.actor.entityid)
-                            continue;
+                var link = new Link();
 
-                        var arr = position_table[i];
-                        var euclid_distance = MathUtils.getEuclidDistance3D(new Vector(playerpos), new Vector(arr));
-                        if (g.actor.attackrange >= euclid_distance)
-                        {
-                            //new Link();
-                        }
-                    }
-                    break;
-                case AlgorithmMode.SIGHT_COMBATLINKS:
-                    break;
-                case AlgorithmMode.FOV_COMBATLINKS:
-                    break;
+                switch (g.gameevent) //SWITCH OR implement in class?
+                {
+                    //CSGO GAMEEVENTS
+                    case "player_hurt":
+                        break;
+                    case "player_killed":
+                        break;
+                    case "weapon_fire":
+                        break;
+                    case "player_spotted":
+                        break;
+                }
+
+                combcomp.links.Add(link); //Add links
             }
+
+            combcomp.assignPlayers();
+            return combcomp;
         }
 
 

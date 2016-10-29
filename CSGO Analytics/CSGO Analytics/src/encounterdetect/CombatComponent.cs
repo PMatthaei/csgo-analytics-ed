@@ -32,11 +32,23 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private float TTD;
 
-        public void initLinks()
+        public CombatComponent(int tick_id)
         {
-            foreach(var p in players)
+            this.tick_id = tick_id;
+            players = new List<Player>();
+            links = new List<Link>();
+        }
+
+        public void assignPlayers()
+        {
+            if(links.Count == 0 || links == null)
             {
-                //TODO: Union of their links. but therefore players need to known the link they are in
+
+            }
+            foreach(var l in links)
+            {
+                players.Add(l.getActor());
+                players.Add(l.getReciever());
             }
         }
 
@@ -53,7 +65,7 @@ namespace CSGO_Analytics.src.encounterdetect
             string s = "Component: \n";
             foreach (var l in links)
             {
-                s += l.ToString()+"\n";
+                s += l.ToString() + "\n";
             }
             return s;
         }

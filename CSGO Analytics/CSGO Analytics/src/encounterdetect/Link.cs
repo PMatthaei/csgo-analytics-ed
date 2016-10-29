@@ -19,6 +19,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private Direction dir;
 
+        public Link()
+        {
+
+        }
+
         public Link(Player actor, Player reciever, ComponentType type, Direction dir)
         {
             players = new Player[2];

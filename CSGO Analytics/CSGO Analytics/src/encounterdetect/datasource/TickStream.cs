@@ -26,7 +26,7 @@ namespace CSGO_Analytics.src.encounterdetect.datasource
         {
 
             string tickstring = reader.ReadLine(); //Correct position?
-            dynamic deserializedTick = CSGOReplayDeserializer.deserializeJSONString(tickstring);
+            dynamic deserializedTick = null;
 
             this.Position = this.Position + 1;
             var id = deserializedTick.tick_id;
