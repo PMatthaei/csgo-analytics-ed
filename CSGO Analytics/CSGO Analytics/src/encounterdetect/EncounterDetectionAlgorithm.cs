@@ -7,19 +7,19 @@ using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.math;
-using demojsonparser.src.JSON.objects;
-using demojsonparser.src.JSON.events;
+using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gameevents;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
-    enum AlgorithmMode
+    public enum AlgorithmMode
     {
         EUCLID_COMBATLINKS,
         FOV_COMBATLINKS,
         SIGHT_COMBATLINKS,
     };
 
-    class EncounterDetectionAlgorithm
+    public class EncounterDetectionAlgorithm
     {
         //
         // VARIABLES AND CONSTANTS
@@ -28,16 +28,17 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
 
-
-
-        private List<JSONTick> ticks;
+        private List<Tick> ticks;
 
         private List<Encounter> open_encounters = new List<Encounter>();
         private List<Encounter> closed_encounters = new List<Encounter>();
         private List<Encounter> predecessors = new List<Encounter>();
 
 
-        private Player[] players;
+        /// <summary>
+        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
+        /// </summary>
+        private Dictionary<int, int> idMapping = new Dictionary<int, int>();
 
         /// <summary>
         /// Matrix to save player positions
@@ -64,35 +65,68 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private bool[][] spotted_table;
 
-        public EncounterDetectionAlgorithm(List<JSONTick> ticks)
+
+
+        public EncounterDetectionAlgorithm(JSONGamestate gamestate)
         {
-            this.ticks = ticks;
-            players = new Player[10];
+            this.ticks = getTicks(gamestate);
+
+            int ownid = 0;
+            foreach (var player in gamestate.meta.players) // Map all CS Entity IDs to our own
+            {
+                idMapping.Add(player.player_id, ownid);
+                ownid++;
+            }
+
+            initTables(ownid); // Initalize tables for all players(should be 10 for csgo)
+
+        }
+
+        /// <summary>
+        /// Returns a list of all ticks
+        /// </summary>
+        /// <param name="rounds"></param>
+        /// <returns></returns>
+        public List<Tick> getTicks(JSONGamestate gs)
+        {
+            List<Tick> ticks = new List<Tick>();
+
+            foreach (var r in gs.match.rounds)
+            {
+                ticks.AddRange(r.ticks);
+            }
+            return ticks;
         }
 
 
+
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
         public void run()
         {
-            initTables(10); //Initalize tables for 10 players
 
-            for (int t = 0; t < ticks.Count; t++) // Read all ticks
+            foreach (var tick in ticks) // Read all ticks
             {
+                Console.WriteLine("Current tick: " + tick.tick_id);
 
-                var tick = ticks[t];
-
-                foreach (var p in getUpdatedPlayers(tick)) // Update tables
+                foreach (var p in tick.getUpdatedPlayers()) // Update tables
                 {
-                    updatePosition(p.getID(), p.getPosition().getAsArray()); //Evtl anders als mit matrizen machen
-                    updateFacing(p.getID(), p.getFacing().getAsArray()); //TODO: facing class? and how handle player id -> ids sind unterschiedlich von game zu game und nicht von 0-9
-                    updateSpotted(); //TODO
-                    updateDistance(); //TODO: 
+                    updatePosition(getID(p.player_id), p.position.getAsArray());
+                    updateFacing(getID(p.player_id), p.position.getAsArray());
+                    //updateSpotted(getID(p.player_id), p.spotted); //TODO
+                    updateDistance(getID(p.player_id)); //TODO:   
                 }
 
 
-                CombatComponent component = buildComponent(tick);
-                
+                CombatComponent component = null;
+                //CombatComponent component = buildComponent(tick);
 
-                if (!(component is CombatComponent)) //TODO: makes no sense? see schubert code
+
+                if (component == null) // No component in this tick
                     continue;
 
                 predecessors = searchPredecessors(component); // Check if this component has predecessors
@@ -111,13 +145,14 @@ namespace CSGO_Analytics.src.encounterdetect
                     joint_encounter.update(component);
                     open_encounters.Add(joint_encounter);
                 }
+
                 predecessors.Clear();
 
-
+                // Check timeouts
                 for (int i = open_encounters.Count - 1; i >= 0; i--)
                 {
                     Encounter e = open_encounters[i];
-                    if (e.hasTimeout(tick.tick_id)) //test is encounter e hast timeout at tick tick_id
+                    if (e.hasTimeout(tick.tick_id))
                     {
                         open_encounters.Remove(e);
                         closed_encounters.Add(e);
@@ -133,20 +168,7 @@ namespace CSGO_Analytics.src.encounterdetect
             //tickstream.Dispose();
         }
 
-        /// <summary>
-        /// Return all players mentioned in a given tick.
-        /// </summary>
-        /// <param name="tick"></param>
-        /// <returns></returns>
-        private List<Player> getUpdatedPlayers(JSONTick tick)
-        {
-            List<Player> ps = new List<Player>();
-            foreach (var g in tick.tickevents)
-            {
-                ps.AddRange(g.getPlayers());
-            }
-            return ps;
-        }
+
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -168,21 +190,21 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         // -> Test if there are same players in component and predecessor and if there are at least two with different teams.
                         // Intersection of player(Vereinigung)
-                        var doubleplayers = c.players.Intersect(comp.players);
-                        if (doubleplayers.Count() < 2)
+                        var intersectPlayers = c.players.Intersect(comp.players);
+                        if (intersectPlayers.Count() < 2)
                             continue;
 
                         var oldteam = Team.None; //TODO: kürzer
-                        foreach (var p in doubleplayers)
+                        foreach (var p in intersectPlayers)
                         {
-                            if (oldteam != Team.None && oldteam != p.team) //Is team different to one we know
+                            if (oldteam != Team.None && oldteam != p.getTeam()) //Is team different to one we know
                             {
                                 predecessors.Add(e);
-                                break; // We found a second team in the predecessorplayers
+                                break; // We found a second team in the intersected players
                             }
                             else
                             {
-                                oldteam = p.team;
+                                oldteam = p.getTeam();
                             }
                         }
 
@@ -210,35 +232,63 @@ namespace CSGO_Analytics.src.encounterdetect
             return new Encounter(encounter_tick_id, cs);
         }
 
+
+        private List<Link> links = new List<Link>();
+
         /// <summary>
         /// Feeds the component with a link resulting of the given gameevent.
         /// </summary>
         /// <param name="component"></param>
         /// <param name="g"></param>
-        private CombatComponent buildComponent(JSONTick tick)
+        private CombatComponent buildComponent(Tick tick)
         {
-            CombatComponent combcomp = new CombatComponent(tick.tick_id);
+            Link link = null;
+
             foreach (var g in tick.tickevents) // Read all gameevents in that tick and build a component with it
             {
-                var link = new Link();
 
-                switch (g.gameevent) //SWITCH OR implement in class?
+                switch (g.gameevent) //TODO: SWITCH OR implement in event class? problem: switch is mess and classes need sources from gamestate
                 {
                     //CSGO GAMEEVENTS
                     case "player_hurt":
+                        PlayerHurt p = (PlayerHurt)g;
+                        link = new Link(p.actor, p.victim, ComponentType.COMBATLINK, Direction.DEFAULT);
                         break;
                     case "player_killed":
+                        PlayerKilled pk = (PlayerKilled)g;
+                        link = new Link(pk.actor, pk.victim, ComponentType.COMBATLINK, Direction.DEFAULT);
                         break;
                     case "weapon_fire":
+                        WeaponFire wf = (WeaponFire)g;
+                        Player victim = null; //TODO: suche den anvisierten spieler
+                        link = new Link(wf.actor, victim, ComponentType.COMBATLINK, Direction.DEFAULT);
                         break;
                     case "player_spotted":
+                        PlayerSpotted sp = (PlayerSpotted)g;
+                        sp.actor = null; //TODO: suche den gesehenen spieler
+                        link = new Link(sp.spotter, sp.actor, ComponentType.COMBATLINK, Direction.DEFAULT);
                         break;
+                    default:
+                        continue; //Cant build Link with this event
                 }
 
-                combcomp.links.Add(link); //Add links
+                if (link != null)
+                {
+                    links.Add(link); //Add links
+                    link = null;
+                }
+
             }
 
-            combcomp.assignPlayers();
+            CombatComponent combcomp = null;
+            if (links.Count != 0)
+            {
+                combcomp = new CombatComponent(tick.tick_id);
+                combcomp.links = links;
+                links.Clear();
+                combcomp.assignPlayers(); // fetch players in this encounter from all links
+            }
+
             return combcomp;
         }
 
@@ -298,14 +348,40 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
-        private void updateDistance() //TODO
+        private void updateDistance(int entityid)
         {
-
+            for (int i = 0; i < distance_table[entityid].Length; i++)
+            {
+                if (entityid != i)
+                    distance_table[entityid][i] = MathUtils.getEuclidDistance3D(new Vector(position_table[entityid]), new Vector(position_table[i]));
+            }
         }
 
-        private void updateSpotted()//TODO
+        private void updateSpotted(int entityid, bool spotted)
         {
+            spotted_table[entityid][entityid] = spotted;
+            // TODO: Check who spotted the player entityid?
+        }
 
+
+        //
+        //
+        // HELPING METHODS
+        //
+        //
+
+        public int getID(int csid)
+        {
+            int id;
+            if (idMapping.TryGetValue(csid, out id))
+            {
+                return id;
+            }
+            else
+            {
+                Console.WriteLine("Can`t map id: " + csid);
+                return -99;
+            }
         }
     }
 }

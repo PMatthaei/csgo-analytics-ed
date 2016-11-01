@@ -55,6 +55,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj">
+      <Project>{859f0c7d-a7d5-4209-abae-3140a70c7afb}</Project>
+      <Name>demoinfo-modded</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CSGO Analytics\CSGO Analytics.csproj">
       <Project>{03e855ac-39ce-42e3-bd61-7a57e9b8ca34}</Project>
       <Name>CSGO Analytics</Name>

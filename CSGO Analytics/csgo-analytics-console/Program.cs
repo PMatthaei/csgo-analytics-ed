@@ -9,8 +9,9 @@ using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.json;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.postgres;
-using CSGO_Analytics.src.encounterdetect.datasource;
-using demojsonparser.src.JSON.objects;
+using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.json.parser;
+using DemoInfoModded;
 
 namespace csgo_analytics_console
 {
@@ -18,15 +19,39 @@ namespace csgo_analytics_console
     {
         static void Main(string[] args)
         {
-
-            /*CSGOReplayDeserializer cs = new CSGOReplayDeserializer(args[0]);
-            foreach (var tick in cs.deserializeTicks())
+            var path = args[0];
+            using ( var demoparser = new DemoParser(File.OpenRead(path)))
             {
-                Console.WriteLine(tick.tick_id);
+                ParseTask ptask = new ParseTask
+                {
+                    destpath = path,
+                    srcpath = path,
+                    usepretty = true,
+                    showsteps = true,
+                    specialevents = true,
+                    highdetailplayer = true,
+                    positioninterval = 8
+                };
 
+                GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+                using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                {
+                    var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<JSONGamestate>(reader.ReadToEnd());
+                    EncounterDetectionAlgorithm ed_algorithm = new EncounterDetectionAlgorithm(deserializedGamestate);
+                    ed_algorithm.run();
+                }
+                
+            }
+
+            /*
+            using (var reader = new StreamReader(File.OpenRead(args[0])))
+            {
+               var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<JSONGamestate>(reader.ReadLine());
+                EncounterDetectionAlgorithm ed_algorithm = new EncounterDetectionAlgorithm(deserializedGamestate);
+                ed_algorithm.run();
             }*/
 
-            using (var reader = new StreamReader(File.OpenRead(args[0])))
+            /*using (var reader = new StreamReader(File.OpenRead(args[0])))
             {
                 JSONGamestate deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<JSONGamestate>(reader.ReadLine());
 
@@ -43,7 +68,7 @@ namespace csgo_analytics_console
 
                 deserializedGamestate = null;
 
-            }
+            }*/
 
             //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'meta'->'players'->> 2 FROM demodata"); //Hole 3. spieler aus meta array
             //Stream s = NPGSQLDelegator.fetchCommandStream("SELECT jsondata->'match'->'rounds'-> 1 FROM demodata"); //Zweite Runde

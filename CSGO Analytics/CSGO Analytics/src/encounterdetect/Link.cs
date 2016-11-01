@@ -50,7 +50,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         override public string ToString()
         {
-            return type.ToString() + " | Actor: " + players[0].name + "- Reciever: " + players[1].name;
+            return type.ToString() + " | Actor: " + players[0].playername + "- Reciever: " + players[1].playername;
         }
     }
 }

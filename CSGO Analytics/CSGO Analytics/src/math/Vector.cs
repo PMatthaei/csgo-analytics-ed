@@ -12,12 +12,19 @@ namespace CSGO_Analytics.src.math
         public float y { get; set; }
         public float z { get; set; }
 
+        public Vector() { }
+
         public Vector(float nx, float ny, float nz)
         {
             x = nx;
             y = ny;
             z = nz;
         }
+
+        /// <summary>
+        /// Initalizes a vector with an array of floats: x = arr[0], y = arr[1], z = arr[2]
+        /// </summary>
+        /// <param name="arr"></param>
         public Vector(float[] arr)
         {
             x = arr[0];
@@ -25,33 +32,35 @@ namespace CSGO_Analytics.src.math
             z = arr[2];
         }
 
-        public double Angle2D
+        public Vector Copy()
         {
-            get
-            {
-                return Math.Atan2(this.y, this.x);
-            }
+            return new Vector(x, y, z);
         }
 
-        public double Absolute
+        public double Angle2D()
         {
-            get
-            {
-                return Math.Sqrt(AbsoluteSquared);
-            }
+
+            return Math.Atan2(this.y, this.x);
+
         }
 
-        public double AbsoluteSquared
+        public double Absolute()
         {
-            get
-            {
-                return this.x * this.x + this.y * this.y + this.z * this.z;
-            }
+
+            return Math.Sqrt(AbsoluteSquared());
+
+        }
+
+        public double AbsoluteSquared()
+
+        {
+            return this.x * this.x + this.y * this.y + this.z * this.z;
+
         }
 
         public float[] getAsArray()
         {
-            return new float[]{x,y,z};
+            return new float[] { x, y, z };
         }
     }
 }

@@ -36,18 +36,22 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Type of the weapon to distinguish it later
         /// </summary>
-        private WeaponType weaponType;
+        //private WeaponType weaponType;
 
         /// <summary>
         /// Owner of this weapon
         /// </summary>
-        private Player owner;
+        //public Player owner { get; set; }
+
+        public string name { get; set; }
+
+        public int ammo_in_magazine { get; set; }
 
         // Weapon data
-        private int currentAmmo;
+        //private int currentAmmo;
 
-        private int maxAmmo;
-        
-        private bool isSilenced;
+        //private int maxAmmo;
+
+        //private bool isSilenced;
     }
 }

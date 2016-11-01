@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DemoInfoModded;
 
-namespace demojsonparser.src.JSON
+namespace CSGO_Analytics.src.json.parser
 {
     /// <summary>
     /// Class holding every data to parse as well as information about how to parse

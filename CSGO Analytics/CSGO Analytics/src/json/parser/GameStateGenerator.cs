@@ -5,15 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.IO;
-using demojsonparser.src.JSON;
 using DemoInfoModded;
 using Newtonsoft.Json;
-using demojsonparser.src.JSON.objects;
-using demojsonparser.src.JSON.events;
+using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.json.parser;
+using CSGO_Analytics.src.data.gameevents;
 using System.Diagnostics;
 using System.Threading;
 
-namespace demojsonparser.src
+namespace CSGO_Analytics.src.json.parser
 {
     public class GameStateGenerator
     {
@@ -37,7 +37,9 @@ namespace demojsonparser.src
         //
         static JSONMatch match;
         static JSONRound round;
-        static JSONTick tick;
+        static Tick tick;
+
+
         static JSONGamestate gs; //JSON holding the whole gamestate - delete this with GC to prevent unnecessary RAM usage!!
 
 
@@ -76,7 +78,7 @@ namespace demojsonparser.src
         {
             match = new JSONMatch();
             round = new JSONRound();
-            tick = new JSONTick();
+            tick = new Tick();
             gs = new JSONGamestate();
 
             steppers = new List<Player>();
@@ -99,8 +101,8 @@ namespace demojsonparser.src
 
             //Init lists
             match.rounds = new List<JSONRound>();
-            round.ticks = new List<JSONTick>();
-            tick.tickevents = new List<JSONGameevent>();
+            round.ticks = new List<Tick>();
+            tick.tickevents = new List<Gameevent>();
         }
 
         /// <summary>
@@ -144,7 +146,17 @@ namespace demojsonparser.src
             initializeGenerator();
 
             GenerateGamestate(); // Fills variable gs with gamestateobject
-            string gsstr = jsonparser.dumpJSONString(gs, ptask.usepretty);
+            string gsstr = "";
+            try
+            {
+                gsstr = jsonparser.dumpJSONString(gs, ptask.usepretty);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+                Console.ReadLine();
+            }
 
             printWatch();
 
@@ -203,7 +215,7 @@ namespace demojsonparser.src
                         round.winner = e.Winner.ToString();
                         match.rounds.Add(round);
                         round = new JSONRound();
-                        round.ticks = new List<JSONTick>();
+                        round.ticks = new List<Tick>();
                     }
 
                     hasRoundStarted = false;
@@ -443,7 +455,7 @@ namespace demojsonparser.src
                     {
                         foreach (var player in parser.PlayingParticipants)
                         {
-                            if (!checkDoubleSteps(player, steppers)) // Check if we already measured a position update of a player(by jump or step event)
+                            if (steppers.Contains(player)) // Check if we already measured a position update of a player(by jump or step event)
                                 tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
                         }
                     }
@@ -468,8 +480,8 @@ namespace demojsonparser.src
                         {
                             round.ticks.Add(tick);
                             tickcount++;
-                            tick = new JSONTick();
-                            tick.tickevents = new List<JSONGameevent>();
+                            tick = new Tick();
+                            tick.tickevents = new List<Gameevent>();
                         }
 
                     }
@@ -501,14 +513,6 @@ namespace demojsonparser.src
         //
         //
 
-        /// <summary>
-        /// Check if a players position / footstep is already in this tick to prevent doubles
-        /// </summary>
-        /// <returns></returns>
-        private static bool checkDoubleSteps(Player p, List<Player> steppers)
-        {
-            return steppers.Contains(p);
-        }
 
         /// <summary>
         /// Measure time to roughly check performance

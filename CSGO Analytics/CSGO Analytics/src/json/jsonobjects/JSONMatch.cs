@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace demojsonparser.src.JSON.objects
+namespace CSGO_Analytics.src.json.jsonobjects
 {
     public class JSONMatch
     {

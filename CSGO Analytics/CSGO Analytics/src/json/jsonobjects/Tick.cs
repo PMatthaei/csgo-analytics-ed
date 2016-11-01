@@ -1,0 +1,34 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using CSGO_Analytics.src.data.gameevents;
+using CSGO_Analytics.src.data.gameobjects;
+
+namespace CSGO_Analytics.src.json.jsonobjects
+
+{
+    public class Tick
+    {
+        public int tick_id { get; set; }
+        public List<Gameevent> tickevents { get; set; }
+
+        /// <summary>
+        /// Return all players mentioned in a given tick.
+        /// </summary>
+        /// <param name="tick"></param>
+        /// <returns></returns>
+        public List<Player> getUpdatedPlayers()
+        {
+            List<Player> ps = new List<Player>();
+            foreach (var g in tickevents)
+            {
+                ps.AddRange(g.getPlayers()); //Every gameevent provides its acting players
+            }
+            return ps;
+        }
+    }
+
+
+}

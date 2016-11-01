@@ -63,46 +63,28 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="src\data\gameevents\JSONBomb.cs" />
-    <Compile Include="src\data\gameevents\JSONBombState.cs" />
-    <Compile Include="src\data\gameevents\JSONFlashNade.cs" />
-    <Compile Include="src\data\gameevents\JSONGameevent.cs" />
-    <Compile Include="src\data\gameevents\JSONNades.cs" />
-    <Compile Include="src\data\gameevents\JSONPlayerFootstep.cs" />
-    <Compile Include="src\data\gameevents\JSONPlayerHurt.cs" />
-    <Compile Include="src\data\gameevents\JSONPlayerKilled.cs" />
-    <Compile Include="src\data\gameevents\JSONPlayerMovement.cs" />
-    <Compile Include="src\data\gameevents\JSONWeaponFire.cs" />
+    <Compile Include="src\data\gameevents\BombEvents.cs" />
+    <Compile Include="src\data\gameevents\CombatEvents.cs" />
+    <Compile Include="src\data\gameevents\Gameevent.cs" />
+    <Compile Include="src\data\gameevents\NadeEvents.cs" />
+    <Compile Include="src\data\gameevents\MovementEvents.cs" />
     <Compile Include="src\data\gameobjects\GameObject.cs" />
-    <Compile Include="src\data\gameobjects\JSONFacing.cs" />
-    <Compile Include="src\data\gameobjects\JSONItem.cs" />
-    <Compile Include="src\data\gameobjects\JSONPlayer.cs" />
-    <Compile Include="src\data\gameobjects\JSONPlayerDetailed.cs" />
-    <Compile Include="src\data\gameobjects\JSONPlayerDetailedWithItems.cs" />
-    <Compile Include="src\data\gameobjects\JSONPlayerFlashed.cs" />
-    <Compile Include="src\data\gameobjects\JSONPlayerMeta.cs" />
-    <Compile Include="src\data\gameobjects\JSONPosition3D.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
-    <Compile Include="src\encounterdetect\datasource\Tick.cs" />
-    <Compile Include="src\encounterdetect\datasource\TickObject.cs" />
     <Compile Include="src\encounterdetect\Encounter.cs" />
     <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
-    <Compile Include="src\encounterdetect\datasource\GameEvent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
-    <Compile Include="src\encounterdetect\datasource\TickStream.cs" />
-    <Compile Include="src\json\CSGOReplayDeserializer.cs" />
     <Compile Include="src\math\MathUtils.cs" />
     <Compile Include="src\math\Vector.cs" />
-    <Compile Include="src\parser\GameStateGenerator.cs" />
-    <Compile Include="src\parser\JSONGamemeta.cs" />
-    <Compile Include="src\parser\JSONGamestate.cs" />
-    <Compile Include="src\parser\JSONMatch.cs" />
-    <Compile Include="src\parser\JSONParser.cs" />
-    <Compile Include="src\parser\JSONRound.cs" />
-    <Compile Include="src\parser\JSONTick.cs" />
-    <Compile Include="src\parser\ParseTask.cs" />
+    <Compile Include="src\json\parser\GameStateGenerator.cs" />
+    <Compile Include="src\json\jsonobjects\JSONGamemeta.cs" />
+    <Compile Include="src\json\jsonobjects\JSONGamestate.cs" />
+    <Compile Include="src\json\jsonobjects\JSONMatch.cs" />
+    <Compile Include="src\json\parser\JSONParser.cs" />
+    <Compile Include="src\json\jsonobjects\JSONRound.cs" />
+    <Compile Include="src\json\jsonobjects\Tick.cs" />
+    <Compile Include="src\json\parser\ParseTask.cs" />
     <Compile Include="src\postgres\CommandText.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
     <Page Include="src\views\AnalyseDemosView.xaml">
@@ -160,9 +142,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="src\physics\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Resource Include="src\views\maps\de_dust2_map.jpg" />
   </ItemGroup>
