@@ -10,7 +10,7 @@ namespace CSGO_Analytics.src.encounterdetect
     /// <summary>
     /// Graph showing one Encounter at a tick tick_id
     /// </summary>
-    class Encounter
+    public class Encounter
     {
         /// <summary>
         /// Components which form this encounter
@@ -22,15 +22,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public int tick_id;
 
-        /// <summary>
-        /// Is this encounter closed 
-        /// </summary>
-        public bool isClosed;
-
-        /// <summary>
-        /// Time to die for this encounter
-        /// </summary>
-        public float TTD;
 
         public Encounter(CombatComponent comp)
         {
@@ -54,18 +45,30 @@ namespace CSGO_Analytics.src.encounterdetect
             //TODO: reset timeout?
         }
 
-
         public void orderByTick()
         {
             cs.OrderBy(x => x.tick_id); //TODO evtl descending?
         }
 
-        public bool hasTimeout(int currenttick)
+        override public bool Equals(object other)
         {
-            if(tick_id+TTD >= currenttick)
+            var en = other as Encounter;
+            if (en == null)
+                return false;
+            if (!(this.tick_id == en.tick_id))
+                return false;
+
+            var intersection = cs.Intersect(en.cs);
+
+            if (intersection.Count() == cs.Count && intersection.Count() == en.cs.Count)
                 return true;
 
-            return false;
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

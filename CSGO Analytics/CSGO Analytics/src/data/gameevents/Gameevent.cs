@@ -14,7 +14,13 @@ namespace CSGO_Analytics.src.data.gameevents
         /// The actor is always the person causing this event because he did something or he rises an event(f.e. he is spotted)
         /// </summary>
         public Player actor;
+
+        /// <summary>
+        /// Get Players in this event
+        /// </summary>
+        /// <returns></returns>
         public virtual Player[] getPlayers() { return new Player[] { actor }; }
+
 
     }
 }

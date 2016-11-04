@@ -24,15 +24,22 @@ namespace CSGO_Analytics.src.encounterdetect
         //
         // VARIABLES AND CONSTANTS
         //
-        private float tau = 0.5f;
+        private float tau = 20;
+        private float ENCOUNTER_TIMEOUT = 20;
+
+        private float tickrate;
 
         public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
 
-        private List<Tick> ticks;
+        /// <summary>
+        /// All players participating in this match.
+        /// </summary>
+        private Player[] players;
 
-        private List<Encounter> open_encounters = new List<Encounter>();
-        private List<Encounter> closed_encounters = new List<Encounter>();
-        private List<Encounter> predecessors = new List<Encounter>();
+        /// <summary>
+        /// All ticks we have from this match.
+        /// </summary>
+        private List<Tick> ticks;
 
 
         /// <summary>
@@ -67,9 +74,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
 
-        public EncounterDetectionAlgorithm(JSONGamestate gamestate)
+        public EncounterDetectionAlgorithm(Gamestate gamestate)
         {
             this.ticks = getTicks(gamestate);
+            this.tickrate = gamestate.meta.tickrate;
+            this.players = gamestate.meta.players.ToArray();
 
             int ownid = 0;
             foreach (var player in gamestate.meta.players) // Map all CS Entity IDs to our own
@@ -82,12 +91,17 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
+        public Player[] getPlayers()
+        {
+            return players;
+        }
+
         /// <summary>
         /// Returns a list of all ticks
         /// </summary>
         /// <param name="rounds"></param>
         /// <returns></returns>
-        public List<Tick> getTicks(JSONGamestate gs)
+        public List<Tick> getTicks(Gamestate gs)
         {
             List<Tick> ticks = new List<Tick>();
 
@@ -99,31 +113,38 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
+        private List<Encounter> open_encounters = new List<Encounter>();
+        private List<Encounter> closed_encounters = new List<Encounter>();
+        private List<Encounter> predecessors = new List<Encounter>();
 
 
-
+        int pCount = 0;
+        int wfCount = 0;
+        int mCount = 0;
+        int nCount = 0;
+        int uCount = 0;
 
         /// <summary>
         /// 
         /// </summary>
         public void run()
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
 
             foreach (var tick in ticks) // Read all ticks
             {
-                Console.WriteLine("Current tick: " + tick.tick_id);
+                //Console.WriteLine("Current tick: " + tick.tick_id);
 
                 foreach (var p in tick.getUpdatedPlayers()) // Update tables
                 {
                     updatePosition(getID(p.player_id), p.position.getAsArray());
-                    updateFacing(getID(p.player_id), p.position.getAsArray());
-                    //updateSpotted(getID(p.player_id), p.spotted); //TODO
-                    updateDistance(getID(p.player_id)); //TODO:   
+                    //updateFacing(getID(p.player_id), p.position.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
+                    //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
+                    updateDistance(getID(p.player_id));
                 }
 
 
-                CombatComponent component = null;
-                //CombatComponent component = buildComponent(tick);
+                CombatComponent component = buildComponent(tick);
 
 
                 if (component == null) // No component in this tick
@@ -132,43 +153,70 @@ namespace CSGO_Analytics.src.encounterdetect
                 predecessors = searchPredecessors(component); // Check if this component has predecessors
 
                 if (predecessors.Count == 0)
-                    open_encounters.Add(new Encounter(component));
+                {
+                    open_encounters.Add(new Encounter(component)); nCount++;
+
+                }
+
 
                 if (predecessors.Count == 1)
-                    predecessors.ElementAt(0).update(component);
+                {
+                    predecessors.ElementAt(0).update(component); uCount++;
+
+                }
+
 
                 if (predecessors.Count > 1)
                 {
                     // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
-                    open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); });
+                    open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); }); //TODO: is contains working? -> if not encounters slip through and waste memory.... a lot
                     var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
                     joint_encounter.update(component);
                     open_encounters.Add(joint_encounter);
+                    mCount++;
                 }
 
                 predecessors.Clear();
 
-                // Check timeouts
+                // Check encounter timeouts
                 for (int i = open_encounters.Count - 1; i >= 0; i--)
                 {
                     Encounter e = open_encounters[i];
-                    if (e.hasTimeout(tick.tick_id))
+                    if (Math.Abs(e.tick_id - tick.tick_id) > ENCOUNTER_TIMEOUT)
                     {
                         open_encounters.Remove(e);
                         closed_encounters.Add(e);
                     }
                 }
+                // NEXT TICK
+
             } //NO TICKS LEFT
 
             //We are done. -> move open encounters to closed encounters
             closed_encounters.AddRange(open_encounters);
             open_encounters.Clear();
 
+            // Dump stats to console
+            pCount = nCount + uCount + mCount;
+            Console.WriteLine("Component Predecessors handled: " + pCount);
+            Console.WriteLine("New Encounter occured: " + nCount);
+            Console.WriteLine("Encounter Merges occured: " + mCount);
+            Console.WriteLine("Encounter Updates occured: " + uCount);
+            Console.WriteLine("Weaponfire-Event victims found: " + wfCount);
+            Console.WriteLine("\n Encounters found: " + closed_encounters.Count);
+
+            watch.Stop();
+            var sec = watch.ElapsedMilliseconds / 1000.0f;
+
+            Console.WriteLine("Time to run Algorithm: " + sec + "sec. \n");
             //TODO: dispose everything else. tickstream etc!!
             //tickstream.Dispose();
         }
 
-
+        public List<Encounter> getEncounters()
+        {
+            return closed_encounters;
+        }
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -178,35 +226,39 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <returns></returns>
         private List<Encounter> searchPredecessors(CombatComponent comp)
         {
+
             List<Encounter> predecessors = new List<Encounter>();
             foreach (var e in open_encounters)
             {
+                bool registered = false;
                 foreach (var c in e.cs)
                 {
-                    int testtick_id = c.tick_id; //Maybe use only tickid of newest comp?
-                    int dt = Math.Abs(testtick_id - comp.tick_id);
-
-                    if (testtick_id + dt <= tau)
+                    int dt = e.tick_id - comp.tick_id;
+                    if (dt <= tau)
                     {
-                        // -> Test if there are same players in component and predecessor and if there are at least two with different teams.
+                        // -> Test if c and the component to test
                         // Intersection of player(Vereinigung)
-                        var intersectPlayers = c.players.Intersect(comp.players);
-                        if (intersectPlayers.Count() < 2)
+                        var intersectPlayers = c.players.Intersect(comp.players).ToList();
+
+                        if (intersectPlayers.Count < 2)
                             continue;
 
-                        var oldteam = Team.None; //TODO: kürzer
-                        foreach (var p in intersectPlayers)
+                        var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
+                        for (int i = 1; i < intersectPlayers.Count(); i++)
                         {
-                            if (oldteam != Team.None && oldteam != p.getTeam()) //Is team different to one we know
+                            var p = intersectPlayers[i];
+                            //Is team different to one we know.
+                            //If so we have all criterias for a successor and this encounter e is a predecessor of the component comp
+                            if (knownteam != Team.None && knownteam != p.getTeam()) 
                             {
                                 predecessors.Add(e);
-                                break; // We found a second team in the intersected players
-                            }
-                            else
-                            {
-                                oldteam = p.getTeam();
+                                registered = true;
+                                break;
+
                             }
                         }
+
+                        if (registered) break;
 
                     }
 
@@ -221,19 +273,38 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="predecessors"></param>
         /// <returns></returns>
-        private Encounter join(List<Encounter> predecessors)
+        private Encounter join(List<Encounter> predecessors) //TODO: Problem: high tau increases concated merged encounters and therefore memory. where is the problem?
         {
             List<CombatComponent> cs = new List<CombatComponent>();
             foreach (var e in predecessors)
             {
-                cs.AddRange(e.cs);
+                cs.AddRange(e.cs); // Watch for OutOfMemory here if too many predecessors add up!! 
             }
+            var css = cs.OrderBy(x => x.tick_id);
             int encounter_tick_id = cs.OrderBy(x => x.tick_id).ElementAt(0).tick_id;
             return new Encounter(encounter_tick_id, cs);
         }
 
 
-        private List<Link> links = new List<Link>();
+
+
+
+
+        /// <summary>
+        /// Queue of all hurtevents that where fired. Use these to search for a coressponding weaponfire event.
+        /// </summary>
+        private Dictionary<PlayerHurt, int> registeredHurtEvents = new Dictionary<PlayerHurt, int>();
+
+
+        /// <summary>
+        /// Weaponfire events that are waiting for their check.
+        /// </summary>
+        private List<WeaponFire> pendingWeaponFireEvents = new List<WeaponFire>();
+
+        /// <summary>
+        /// Active nades such as smoke and fire nades which have not ended.
+        /// </summary>
+        private List<NadeEvents> activeNades = new List<NadeEvents>();
 
         /// <summary>
         /// Feeds the component with a link resulting of the given gameevent.
@@ -242,40 +313,83 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="g"></param>
         private CombatComponent buildComponent(Tick tick)
         {
-            Link link = null;
+
+            List<Link> links = new List<Link>();
 
             foreach (var g in tick.tickevents) // Read all gameevents in that tick and build a component with it
             {
+                Player reciever = null;
+                ComponentType type = 0;
 
                 switch (g.gameevent) //TODO: SWITCH OR implement in event class? problem: switch is mess and classes need sources from gamestate
                 {
-                    //CSGO GAMEEVENTS
+                    //
+                    // CSGO GAMEEVENTS
+                    //
+
+                    //
+                    //  Combatlinks
+                    //
                     case "player_hurt":
-                        PlayerHurt p = (PlayerHurt)g;
-                        link = new Link(p.actor, p.victim, ComponentType.COMBATLINK, Direction.DEFAULT);
+                        PlayerHurt ph = (PlayerHurt)g;
+                        reciever = ph.victim;
+                        type = ComponentType.COMBATLINK;
+
+                        registeredHurtEvents.Add(ph, tick.tick_id);
+
                         break;
                     case "player_killed":
                         PlayerKilled pk = (PlayerKilled)g;
-                        link = new Link(pk.actor, pk.victim, ComponentType.COMBATLINK, Direction.DEFAULT);
+                        reciever = pk.victim;
+                        type = ComponentType.COMBATLINK;
+
                         break;
                     case "weapon_fire":
                         WeaponFire wf = (WeaponFire)g;
-                        Player victim = null; //TODO: suche den anvisierten spieler
-                        link = new Link(wf.actor, victim, ComponentType.COMBATLINK, Direction.DEFAULT);
+                        var victim = searchCandidate(wf, tick.tick_id);
+
+                        if (victim == null)
+                            continue;
+                        wfCount++;
+                        reciever = victim;
+                        type = ComponentType.COMBATLINK;
                         break;
                     case "player_spotted":
-                        PlayerSpotted sp = (PlayerSpotted)g;
-                        sp.actor = null; //TODO: suche den gesehenen spieler
-                        link = new Link(sp.spotter, sp.actor, ComponentType.COMBATLINK, Direction.DEFAULT);
+                        /*PlayerSpotted ps = (PlayerSpotted)g;
+                        type = ComponentType.COMBATLINK;*/
+
+                        continue;
+
+                    //    
+                    //  Supportlinks
+                    //
+                    case "smoke_exploded":
+                        NadeEvents smokestart = (NadeEvents)g;
+                        reciever = null;
+                        type = ComponentType.SUPPORTLINK;
+
+                        activeNades.Add(smokestart);
+                        continue;
+                        break;
+                    case "smoke_ended":
+                        NadeEvents smokeend = (NadeEvents)g;
+                        reciever = null;
+                        type = ComponentType.SUPPORTLINK;
+
+                        activeNades.Remove(smokeend); // Does this really get the right nade?
+                        continue;
                         break;
                     default:
                         continue; //Cant build Link with this event
                 }
 
-                if (link != null)
+                int actor_id = getID(g.actor.player_id);
+                int reciever_id = getID(reciever.player_id);
+
+                if (distance_table[actor_id][reciever_id] < 5000)
                 {
+                    Link link = new Link(g.actor, reciever, type, Direction.DEFAULT);
                     links.Add(link); //Add links
-                    link = null;
                 }
 
             }
@@ -285,11 +399,55 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 combcomp = new CombatComponent(tick.tick_id);
                 combcomp.links = links;
-                links.Clear();
-                combcomp.assignPlayers(); // fetch players in this encounter from all links
+                combcomp.assignPlayers(); // Assign players in this encounter from all links
             }
 
             return combcomp;
+        }
+
+        private List<Player> candidates = new List<Player>();
+
+        /// <summary>
+        /// Searches the player that has most probable Hurt another player with the given weapon fire event
+        /// </summary>
+        /// <param name="wf"></param>
+        /// <returns></returns>
+        private Player searchCandidate(WeaponFire wf, int tick_id)
+        {
+            // This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor
+            // And in most cases a player fires and misses and theres a long time between he might hit the seen opponent because he hides. But still he saw and shot at him. these events are lost here
+            for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
+            {
+                var item = registeredHurtEvents.ElementAt(index);
+                var hurtevent = item.Key;
+                var htick_id = item.Value;
+
+                int tick_dt = htick_id - tick_id;
+                if (tick_dt * tickrate > 20)
+                {
+                    //If more than 20 seconds are between a shoot and a hit. this hurtevent is irrelevant
+                    registeredHurtEvents.Remove(hurtevent);
+                    continue;
+                }
+
+                if (wf.actor.Equals(hurtevent.actor))
+                {
+                    candidates.Add(hurtevent.victim);
+                    registeredHurtEvents.Remove(hurtevent);
+                }
+            }
+
+
+            if (candidates.Count == 0)
+            {
+                candidates.Clear();
+                return null;
+            }
+            //Console.WriteLine("Candidates found: " + candidates.Count);
+            //Console.ReadLine();
+            var reciever = candidates[0];
+            candidates.Clear();
+            return reciever; //TODO: search probablest attacker!
         }
 
 
@@ -374,14 +532,9 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             int id;
             if (idMapping.TryGetValue(csid, out id))
-            {
                 return id;
-            }
             else
-            {
-                Console.WriteLine("Can`t map id: " + csid);
-                return -99;
-            }
+                Console.WriteLine("Can`t map csid: " + csid + ", on id"); return -99;
         }
     }
 }

@@ -52,5 +52,21 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             return type.ToString() + " | Actor: " + players[0].playername + "- Reciever: " + players[1].playername;
         }
+
+        override public bool Equals(object other)
+        {
+            var link = other as Link;
+            if (link == null)
+                return false;
+            if (getActor().Equals(link.getActor()) && getReciever().Equals(link.getReciever()) && dir == link.dir)
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
 }

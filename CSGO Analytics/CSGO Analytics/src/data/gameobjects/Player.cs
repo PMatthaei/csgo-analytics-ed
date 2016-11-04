@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.math;
+using Newtonsoft.Json;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
@@ -32,10 +33,10 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <returns></returns>
         public Team getTeam()
         {
-            if(team == "T")
+            if(team == "Terrorist")
             {
                 return Team.T;
-            } else if(team == "CT")
+            } else if(team == "CounterTerrorist")
             {
                 return Team.CT;
             }
@@ -51,14 +52,17 @@ namespace CSGO_Analytics.src.data.gameobjects
             return false;
         }
 
-        /*public override bool Equals(object obj)
+        //[JsonIgnore]
+        public override bool Equals(object obj) //Why does a true overriden Equals kill the json serialisation?!?
         {
-            var p = (Player)obj;
+            Player p = obj as Player;
+            if (p == null)
+                return false;
             if (player_id == p.player_id && playername == p.playername && team == p.team)
                 return true;
 
             return false;
-        }*/
+        }
 
         public override int GetHashCode()
         {
@@ -73,6 +77,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             me.playername = playername;
             me.team = team;
             me.position = position.Copy();
+            me.facing = facing.Copy();
 
 
             return me;
@@ -83,6 +88,16 @@ namespace CSGO_Analytics.src.data.gameobjects
     {
         public float yaw { get; set; }
         public float pitch { get; set; }
+
+        public Vector getFacingVector(Vector v)
+        {
+            return new Vector();
+        }
+
+        internal Facing Copy()
+        {
+            return new Facing() { yaw = yaw, pitch = pitch };
+        }
     }
 
     class PlayerDetailed : Player

@@ -17,11 +17,15 @@ namespace CSGO_Analytics.src.json.parser
 
         private static StreamWriter outputStream;
 
+        private JsonSerializerSettings settings;
 
-        public JSONParser(string path)
+        public JSONParser(string path, JsonSerializerSettings settings)
         {
             string outputpath = path.Replace(".dem", "") + ".json";
             outputStream = new StreamWriter(outputpath);
+
+            this.settings = settings;
+
         }
 
         /// <summary>
@@ -29,13 +33,18 @@ namespace CSGO_Analytics.src.json.parser
         /// </summary>
         /// <param name="gs"></param>
         /// <param name="prettyjson"></param>
-        public void dumpJSONFile(JSONGamestate gs, bool prettyjson)
+        public void dumpJSONFile(Gamestate gs, bool prettyjson)
         {
             Formatting f = Formatting.None;
             if (prettyjson)
                 f = Formatting.Indented;
 
-            outputStream.Write(JsonConvert.SerializeObject(gs, f));
+            outputStream.Write(JsonConvert.SerializeObject(gs, settings));
+        }
+
+        public Gamestate deserializeGamestate(string gamestatestring)
+        {
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(gamestatestring, settings);
         }
 
         /// <summary>
@@ -43,7 +52,7 @@ namespace CSGO_Analytics.src.json.parser
         /// </summary>
         /// <param name="gs"></param>
         /// <param name="prettyjson"></param>
-        public string dumpJSONString(JSONGamestate gs, bool prettyjson)
+        public string dumpJSONString(Gamestate gs, bool prettyjson)
         {
             Formatting f = Formatting.None;
             if (prettyjson)
@@ -58,14 +67,14 @@ namespace CSGO_Analytics.src.json.parser
 
         
 
-        public JSONGamemeta assembleGamemeta(string mapname, float tickrate, IEnumerable<DemoInfoModded.Player> players)
+        public GamestateMeta assembleGamemeta(string mapname, float tickrate, IEnumerable<DemoInfoModded.Player> players)
         {
-            return new JSONGamemeta
+            return new GamestateMeta
             {
                 gamestate_id = 0,
                 mapname = mapname,
                 tickrate = tickrate,
-                players = assemblePlayers(players)
+                players = assemblePlayers(players.ToArray())
             };
         }
         #region Gameevents
@@ -238,7 +247,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public List<PlayerMeta> assemblePlayers(IEnumerable<DemoInfoModded.Player> ps)
+        /*public List<PlayerMeta> assemblePlayers(IEnumerable<DemoInfoModded.Player> ps)
         {
             if (ps == null)
                 return null;
@@ -247,7 +256,7 @@ namespace CSGO_Analytics.src.json.parser
                 players.Add(assemblePlayerMeta(player));
 
             return players;
-        }
+        }*/
 
 
         public CSGO_Analytics.src.data.gameobjects.Player assemblePlayer(DemoInfoModded.Player p)

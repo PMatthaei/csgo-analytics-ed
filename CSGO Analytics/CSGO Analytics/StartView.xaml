@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:CSGO_Analytics"
         mc:Ignorable="d"
         Title="CS:GO Analytics" Height="800" Width="1440" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
-    <Grid>
+    <Grid Background="#FFDAE4FF">
         <Grid Margin="0,80,1024,0">
             <Menu x:Name="menu" HorizontalAlignment="Left" Height="690" VerticalAlignment="Top" Width="250" Margin="0,1,0,0">
                 <MenuItem Header="Manage Demos" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff" Click="manage_click" />

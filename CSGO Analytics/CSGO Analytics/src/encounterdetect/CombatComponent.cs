@@ -10,7 +10,7 @@ namespace CSGO_Analytics.src.encounterdetect
     /// <summary>
     /// Subgraph of an Encountergraph
     /// </summary>
-    class CombatComponent
+    public class CombatComponent
     {
         /// <summary>
         /// Set of players participating in the component
@@ -43,7 +43,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             if(links.Count == 0 || links == null)
             {
-
+                return;
             }
             foreach(var l in links)
             {
@@ -68,6 +68,28 @@ namespace CSGO_Analytics.src.encounterdetect
                 s += l.ToString() + "\n";
             }
             return s;
+        }
+
+        override public bool Equals(object other)
+        {
+            var c = other as CombatComponent;
+            if (c == null)
+                return false;
+
+            if (!(this.tick_id == c.tick_id))
+                return false;
+
+            var intersection = links.Intersect(c.links);
+
+            if(intersection.Count() == links.Count && intersection.Count() == c.links.Count)
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

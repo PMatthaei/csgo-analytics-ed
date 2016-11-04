@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DemoInfoModded;
+using Newtonsoft.Json;
 
 namespace CSGO_Analytics.src.json.parser
 {
@@ -25,5 +26,8 @@ namespace CSGO_Analytics.src.json.parser
         public bool specialevents { get; set; }
 
         public bool highdetailplayer { get; set; }
+
+        public JsonSerializerSettings settings { get; set; }
+
     }
 }

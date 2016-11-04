@@ -18,7 +18,7 @@
                                 <ColumnDefinition Width="79*"/>
                                 <ColumnDefinition Width="1036*"/>
                             </Grid.ColumnDefinitions>
-                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="522" Margin="96.5,10,0,0" VerticalAlignment="Top" Width="928" Background="Black" Grid.Column="1"/>
+                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="522" Margin="96.5,10,0,0" VerticalAlignment="Top" Width="928" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnRightMouseButtonDown" MouseMove="Canvas_OnMouseMove"/>
                             <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114.5,579,0,0" VerticalAlignment="Top" Width="865" Grid.Column="1"/>
                             <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114.5,551,0,0" VerticalAlignment="Top" Grid.Column="1"/>
                             <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="937.5,551,0,0" VerticalAlignment="Top" Grid.Column="1"/>

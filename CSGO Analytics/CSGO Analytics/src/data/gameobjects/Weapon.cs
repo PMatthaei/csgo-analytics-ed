@@ -31,7 +31,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     };
 
-    public class Weapon : GameObject
+    public class Weapon
     {
         /// <summary>
         /// Type of the weapon to distinguish it later
@@ -41,7 +41,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Owner of this weapon
         /// </summary>
-        //public Player owner { get; set; }
+        //public Player owner { get; set; } // Is always null. Not correctly returned by DemoInfo?
 
         public string name { get; set; }
 

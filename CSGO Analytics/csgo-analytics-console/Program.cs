@@ -12,6 +12,7 @@ using CSGO_Analytics.src.postgres;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
 using DemoInfoModded;
+using Newtonsoft.Json;
 
 namespace csgo_analytics_console
 {
@@ -30,13 +31,14 @@ namespace csgo_analytics_console
                     showsteps = true,
                     specialevents = true,
                     highdetailplayer = true,
-                    positioninterval = 8
-                };
+                    positioninterval = 8,
+                    settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+            };
 
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
                 using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                 {
-                    var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<JSONGamestate>(reader.ReadToEnd());
+                    var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
                     EncounterDetectionAlgorithm ed_algorithm = new EncounterDetectionAlgorithm(deserializedGamestate);
                     ed_algorithm.run();
                 }

@@ -3,31 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Dynamic;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
 
 namespace CSGO_Analytics.src.data.gameevents
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    /*class CombatEvent : Gameevent
-    {
-        public virtual Link buildLink()
-        {
-            Console.WriteLine("Please define a method on how to build a link with this combatevent");
-            throw new NotImplementedException();
-        }
-    }*/
 
     class WeaponFire : Gameevent
     {
         public Weapon weapon { get; set; }
 
+
         public override Player[] getPlayers()
         {
             return new Player[] { actor };
         }
+
     }
 
     class PlayerSpotted : Gameevent

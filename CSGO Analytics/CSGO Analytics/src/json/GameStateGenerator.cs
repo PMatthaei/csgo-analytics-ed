@@ -33,14 +33,13 @@ namespace CSGO_Analytics.src.json.parser
         private static Stopwatch watch;
 
         //
-        // JSON Objects for Serialization
+        //  Objects for JSON-Serialization
         //
-        static JSONMatch match;
-        static JSONRound round;
+        static Match match;
+        static Round round;
         static Tick tick;
 
-
-        static JSONGamestate gs; //JSON holding the whole gamestate - delete this with GC to prevent unnecessary RAM usage!!
+        static Gamestate gs; //JSON holding the whole gamestate - delete this with GC to prevent unnecessary RAM usage!!
 
 
         //
@@ -76,10 +75,10 @@ namespace CSGO_Analytics.src.json.parser
         /// </summary>
         private static void initializeGenerator()
         {
-            match = new JSONMatch();
-            round = new JSONRound();
+            match = new Match();
+            round = new Round();
             tick = new Tick();
-            gs = new JSONGamestate();
+            gs = new Gamestate();
 
             steppers = new List<Player>();
 
@@ -97,10 +96,10 @@ namespace CSGO_Analytics.src.json.parser
             initWatch();
 
             //Parser to transform DemoParser events to JSON format
-            jsonparser = new JSONParser(ptask.destpath);
+            jsonparser = new JSONParser(ptask.destpath, ptask.settings);
 
             //Init lists
-            match.rounds = new List<JSONRound>();
+            match.rounds = new List<Round>();
             round.ticks = new List<Tick>();
             tick.tickevents = new List<Gameevent>();
         }
@@ -214,7 +213,7 @@ namespace CSGO_Analytics.src.json.parser
                         {
                         round.winner = e.Winner.ToString();
                         match.rounds.Add(round);
-                        round = new JSONRound();
+                        round = new Round();
                         round.ticks = new List<Tick>();
                     }
 
