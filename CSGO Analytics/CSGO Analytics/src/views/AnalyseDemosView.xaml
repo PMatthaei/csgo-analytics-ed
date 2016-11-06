@@ -5,13 +5,13 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:CSGO_Analytics.src.views"
       mc:Ignorable="d" 
-      d:DesignHeight="735"
-      Title="AnalyseDemosView" Width="1148">
+      d:DesignHeight="740" d:DesignWidth="1148"
+      Title="AnalyseDemosView" >
 
     <Grid>
-        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro" Margin="0,0,-15,0">
+        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro">
             <Grid Height="740" VerticalAlignment="Top" Width="1148">
-                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="714" Margin="10,10,0,0" VerticalAlignment="Top" Width="1128">
+                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="715" Margin="10,10,0,0" VerticalAlignment="Top" Width="1128">
                     <TabItem Header="Live view">
                         <Grid Background="#FFE5E5E5">
                             <Grid.ColumnDefinitions>
@@ -22,11 +22,11 @@
                             <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,639,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1"/>
                             <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114,591,0,0" VerticalAlignment="Top" Grid.Column="1"/>
                             <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="938,591,0,0" VerticalAlignment="Top" Grid.Column="1"/>
-                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="525,0,456,69" VerticalAlignment="Bottom" Width="75" Grid.Column="1"/>
-                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="610,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="660,595,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="456,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="406,595,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="511,0,462,70" VerticalAlignment="Bottom" Width="70" Grid.Column="1"/>
+                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="586,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="631,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="465,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
+                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="419,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
                             <Menu x:Name="menu" HorizontalAlignment="Left" Height="592" Margin="10,10,0,0" VerticalAlignment="Top" Width="160" Grid.ColumnSpan="2">
                                 <Label Content="Team Terrorists:"/>
                                 <ListBoxItem Content="Player1"/>

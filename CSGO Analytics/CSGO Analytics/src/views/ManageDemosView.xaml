@@ -5,11 +5,11 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:CSGO_Analytics.src.views"
       mc:Ignorable="d" 
-      d:DesignHeight="660" d:DesignWidth="1140"
+      d:DesignHeight="740" d:DesignWidth="1148"
       Title="ManageDemosView">
 
     <Grid>
-        <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" VerticalAlignment="Top" Width="1140" Background="Gainsboro">
+        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro">
             <Grid Height="660" VerticalAlignment="Top" Width="1140">
                 <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="640" Margin="10,10,0,0" VerticalAlignment="Top" Width="1120">
                     <TabItem Header="Upload Demos">

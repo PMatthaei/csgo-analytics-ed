@@ -45,7 +45,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
         /// </summary>
-        private Dictionary<int, int> idMapping = new Dictionary<int, int>();
+        private Dictionary<int, int> mappedPlayerIDs = new Dictionary<int, int>();
 
         /// <summary>
         /// Matrix to save player positions
@@ -83,7 +83,7 @@ namespace CSGO_Analytics.src.encounterdetect
             int ownid = 0;
             foreach (var player in gamestate.meta.players) // Map all CS Entity IDs to our own
             {
-                idMapping.Add(player.player_id, ownid);
+                mappedPlayerIDs.Add(player.player_id, ownid);
                 ownid++;
             }
 
@@ -120,6 +120,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         int pCount = 0;
         int wfCount = 0;
+        int wfeCount = 0;
         int mCount = 0;
         int nCount = 0;
         int uCount = 0;
@@ -203,14 +204,15 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("New Encounter occured: " + nCount);
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
-            Console.WriteLine("Weaponfire-Event victims found: " + wfCount);
+            Console.WriteLine("Weaponfire-Events total: " + wfeCount);
+            Console.WriteLine("Weaponfire-Event where victims were found: " + wfCount);
             Console.WriteLine("Weaponfire-Events inserted into existing components: " + iCount);
-            Console.WriteLine("\n Encounters found: " + closed_encounters.Count);
+            Console.WriteLine("\n  Encounters found: " + closed_encounters.Count);
 
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
 
-            Console.WriteLine("Time to run Algorithm: " + sec + "sec. \n");
+            Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
             //TODO: dispose everything else. tickstream etc!!
             //tickstream.Dispose();
         }
@@ -230,38 +232,36 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
             List<Encounter> predecessors = new List<Encounter>();
-            foreach (var e in open_encounters)
+            foreach (var e in open_encounters.Where(e => e.tick_id - comp.tick_id <= tau))
             {
                 bool registered = false;
-                foreach (var c in e.cs)
+                foreach (var c in e.cs) //Really iterate over components?
                 {
-                    int dt = e.tick_id - comp.tick_id;
-                    if (dt <= tau)
+
+                    // Test if c and comp have at least two players from different teams in common -> Intersection of lists
+                    var intersectPlayers = c.players.Intersect(comp.players).ToList();
+
+                    if (intersectPlayers.Count < 2)
+                        continue;
+
+                    var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
+                    for (int i = 1; i < intersectPlayers.Count(); i++)
                     {
-                        // Test if c and comp have at least two players from different teams in common -> Intersection of lists
-                        var intersectPlayers = c.players.Intersect(comp.players).ToList();
-
-                        if (intersectPlayers.Count < 2)
-                            continue;
-
-                        var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
-                        for (int i = 1; i < intersectPlayers.Count(); i++)
+                        var p = intersectPlayers[i];
+                        //Is team different to one we know.
+                        //If so we have all criterias for a successor and this encounter e is a predecessor of the component comp
+                        if (knownteam != Team.None && knownteam != p.getTeam())
                         {
-                            var p = intersectPlayers[i];
-                            //Is team different to one we know.
-                            //If so we have all criterias for a successor and this encounter e is a predecessor of the component comp
-                            if (knownteam != Team.None && knownteam != p.getTeam()) 
-                            {
-                                predecessors.Add(e);
-                                registered = true; // Stop multiple adding of e
-                                break;
+                            predecessors.Add(e);
+                            registered = true; // Stop multiple adding of e
+                            break;
 
-                            }
                         }
-
-                        if (registered) break;
-
                     }
+
+                    if (registered) break;
+
+
 
                 }
             }
@@ -293,6 +293,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         /// <summary>
         /// Queue of all hurtevents that where fired. Use these to search for a coressponding weaponfire event.
+        /// Value is the tick_id as int where the event happend
         /// </summary>
         private Dictionary<PlayerHurt, int> registeredHurtEvents = new Dictionary<PlayerHurt, int>();
 
@@ -346,10 +347,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         break;
                     case "weapon_fire":
+                        wfeCount++;
                         WeaponFire wf = (WeaponFire)g;
                         var victim = searchVictimCandidate(wf, tick.tick_id);
 
-                        if (victim == null)
+                        if (victim == null) // No candidate found. Either wait for a playerhurt event or there was not nearly victim
                             continue;
                         wfCount++;
                         reciever = victim;
@@ -364,33 +366,46 @@ namespace CSGO_Analytics.src.encounterdetect
                     //    
                     //  Supportlinks
                     //
+                    case "flash_exploded":
+                        FlashNade flash = (FlashNade)g;
+                        type = ComponentType.SUPPORTLINK;
+                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember 
+                        foreach (var player in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher
+                        {
+                            foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != player.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
+                            {
+
+                            }
+                        }
+                        continue;
+                    case "firenade_exploded":
                     case "smoke_exploded":
-                        NadeEvents smokestart = (NadeEvents)g;
-                        reciever = null;
-                        type = ComponentType.SUPPORTLINK;
-
-                        activeNades.Add(smokestart);
+                        NadeEvents timedNadeStart = (NadeEvents)g;
+                        activeNades.Add(timedNadeStart);
                         continue;
-                        break;
                     case "smoke_ended":
-                        NadeEvents smokeend = (NadeEvents)g;
-                        reciever = null;
-                        type = ComponentType.SUPPORTLINK;
-
-                        activeNades.Remove(smokeend); // Does this really get the right nade?
+                    case "firenade_ended":
+                        NadeEvents timedNadeEnd = (NadeEvents)g;
+                        activeNades.Remove(timedNadeEnd);
                         continue;
-                        break;
-                    default:
-                        continue; //Cant build Link with this event
+                    default: // Test for supportlinks created by nades as these cant be read from events directly
+                        List<Player> supportedPlayers = getSupportedPlayers();
+                        foreach (var supportreciever in supportedPlayers)
+                        {
+                            Link link = new Link(g.actor, supportreciever, ComponentType.SUPPORTLINK, Direction.DEFAULT);
+                            links.Add(link);
+                        }
+                        continue;
                 }
 
                 int actor_id = getID(g.actor.player_id);
                 int reciever_id = getID(reciever.player_id);
 
+                if (type == ComponentType.SUPPORTLINK) continue;
                 if (distance_table[actor_id][reciever_id] < 5000)
                 {
                     Link link = new Link(g.actor, reciever, type, Direction.DEFAULT);
-                    links.Add(link); //Add links
+                    links.Add(link);
                 }
 
             }
@@ -406,11 +421,32 @@ namespace CSGO_Analytics.src.encounterdetect
             return combcomp;
         }
 
+        private List<Player> getSupportedPlayers()
+        {
+            var supportedPlayer = new List<Player>();
+            //Test for Line of sight vs smoke collision
+            foreach (var nadeevent in activeNades)
+            {
+                foreach (var player in players.Where(player => player.team != nadeevent.actor.team))
+                {
+                    //checkNadeSphereCollision(nadeevent, player); //TODO
+                }
+            }
+            return supportedPlayer;
+        }
+
+
+        /// <summary>
+        /// When a hurtevent is registered we want to test if some of our pending weaponfire events match this playerhurt event.
+        /// If so we have to insert the link that arises into the right Combatcomponent.
+        /// </summary>
+        /// <param name="ph"></param>
+        /// <param name="tick_id"></param>
         private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id)
         {
             registeredHurtEvents.Add(ph, tick_id);
 
-            for (int index = pendingWeaponFireEvents.Count - 1; index >= 0; index--)
+            for (int index = pendingWeaponFireEvents.Count - 1; index >= 0; index--) //TODO: with where statement?
             {
                 var item = pendingWeaponFireEvents.ElementAt(index);
                 var weaponfireevent = item.Key;
@@ -426,11 +462,20 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 if (ph.actor.Equals(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
                 {
-                    //TODO: insert the link which will be created into the right component
-                    iCount++;
+                    Link insertLink = new Link(weaponfireevent.actor, ph.victim, ComponentType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 43 links found...seems a bit small
+
+                    foreach (var en in open_encounters)
+                    {
+                        // If more than 8 sec between encounter and weaponfire link -> next 
+                        foreach (var comp in en.cs.Where(comp => (comp.tick_id - wftick_id) * tickrate > 8))
+                        {
+                            iCount++;
+                            comp.links.Add(insertLink);
+                        }
+                    }
                     pendingWeaponFireEvents.Remove(weaponfireevent); // Delete the weaponfire event from the queue
                 }
-                
+
             }
         }
 
@@ -442,7 +487,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <returns></returns>
         private Player searchVictimCandidate(WeaponFire wf, int tick_id)
         {
-            Console.WriteLine(registeredHurtEvents.Count);
+            //Console.WriteLine(registeredHurtEvents.Count);
             // This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor
             // And in most cases a player fires and misses and theres a long time between he might hit the seen opponent because he hides. But still he saw and shot at him. these events are lost here
             for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
@@ -464,7 +509,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     candidates.Add(hurtevent.victim);
                     registeredHurtEvents.Remove(hurtevent);
                     break;
-                } else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
+                }
+                else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
                 {
                     pendingWeaponFireEvents.Add(wf, tick_id);
                     break;
@@ -481,7 +527,7 @@ namespace CSGO_Analytics.src.encounterdetect
             //Console.ReadLine();
             var victim = candidates[0]; //TODO: search probablest attacker!
             candidates.Clear();
-            return victim; 
+            return victim;
         }
 
 
@@ -565,7 +611,7 @@ namespace CSGO_Analytics.src.encounterdetect
         public int getID(int csid)
         {
             int id;
-            if (idMapping.TryGetValue(csid, out id))
+            if (mappedPlayerIDs.TryGetValue(csid, out id))
                 return id;
             else
                 Console.WriteLine("Can`t map csid: " + csid + ", on id"); return -99;

@@ -179,8 +179,8 @@ namespace CSGO_Analytics.src.json.parser
             parser.MatchStarted += (sender, e) =>
             {
                 hasMatchStarted = true;
-                    //Assign Gamemetadata
-                    gs.meta = jsonparser.assembleGamemeta(parser.Map, parser.TickRate, parser.PlayingParticipants);
+                //Assign Gamemetadata
+                gs.meta = jsonparser.assembleGamemeta(parser.Map, parser.TickRate, parser.PlayingParticipants);
             };
 
             //Assign match object
@@ -210,7 +210,7 @@ namespace CSGO_Analytics.src.json.parser
                 if (hasMatchStarted)
                 {
                     if (hasRoundStarted) //TODO: maybe round fires false -> do in tickdone event (see github issues of DemoInfo)
-                        {
+                    {
                         round.winner = e.Winner.ToString();
                         match.rounds.Add(round);
                         round = new Round();
@@ -227,7 +227,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 if (hasMatchStarted)
                     hasFreeezEnded = true; //Just capture movement after freezetime has ended
-                };
+            };
 
 
             #endregion
@@ -298,8 +298,8 @@ namespace CSGO_Analytics.src.json.parser
             {
                 if (hasMatchStarted)
                 {
-                        //the killer is null if vicitm is killed by the world - eg. by falling
-                        if (e.Killer != null)
+                    //the killer is null if vicitm is killed by the world - eg. by falling
+                    if (e.Killer != null)
                         tick.tickevents.Add(jsonparser.assemblePlayerKilled(e));
 
                 }
@@ -309,8 +309,8 @@ namespace CSGO_Analytics.src.json.parser
             parser.PlayerHurt += (object sender, PlayerHurtEventArgs e) =>
             {
                 if (hasMatchStarted)
-                        //the attacker is null if vicitm is damaged by the world - eg. by falling
-                        if (e.Attacker != null)
+                    //the attacker is null if vicitm is damaged by the world - eg. by falling
+                    if (e.Attacker != null)
                         tick.tickevents.Add(jsonparser.assemblePlayerHurt(e));
             };
             #endregion
@@ -452,10 +452,9 @@ namespace CSGO_Analytics.src.json.parser
                     // Dumb playerpositions every positioninterval-ticks when freezetime has ended
                     if ((tick_id % positioninterval == 0) && hasFreeezEnded)
                     {
-                        foreach (var player in parser.PlayingParticipants)
+                        foreach (var player in parser.PlayingParticipants.Where(player => steppers.Contains(player)))
                         {
-                            if (steppers.Contains(player)) // Check if we already measured a position update of a player(by jump or step event)
-                                tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
+                            tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
                         }
                     }
 
