@@ -22,89 +22,68 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
+        /*
+         * TODO:
+         * Mapping CS Punkte auf Zeichenpunkte
+         * WIe wird gezeichnet? list der encounter? sind sie ausreichend organisiert?
+         * Map bewegen implementieren? zoom drag map -> Spieler und links müssen mitbewegen
+         */
         private EncounterDetectionAlgorithm enDetect;
 
-        private double scalefactor_map = 0.5;
+        private double scalefactor_map = 0.6;
         private double map_width;
         private double map_height;
+        private double map_x;
+        private double map_y;
 
-        private StackPanel mapPanel = new StackPanel();
+        private Canvas mapPanel = new Canvas();
 
-        private Dictionary<Player, StackPanel> players = new Dictionary<Player, StackPanel>();
+        private Viewbox minimap;
+
+        private Dictionary<int, PlayerShape> players = new Dictionary<int, PlayerShape>();
+        private List<LinkShape> links = new List<LinkShape>();
 
         public AnalyseDemosView()
         {
             InitializeComponent();
-            //InitializeEncounterDetection();
             InitializeCanvas();
+            //InitializeEncounterDetection();
         }
 
         private void InitializeCanvas()
         {
             canvas.ClipToBounds = true;
             BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\de_dust2_map.jpg", UriKind.Relative));
-
             map_width = bi.Width; // Save original size to apply scaling
             map_height = bi.Height;
             mapPanel.Background = new ImageBrush(bi);
 
-            mapPanel.Width = bi.Width * scalefactor_map;
-            mapPanel.Height = bi.Height * scalefactor_map;
+            minimap = new Viewbox();
+            minimap.StretchDirection = StretchDirection.Both;
+            minimap.Stretch = Stretch.Fill;
+            minimap.Child = mapPanel;
 
-            double maxX = canvas.Width - mapPanel.Width;
-            double maxY = canvas.Height - mapPanel.Height;
+            mapPanel.Width = minimap.Width = bi.Width * scalefactor_map;
+            mapPanel.Height = minimap.Height = bi.Height * scalefactor_map;
 
-            Canvas.SetLeft(mapPanel, maxX / 2);
-            Canvas.SetTop(mapPanel, maxY / 2);
-            canvas.Children.Add(mapPanel);
+            map_x = (canvas.Width - minimap.Width);
+            map_y = (canvas.Height - minimap.Height);
 
-            StackPanel p = new StackPanel();
-            p.Margin = new Thickness(0, 0, 0, 0);
-            p.Background = new SolidColorBrush(Color.FromArgb(255,255,255,0));
-            var e = new Ellipse();
-            //p.Children.Add(e);
+            Canvas.SetLeft(minimap, map_x / 2);
+            Canvas.SetTop(minimap, map_y / 2);
 
-            e.Width = 8;
-            e.Height = 8;
-            e.Margin = new Thickness(0, 0, 0, 0);
-            SolidColorBrush playerBrush = new SolidColorBrush();
-            playerBrush.Color = Color.FromArgb(255, 255, 0, 0);
-            e.Fill = playerBrush;
+            canvas.Children.Add(minimap);
 
-            var line = new Line();
-            //p.Children.Add(line);
-
-            line.Stroke = System.Windows.Media.Brushes.Green;
-            line.X1 = 0;
-            line.X2 = 50;
-            line.Y1 = 0; //TODO: calc with yaw and pitch
-            line.Y2 = 50;
-            line.StrokeThickness = 1;
-
-            mapPanel.Children.Add(p);
         }
 
         public void InitializeEncounterDetection()
         {
             this.enDetect = new EncounterDetectionAlgorithm(new json.jsonobjects.Gamestate()); // TODO fill
 
-            foreach (var  p in enDetect.getPlayers())
+            //Initalize all graphical player representations TODO: positionsumrechnung
+            foreach (var p in enDetect.getPlayers())
             {
-                var panel = new StackPanel();
-                var e = new Ellipse();
-                SolidColorBrush playerBrush = new SolidColorBrush();
-                if(p.team == "CT")
-                    playerBrush.Color = Color.FromArgb(0, 255, 0, 0);
-                else
-                    playerBrush.Color = Color.FromArgb(255, 0, 0, 0);
-
-                e.Fill = playerBrush;
-                e.Width = 3;
-                e.Height = 3;
-                panel.Children.Add(e);
-
-                this.players.Add(p, panel);
-
+                drawPlayer(p);
             }
 
             this.enDetect.run();
@@ -115,13 +94,109 @@ namespace CSGO_Analytics.src.views
                 {
                     foreach (var p in c.players)
                     {
-                        updatePlayerGraphic(p);
-                        drawLineOfSight(p);
+                        updatePlayer(p);
                     }
                 }
             }
         }
+        //
+        //
+        // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
+        //
+        //
 
+        private void drawLink(Player actor, Player reciever, ComponentType type)
+        {
+            LinkShape l = new LinkShape();
+
+            PlayerShape aps;
+            if (players.TryGetValue(actor.player_id, out aps))
+            {
+                l.X1 = aps.X;
+                l.Y1 = aps.Y;
+            }
+            else
+            {
+                Console.WriteLine("Could not map PlayerShape");
+            }
+            PlayerShape rps;
+            if (players.TryGetValue(reciever.player_id, out rps))
+            {
+                l.X2 = rps.X;
+                l.Y2 = rps.Y;
+            }
+            else
+            {
+                Console.WriteLine("Could not map PlayerShape");
+            }
+
+            l.StrokeThickness = 2;
+            l.Stroke = System.Windows.Media.Brushes.DarkRed;
+
+
+            if (type == ComponentType.COMBATLINK)
+                l.Stroke = System.Windows.Media.Brushes.DarkRed;
+            else
+                l.Stroke = System.Windows.Media.Brushes.DarkGreen;
+            if (! links.Contains(l))
+            {
+                links.Add(l);
+                mapPanel.Children.Add(l);
+            } else
+            {
+                l = null;
+            }
+
+        }
+
+        private void drawFOV()
+        {
+
+        }
+
+        private void updatePlayer(Player p)
+        {
+            PlayerShape ps;
+            if (players.TryGetValue(p.player_id, out ps))
+            {
+                ps.X = p.position.x;
+                ps.Y = p.position.y;
+                ps.Yaw = p.facing.yaw;
+            }
+            else
+            {
+                Console.WriteLine("Could not map PlayerShape");
+            }
+
+        }
+
+        private void drawPlayer(Player p)
+        {
+            var ps = new PlayerShape();
+            ps.Yaw = p.facing.yaw;
+            ps.X = p.position.x;
+            ps.Y = p.position.y;
+            ps.Radius = 4;
+            Color color;
+            if (p.getTeam() == Team.T)
+                color = Color.FromArgb(255, 255, 0, 0);
+            else
+                color = Color.FromArgb(255, 0, 0, 255);
+
+            ps.Fill = new SolidColorBrush(color);
+            ps.Stroke = new SolidColorBrush(color);
+            ps.StrokeThickness = 0.5;
+
+            //players.Add(enDetect.getID(p.player_id), ps);
+            players.Add(p.player_id, ps);
+            mapPanel.Children.Add(ps);
+        }
+
+        //
+        //
+        // EVENTS
+        //
+        //
 
         //
         //
@@ -137,110 +212,91 @@ namespace CSGO_Analytics.src.views
 
         private void zoomMap(int dt)
         {
-            //TODO: zoom not working when to high and then return to 0.5 not possible
             var newscale = scalefactor_map + dt * 0.001;
-            if (newscale >= 0.5 )
+            if (newscale >= 0.5)
                 scalefactor_map = newscale;
             else return;
 
-            mapPanel.Width = map_width * scalefactor_map;
-            mapPanel.Height = map_height * scalefactor_map;
+            minimap.Width = map_width * scalefactor_map;
+            minimap.Height = map_height * scalefactor_map;
+            var mx = current.X;
+            var my = current.Y;
+            double x = (canvas.Width - minimap.Width) / 2.0;
+            double y = (canvas.Height - minimap.Height) / 2.0;
+            Canvas.SetLeft(minimap, x);
+            Canvas.SetTop(minimap, y);
 
-            double maxX = canvas.Width - mapPanel.Width;
-            double maxY = canvas.Height - mapPanel.Height;
-            Canvas.SetLeft(mapPanel, maxX / 2);
-            Canvas.SetTop(mapPanel, maxY / 2);
         }
 
         private Point start;
         private Point current;
+        private Point focus;
 
         private bool isdragging;
 
         private void Canvas_OnLeftMouseButtonDown(object sender, MouseButtonEventArgs e)
         {
             isdragging = true;
-            start = e.GetPosition(null);
+            start = e.GetPosition(minimap);
+
+            Player p = new Player()
+            {
+                position = new math.Vector((float)current.X, (float)current.Y, 20),
+                facing = new Facing { yaw = 30, pitch = 20 },
+                player_id = 1,
+                team = "Terrorist"
+            };
+            updatePlayer(p);
+
+            
+
         }
 
-        private void Canvas_OnRightMouseButtonDown(object sender, MouseButtonEventArgs e)
+        private void Canvas_OnLefttMouseButtonUp(object sender, MouseButtonEventArgs e)
         {
             isdragging = false;
-            start = e.GetPosition(null);
         }
 
         private void Canvas_OnMouseMove(object sender, MouseEventArgs e)
         {
+            current = e.GetPosition(minimap);
+
             if (!isdragging)
                 return;
-
-            current = e.GetPosition(null);
-
             double dx = start.X - current.X;
             double dy = start.Y - current.Y;
 
-            moveMap(dx, dy);
+            //moveMap(dx, dy);
         }
-
+        int count = 0;
         private void moveMap(double dx, double dy)
         {
-            double maxX = canvas.Width - mapPanel.Width;
-            double maxY = canvas.Height - mapPanel.Height;
-            Canvas.SetLeft(mapPanel, maxX / 2 + dx);
-            Canvas.SetTop(mapPanel, maxY / 2 + dy);
+            
+                Console.WriteLine(dx);
+                Console.WriteLine(dy);
+                var x = Canvas.GetLeft(minimap);
+                var y = Canvas.GetTop(minimap);
+                Console.WriteLine(x);
+                Console.WriteLine(y);
+                var newx = x + dx * 0.3;
+                var newy = y + dy * 0.3;
+                Console.WriteLine(newx);
+                Console.WriteLine(newy);
+                Canvas.SetLeft(minimap, newx);
+                Canvas.SetTop(minimap, newy);
+                count++;
+            
         }
 
-
-        //
-        //
-        // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
-        //
-        //
-
-        private void drawLineOfSight(Player p)
-        {
-            var px = p.position.x;
-            var py = p.position.y;
-
-            var yaw = p.facing.yaw;
-            var pitch = p.facing.pitch;
-
-            var line = new Line();
-            line.Stroke = System.Windows.Media.Brushes.Red;
-            line.X1 = px;
-            line.X2 = py;
-            line.Y1 = 1; //TODO: calc with yaw and pitch
-            line.Y2 = 50;
-            line.StrokeThickness = 2;
-            mapPanel.Children.Add(line);
-        }
-
-        private void drawFOV()
-        {
-
-        }
-
-        private void updatePlayerGraphic(Player p)
-        {
-            var x = p.position.x;
-            var y = p.position.y;
-
-            //Ellipse e;
-            //if (!players.TryGetValue(p, out e))
-                //return;
-
-            //e.Margin = new Thickness(x, y, 0, 0);
-
-            //mapPanel.Children.Add(e);
-        }
-
- 
 
         public Canvas getCanvas()
         {
             return canvas;
         }
 
-        
+        private void Canvas_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            isdragging = false;
+        }
     }
 }

@@ -8,15 +8,23 @@
         Title="CS:GO Analytics" Height="800" Width="1440" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
     <Grid Background="#FFDAE4FF">
         <Grid Margin="0,80,1024,0">
-            <Menu x:Name="menu" HorizontalAlignment="Left" Height="690" VerticalAlignment="Top" Width="250" Margin="0,1,0,0">
+            <Menu x:Name="menu" HorizontalAlignment="Left" Height="762" VerticalAlignment="Top" Width="250" Margin="0,-71,0,0">
                 <MenuItem Header="Manage Demos" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff" Click="manage_click" />
                 <MenuItem Header="Analyse Demos" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff" Click="analyse_click" />
                 <MenuItem Header="Generate Analysisvideo" Height="45" Width="250" Background="#FF3A3A3A" Foreground="#ffffff"/>
                 <MenuItem Header="Impressum" Height="45" Width="250" Margin="0,500,0,0" VerticalAlignment="Bottom"/>
             </Menu>
         </Grid>
-        <Grid HorizontalAlignment="Left" Height="771" VerticalAlignment="Top" Width="1274">
-            <DockPanel HorizontalAlignment="Left" Height="660" LastChildFill="False" Margin="264,86,-130,0" VerticalAlignment="Top" Width="1140">
+        <Grid HorizontalAlignment="Left" Height="770" VerticalAlignment="Top" Width="1180" Margin="254,0,0,0">
+            <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" Margin="10,10,0,0" VerticalAlignment="Top" Width="1148" Background="#FFF70000" RenderTransformOrigin="0.5,0.5">
+                <DockPanel.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform/>
+                        <SkewTransform AngleY="0.05"/>
+                        <RotateTransform/>
+                        <TranslateTransform Y="0.499"/>
+                    </TransformGroup>
+                </DockPanel.RenderTransform>
                 <Frame x:Name="_mainFrame" />
             </DockPanel>
         </Grid>

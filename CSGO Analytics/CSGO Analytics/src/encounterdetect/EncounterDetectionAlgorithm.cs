@@ -123,6 +123,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int mCount = 0;
         int nCount = 0;
         int uCount = 0;
+        int iCount = 0;
 
         /// <summary>
         /// 
@@ -203,6 +204,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
             Console.WriteLine("Weaponfire-Event victims found: " + wfCount);
+            Console.WriteLine("Weaponfire-Events inserted into existing components: " + iCount);
             Console.WriteLine("\n Encounters found: " + closed_encounters.Count);
 
             watch.Stop();
@@ -236,8 +238,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     int dt = e.tick_id - comp.tick_id;
                     if (dt <= tau)
                     {
-                        // -> Test if c and the component to test
-                        // Intersection of player(Vereinigung)
+                        // Test if c and comp have at least two players from different teams in common -> Intersection of lists
                         var intersectPlayers = c.players.Intersect(comp.players).ToList();
 
                         if (intersectPlayers.Count < 2)
@@ -252,7 +253,7 @@ namespace CSGO_Analytics.src.encounterdetect
                             if (knownteam != Team.None && knownteam != p.getTeam()) 
                             {
                                 predecessors.Add(e);
-                                registered = true;
+                                registered = true; // Stop multiple adding of e
                                 break;
 
                             }
@@ -299,7 +300,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Weaponfire events that are waiting for their check.
         /// </summary>
-        private List<WeaponFire> pendingWeaponFireEvents = new List<WeaponFire>();
+        private Dictionary<WeaponFire, int> pendingWeaponFireEvents = new Dictionary<WeaponFire, int>();
 
         /// <summary>
         /// Active nades such as smoke and fire nades which have not ended.
@@ -335,7 +336,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         reciever = ph.victim;
                         type = ComponentType.COMBATLINK;
 
-                        registeredHurtEvents.Add(ph, tick.tick_id);
+                        handleIncomingHurtEvent(ph, tick.tick_id);
 
                         break;
                     case "player_killed":
@@ -346,7 +347,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         break;
                     case "weapon_fire":
                         WeaponFire wf = (WeaponFire)g;
-                        var victim = searchCandidate(wf, tick.tick_id);
+                        var victim = searchVictimCandidate(wf, tick.tick_id);
 
                         if (victim == null)
                             continue;
@@ -405,15 +406,43 @@ namespace CSGO_Analytics.src.encounterdetect
             return combcomp;
         }
 
-        private List<Player> candidates = new List<Player>();
+        private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id)
+        {
+            registeredHurtEvents.Add(ph, tick_id);
 
+            for (int index = pendingWeaponFireEvents.Count - 1; index >= 0; index--)
+            {
+                var item = pendingWeaponFireEvents.ElementAt(index);
+                var weaponfireevent = item.Key;
+                var wftick_id = item.Value;
+
+                int tick_dt = Math.Abs(wftick_id - tick_id);
+                if (tick_dt * tickrate / 1000 > 20)
+                {
+                    //If more than 20 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
+                    pendingWeaponFireEvents.Remove(weaponfireevent);
+                    continue;
+                }
+
+                if (ph.actor.Equals(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
+                {
+                    //TODO: insert the link which will be created into the right component
+                    iCount++;
+                    pendingWeaponFireEvents.Remove(weaponfireevent); // Delete the weaponfire event from the queue
+                }
+                
+            }
+        }
+
+        private List<Player> candidates = new List<Player>();
         /// <summary>
         /// Searches the player that has most probable Hurt another player with the given weapon fire event
         /// </summary>
         /// <param name="wf"></param>
         /// <returns></returns>
-        private Player searchCandidate(WeaponFire wf, int tick_id)
+        private Player searchVictimCandidate(WeaponFire wf, int tick_id)
         {
+            Console.WriteLine(registeredHurtEvents.Count);
             // This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor
             // And in most cases a player fires and misses and theres a long time between he might hit the seen opponent because he hides. But still he saw and shot at him. these events are lost here
             for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
@@ -422,32 +451,37 @@ namespace CSGO_Analytics.src.encounterdetect
                 var hurtevent = item.Key;
                 var htick_id = item.Value;
 
-                int tick_dt = htick_id - tick_id;
-                if (tick_dt * tickrate > 20)
+                int tick_dt = Math.Abs(htick_id - tick_id);
+                if (tick_dt * tickrate / 1000 > 20)
                 {
                     //If more than 20 seconds are between a shoot and a hit. this hurtevent is irrelevant
                     registeredHurtEvents.Remove(hurtevent);
                     continue;
                 }
 
-                if (wf.actor.Equals(hurtevent.actor))
+                if (wf.actor.Equals(hurtevent.actor)) // If we find a actor that hurt somebody this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 {
                     candidates.Add(hurtevent.victim);
                     registeredHurtEvents.Remove(hurtevent);
+                    break;
+                } else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
+                {
+                    pendingWeaponFireEvents.Add(wf, tick_id);
+                    break;
+
                 }
             }
 
 
             if (candidates.Count == 0)
             {
-                candidates.Clear();
                 return null;
             }
             //Console.WriteLine("Candidates found: " + candidates.Count);
             //Console.ReadLine();
-            var reciever = candidates[0];
+            var victim = candidates[0]; //TODO: search probablest attacker!
             candidates.Clear();
-            return reciever; //TODO: search probablest attacker!
+            return victim; 
         }
 
 
