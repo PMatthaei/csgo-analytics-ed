@@ -73,7 +73,7 @@ namespace CSGO_Analytics.src.views
         {
             get
             {
-                aimPoint = new Point(X + 100, Y);
+                aimPoint = new Point(X + 100, Y );
                 Geometry line = new LineGeometry(new Point(X, Y), aimPoint);
                 Geometry e = new EllipseGeometry(new Point(X, Y), Radius, Radius);
                 GeometryGroup combined = new GeometryGroup();

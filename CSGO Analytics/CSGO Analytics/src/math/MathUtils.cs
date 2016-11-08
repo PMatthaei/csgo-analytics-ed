@@ -3,21 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Shapes;
 
 namespace CSGO_Analytics.src.math
 {
     class MathUtils
     {
-        public static float tickrate;
+
 
         /// <summary>
-        /// Returns the time at which a tick at tickid happend.
+        /// Converts a CS:GO Position fetched from a replay file into a coordinate for our UI
         /// </summary>
-        /// <param name="tickid"></param>
+        /// <param name="p"></param>
         /// <returns></returns>
-        public static float TickToTime(int tickid)
+        public static Vector CSPositionToUIPosition(Vector p)
         {
-            return tickid * tickrate;
+            var x = p.x;
+            var y = p.y;
+            return new Vector(x, y, 0);
         }
 
         /// <summary>
@@ -47,9 +50,22 @@ namespace CSGO_Analytics.src.math
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
-        public bool isFacing(Vector v, Vector v2)
+        public bool isFacing(Vector actorV, float actorYaw, Vector recieverV)
         {
-            //Calculate dot. If angle is impossible to see -> return false
+            double dx = recieverV.x - actorV.x;
+            double dy = recieverV.y - actorV.y;
+
+            var aimX = (float)(actorV.x + Math.Cos(actorYaw)); // Aim vector from Yaw
+            var aimY = (float)(actorV.y + Math.Sin(actorYaw));
+
+            double aimdx = aimX - actorV.x;
+            double aimdy = aimY - actorV.y;
+
+            //double theta = Math.Atan2(dy, dx);
+            double theta = toDegree( ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)) );
+
+            if (theta < 45 && theta > -45)
+                return true;
             return false;
         }
 
@@ -61,22 +77,93 @@ namespace CSGO_Analytics.src.math
         /// <param name="angleH"></param>
         /// <param name="posP2"></param>
         /// <returns></returns>
-        public static bool FOVcontainsPoint(Vector posP1, float FOVVertical, float FOVHorizontal, Vector posP2)
+        public static bool FOVcontainsPoint(Vector actorV, float actorYaw, Vector recieverV, float FOVVertical)
         {
+            double dx = recieverV.x - actorV.x;
+            double dy = recieverV.y - actorV.y;
+
+            var aimX = (float)(actorV.x + Math.Cos(actorYaw)); // Aim vector from Yaw
+            var aimY = (float)(actorV.y + Math.Sin(actorYaw));
+
+            double aimdx = aimX - actorV.x;
+            double aimdy = aimY - actorV.y;
+
+            //double theta = Math.Atan2(dy, dx);
+            double theta = toDegree(ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
+
+            if (theta < FOVVertical && theta > -FOVVertical)
+                return true;
             return false;
         }
 
         /// <summary>
-        /// Tests if a vector clips a sphere (Smoke grenade)
+        /// Tests if a vector clips a sphere simplified as a Ellipse/Circle(Smoke grenade)
         /// </summary>
-        /// <param name="posP1"></param>
-        /// <param name="angleV"></param>
-        /// <param name="angleH"></param>
-        /// <param name="posP2"></param>
+        /// <param name="sphere"></param>
+        /// <param name="actorV"></param>
+        /// <param name="actorYaw"></param>
         /// <returns></returns>
-        public static bool vectorClipsSphere()
+        public static bool vectorClipsSphere2D(Ellipse sphere, Vector actorV, float actorYaw)
+        {
+            var actorposx = actorV.x; // Position of player
+            var actorposy = actorV.y;
+
+            var aimX = (float)(actorposx + Math.Cos(actorYaw)); // Aim vector from Yaw
+            var aimY = (float)(actorposy + Math.Sin(actorYaw));
+
+            var sphereCenterX = sphere.Margin.Left; // Center of the nade
+            var sphereCenterY = sphere.Margin.Top;
+
+            var sphereRadius = Math.Min(sphere.Width, sphere.Height); // Radius of the nade
+
+
+            double dx = aimX - actorV.y;
+            double dy = aimY - actorV.y;
+            double theta = Math.Atan2(dy, dx);
+            double r = getEuclidDistance2D(actorV, new Vector(aimX, aimY, 0)) - ((sphereRadius * sphereRadius) / Math.Sqrt(Math.Pow(sphereRadius * Math.Cos(theta), 2) + Math.Pow(sphereRadius * Math.Sin(theta), 2)));
+            //return new Vector((float)(actorposx + r * Math.Cos(theta)), (float)(actorposy + r * Math.Sin(theta)), 0);
+
+            return false;
+        }
+
+
+        /// <summary>
+        /// Tests if a vector clips a sphere in 3D(Smoke grenade)
+        /// </summary>
+        /// <param name="sphere"></param>
+        /// <param name="actorV"></param>
+        /// <param name="actorYaw"></param>
+        /// <returns></returns>
+        public static bool vectorClipsSphere3D()
         {
             return false;
         }
+
+
+        //
+        //
+        // BASICS
+        //
+        //
+        private static double ScalarProduct(Vector v1, Vector v2)
+        {
+            return (v1.x * v2.x + v1.y * v2.y - v1.z * v2.z) / (v1.Absolute() * v2.Absolute());
+        }
+
+        private static Vector CrossProduct(Vector v1, Vector v2)
+        {
+            return new Vector((v1.y * v2.z - v1.z * v2.y)  ,  (v1.z* v2.x -v1.x * v2.z)  ,  (v1.x* v2.y -v1.y * v2.x) );
+        }
+
+        private static double toDegree(double radian)
+        {
+            return radian * 180.0 / Math.PI;
+        }
+
+        private static double toRadian(double degree)
+        {
+            return degree * Math.PI / 180.0;
+        }
     }
+
 }

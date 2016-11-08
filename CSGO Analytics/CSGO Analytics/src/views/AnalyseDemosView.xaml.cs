@@ -14,6 +14,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.views
 {
@@ -22,34 +23,49 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
-        /*
-         * TODO:
-         * Mapping CS Punkte auf Zeichenpunkte
-         * WIe wird gezeichnet? list der encounter? sind sie ausreichend organisiert?
-         * Map bewegen implementieren? zoom drag map -> Spieler und links müssen mitbewegen
-         */
+
         private EncounterDetectionAlgorithm enDetect;
 
-        private double scalefactor_map = 0.6;
+        private double scalefactor_map;
         private double map_width;
         private double map_height;
         private double map_x;
         private double map_y;
 
+        /// <summary>
+        /// Panel where all players and links are being drawn
+        /// </summary>
         private Canvas mapPanel = new Canvas();
 
+        /// <summary>
+        /// Component (holding mapPanel) used to drag around and zoom in
+        /// </summary>
         private Viewbox minimap;
 
+        /// <summary>
+        /// All players drawn on the minimap
+        /// </summary>
         private Dictionary<int, PlayerShape> players = new Dictionary<int, PlayerShape>();
+
+        /// <summary>
+        /// All links between players that are currently drawn
+        /// </summary>
         private List<LinkShape> links = new List<LinkShape>();
+
+        private List<Ellipse> activeNades = new List<Ellipse>();
 
         public AnalyseDemosView()
         {
             InitializeComponent();
+
             InitializeCanvas();
             //InitializeEncounterDetection();
         }
 
+
+        /// <summary>
+        /// MapPanel and minimap viewbox are initalized
+        /// </summary>
         private void InitializeCanvas()
         {
             canvas.ClipToBounds = true;
@@ -58,6 +74,7 @@ namespace CSGO_Analytics.src.views
             map_height = bi.Height;
             mapPanel.Background = new ImageBrush(bi);
 
+            scalefactor_map = canvas.Height / map_height;
             minimap = new Viewbox();
             minimap.StretchDirection = StretchDirection.Both;
             minimap.Stretch = Stretch.Fill;
@@ -66,28 +83,39 @@ namespace CSGO_Analytics.src.views
             mapPanel.Width = minimap.Width = bi.Width * scalefactor_map;
             mapPanel.Height = minimap.Height = bi.Height * scalefactor_map;
 
-            map_x = (canvas.Width - minimap.Width);
-            map_y = (canvas.Height - minimap.Height);
+            Canvas.SetLeft(minimap, (canvas.Width - minimap.Width) / 2);
+            Canvas.SetTop(minimap, (canvas.Height - minimap.Height) / 2);
 
-            Canvas.SetLeft(minimap, map_x / 2);
-            Canvas.SetTop(minimap, map_y / 2);
+            Player p = new Player()
+            {
+                position = new math.Vector((float)current.X, (float)current.Y, 20),
+                facing = new Facing { yaw = 90, pitch = 20 },
+                player_id = 1,
+                team = "Terrorist"
+            };
 
+            drawPlayer(p);
             canvas.Children.Add(minimap);
 
         }
 
         public void InitializeEncounterDetection()
         {
-            this.enDetect = new EncounterDetectionAlgorithm(new json.jsonobjects.Gamestate()); // TODO fill
+            this.enDetect = new EncounterDetectionAlgorithm(new json.jsonobjects.Gamestate()); // Init Encounter Detection
+                                                                                               
+            this.enDetect.run(); // Run the algorithm
 
-            //Initalize all graphical player representations TODO: positionsumrechnung
+            // Initalize all graphical player representations default/start
             foreach (var p in enDetect.getPlayers())
             {
                 drawPlayer(p);
             }
 
-            this.enDetect.run();
+        }
 
+        private void playMatch()
+        {
+            // Display each encounter with its links and players
             foreach (var en in this.enDetect.getEncounters())
             {
                 foreach (var c in en.cs)
@@ -99,6 +127,9 @@ namespace CSGO_Analytics.src.views
                 }
             }
         }
+
+
+
         //
         //
         // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
@@ -107,13 +138,13 @@ namespace CSGO_Analytics.src.views
 
         private void drawLink(Player actor, Player reciever, ComponentType type)
         {
-            LinkShape l = new LinkShape();
+            LinkShape ls = new LinkShape();
 
             PlayerShape aps;
             if (players.TryGetValue(actor.player_id, out aps))
             {
-                l.X1 = aps.X;
-                l.Y1 = aps.Y;
+                ls.X1 = aps.X;
+                ls.Y1 = aps.Y;
             }
             else
             {
@@ -122,51 +153,32 @@ namespace CSGO_Analytics.src.views
             PlayerShape rps;
             if (players.TryGetValue(reciever.player_id, out rps))
             {
-                l.X2 = rps.X;
-                l.Y2 = rps.Y;
+                ls.X2 = rps.X;
+                ls.Y2 = rps.Y;
             }
             else
             {
                 Console.WriteLine("Could not map PlayerShape");
             }
 
-            l.StrokeThickness = 2;
-            l.Stroke = System.Windows.Media.Brushes.DarkRed;
+            ls.StrokeThickness = 2;
+            ls.Stroke = System.Windows.Media.Brushes.DarkRed;
 
 
             if (type == ComponentType.COMBATLINK)
-                l.Stroke = System.Windows.Media.Brushes.DarkRed;
+                ls.Stroke = System.Windows.Media.Brushes.DarkRed;
             else
-                l.Stroke = System.Windows.Media.Brushes.DarkGreen;
-            if (! links.Contains(l))
-            {
-                links.Add(l);
-                mapPanel.Children.Add(l);
-            } else
-            {
-                l = null;
-            }
+                ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
 
+            if(!links.Contains(ls))
+            {
+                links.Add(ls);
+                mapPanel.Children.Add(ls);
+            }
         }
 
-        private void drawFOV()
+        private void updateLink(Player actor)
         {
-
-        }
-
-        private void updatePlayer(Player p)
-        {
-            PlayerShape ps;
-            if (players.TryGetValue(p.player_id, out ps))
-            {
-                ps.X = p.position.x;
-                ps.Y = p.position.y;
-                ps.Yaw = p.facing.yaw;
-            }
-            else
-            {
-                Console.WriteLine("Could not map PlayerShape");
-            }
 
         }
 
@@ -174,8 +186,8 @@ namespace CSGO_Analytics.src.views
         {
             var ps = new PlayerShape();
             ps.Yaw = p.facing.yaw;
-            ps.X = p.position.x;
-            ps.Y = p.position.y;
+            ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
+            ps.Y = MathUtils.CSPositionToUIPosition(p.position).y;
             ps.Radius = 4;
             Color color;
             if (p.getTeam() == Team.T)
@@ -191,6 +203,25 @@ namespace CSGO_Analytics.src.views
             players.Add(p.player_id, ps);
             mapPanel.Children.Add(ps);
         }
+
+
+        private void updatePlayer(Player p)
+        {
+            //if(p.) // TODO: test if player is dead -> no updates and let him look different
+            PlayerShape ps;
+            if (players.TryGetValue(p.player_id, out ps))
+            {
+                ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
+                ps.Y = MathUtils.CSPositionToUIPosition(p.position).y;
+                ps.Yaw = p.facing.yaw;
+            }
+            else
+            {
+                Console.WriteLine("Could not map PlayerShape");
+            }
+
+       }
+
 
         //
         //
@@ -242,7 +273,8 @@ namespace CSGO_Analytics.src.views
             Player p = new Player()
             {
                 position = new math.Vector((float)current.X, (float)current.Y, 20),
-                facing = new Facing { yaw = 30, pitch = 20 },
+                facing = new Facing { yaw = 45, pitch = 20 },
+
                 player_id = 1,
                 team = "Terrorist"
             };
@@ -268,6 +300,7 @@ namespace CSGO_Analytics.src.views
 
             //moveMap(dx, dy);
         }
+
         int count = 0;
         private void moveMap(double dx, double dy)
         {
@@ -288,15 +321,22 @@ namespace CSGO_Analytics.src.views
             
         }
 
+        private void Canvas_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            isdragging = false;
+        }
 
         public Canvas getCanvas()
         {
             return canvas;
         }
 
-        private void Canvas_OnMouseLeave(object sender, MouseEventArgs e)
-        {
-            isdragging = false;
-        }
+
+        //
+        //
+        // HELPING FUNCTIONS
+        //
+        //
+
     }
 }

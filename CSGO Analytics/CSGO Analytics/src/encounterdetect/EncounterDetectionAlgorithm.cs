@@ -96,6 +96,11 @@ namespace CSGO_Analytics.src.encounterdetect
             return players;
         }
 
+        public List<Encounter> getEncounters()
+        {
+            return closed_encounters;
+        }
+
         /// <summary>
         /// Returns a list of all ticks
         /// </summary>
@@ -112,10 +117,17 @@ namespace CSGO_Analytics.src.encounterdetect
             return ticks;
         }
 
-
+        /// <summary>
+        /// All currently running, not timed out, encounters
+        /// </summary>
         private List<Encounter> open_encounters = new List<Encounter>();
+
+        /// <summary>
+        /// Timed out encounters
+        /// </summary>
         private List<Encounter> closed_encounters = new List<Encounter>();
-        private List<Encounter> predecessors = new List<Encounter>();
+
+
 
 
         int pCount = 0;
@@ -126,6 +138,9 @@ namespace CSGO_Analytics.src.encounterdetect
         int uCount = 0;
         int iCount = 0;
 
+
+
+        private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
         /// 
         /// </summary>
@@ -204,10 +219,11 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("New Encounter occured: " + nCount);
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
-            Console.WriteLine("Weaponfire-Events total: " + wfeCount);
+            Console.WriteLine("\nWeaponfire-Events total: " + wfeCount);
             Console.WriteLine("Weaponfire-Event where victims were found: " + wfCount);
             Console.WriteLine("Weaponfire-Events inserted into existing components: " + iCount);
-            Console.WriteLine("\n  Encounters found: " + closed_encounters.Count);
+            Console.WriteLine("\nNades tested for Supportlinks: " + activeNades.Count);
+            Console.WriteLine("\n\n  Encounters found: " + closed_encounters.Count);
 
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
@@ -217,10 +233,6 @@ namespace CSGO_Analytics.src.encounterdetect
             //tickstream.Dispose();
         }
 
-        public List<Encounter> getEncounters()
-        {
-            return closed_encounters;
-        }
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -235,7 +247,7 @@ namespace CSGO_Analytics.src.encounterdetect
             foreach (var e in open_encounters.Where(e => e.tick_id - comp.tick_id <= tau))
             {
                 bool registered = false;
-                foreach (var c in e.cs) //Really iterate over components?
+                foreach (var c in e.cs) //Really iterate over components? -> yes because we need c.players
                 {
 
                     // Test if c and comp have at least two players from different teams in common -> Intersection of lists
@@ -258,10 +270,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         }
                     }
-
                     if (registered) break;
-
-
 
                 }
             }
@@ -370,11 +379,11 @@ namespace CSGO_Analytics.src.encounterdetect
                         FlashNade flash = (FlashNade)g;
                         type = ComponentType.SUPPORTLINK;
                         // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember 
-                        foreach (var player in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher
+                        foreach (var flashedEnemyplayer in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher
                         {
-                            foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != player.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
+                            foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != flashedEnemyplayer.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
                             {
-
+                                //testSight(flashedEnemyplayer, counterplayer); // Test if players can see each other
                             }
                         }
                         continue;
@@ -386,16 +395,18 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "smoke_ended":
                     case "firenade_ended":
                         NadeEvents timedNadeEnd = (NadeEvents)g;
-                        activeNades.Remove(timedNadeEnd);
+                        //activeNades.Remove(timedNadeEnd);
                         continue;
-                    default: // Test for supportlinks created by nades as these cant be read from events directly
-                        List<Player> supportedPlayers = getSupportedPlayers();
-                        foreach (var supportreciever in supportedPlayers)
-                        {
-                            Link link = new Link(g.actor, supportreciever, ComponentType.SUPPORTLINK, Direction.DEFAULT);
-                            links.Add(link);
-                        }
+                    default:
                         continue;
+                }
+
+                // Test for supportlinks created by nades as these cant be read from events directly
+                List<Player> supportedPlayers = getSupportedPlayers();
+                foreach (var supportreciever in supportedPlayers)
+                {
+                    Link link = new Link(g.actor, supportreciever, ComponentType.SUPPORTLINK, Direction.DEFAULT);
+                    links.Add(link);
                 }
 
                 int actor_id = getID(g.actor.player_id);
@@ -453,7 +464,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var wftick_id = item.Value;
 
                 int tick_dt = Math.Abs(wftick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > 20)
+                if (tick_dt * tickrate / 1000 > 4)
                 {
                     //If more than 20 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
                     pendingWeaponFireEvents.Remove(weaponfireevent);
@@ -466,8 +477,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     foreach (var en in open_encounters)
                     {
-                        // If more than 8 sec between encounter and weaponfire link -> next 
-                        foreach (var comp in en.cs.Where(comp => (comp.tick_id - wftick_id) * tickrate > 8))
+                        foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
                         {
                             iCount++;
                             comp.links.Add(insertLink);
