@@ -98,6 +98,11 @@ namespace CSGO_Analytics.src.data.gameobjects
         {
             return new Facing() { yaw = yaw, pitch = pitch };
         }
+
+        internal float[] getAsArray()
+        {
+            return new float[] { yaw, pitch };
+        }
     }
 
     class PlayerDetailed : Player

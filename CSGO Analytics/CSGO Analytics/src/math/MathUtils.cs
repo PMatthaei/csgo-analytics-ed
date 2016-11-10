@@ -18,8 +18,8 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static Vector CSPositionToUIPosition(Vector p)
         {
-            var x = p.x;
-            var y = p.y;
+            var x = p.x  / 10.0f + 200;
+            var y = p.y / 10.0f + 500;
             return new Vector(x, y, 0);
         }
 

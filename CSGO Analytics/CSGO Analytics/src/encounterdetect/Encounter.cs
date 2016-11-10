@@ -27,27 +27,47 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             this.tick_id = comp.tick_id;
             cs = new List<CombatComponent>();
-            cs.Add(comp);
+            AddComponent(comp);
         }
 
         public Encounter(int tick_id, List<CombatComponent> newcs)
         {
             this.tick_id = tick_id;
-            cs = newcs;
+            cs = newcs.OrderBy(x => x.tick_id).ToList();
+            cs.AsParallel().ForAll(x => x.parent = this);
         }
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="update"></param>
         public void update(CombatComponent update)
         {
-            cs.Add(update);
+            AddComponent(update);
+            cs = cs.OrderBy(x => x.tick_id).ToList();
+
             //TODO: reset timeout?
+        }
+
+        public void AddComponent(CombatComponent comp)
+        {
+            cs.Add(comp);
+            comp.parent= this;
         }
 
         public void orderByTick()
         {
             cs.OrderBy(x => x.tick_id); //TODO evtl descending?
+        }
+
+        public override string ToString()
+        {
+            var s = "Encounter-TickID: " + tick_id + "\n";
+            foreach (var c in cs)
+            {
+                s += c.ToString() + "\n";
+            }
+            return s;
         }
 
         override public bool Equals(object other)
@@ -70,5 +90,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             return base.GetHashCode();
         }
+
+
     }
 }

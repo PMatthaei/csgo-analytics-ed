@@ -12,6 +12,8 @@ namespace CSGO_Analytics.src.encounterdetect
     /// </summary>
     public class CombatComponent
     {
+        public Encounter parent; // "Pointer" to encounter this component is part of
+
         /// <summary>
         /// Set of players participating in the component
         /// </summary>
@@ -26,11 +28,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Tick in which this component was built
         /// </summary>
         public int tick_id;
-
-        /// <summary>
-        /// Time to die for this component
-        /// </summary>
-        private float TTD;
 
         public CombatComponent(int tick_id)
         {
@@ -57,12 +54,11 @@ namespace CSGO_Analytics.src.encounterdetect
             players.Clear();
             links.Clear();
             tick_id = -1; // -1 indicates a non-initalized tickid as we wont allocate negative tickids
-            TTD = -1;
         }
 
         override public string ToString()
         {
-            string s = "Component: \n";
+            string s = "Component-ID: "+ tick_id +"\n";
             foreach (var l in links)
             {
                 s += l.ToString() + "\n";
@@ -91,5 +87,6 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             return base.GetHashCode();
         }
+
     }
 }

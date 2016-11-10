@@ -34,5 +34,15 @@ namespace CSGO_Analytics
         {
             _mainFrame.NavigationService.Navigate(new Uri("src/views/AnalyseDemosView.xaml", UriKind.Relative));
         }
+
+        private void generatevideo_click(object sender, RoutedEventArgs e)
+        {
+            _mainFrame.NavigationService.Navigate(new Uri("src/views/AnalyseDemosView.xaml", UriKind.Relative));
+        }
+
+        private void impressum_click(object sender, RoutedEventArgs e)
+        {
+            _mainFrame.NavigationService.Navigate(new Uri("src/views/Impressum.xaml", UriKind.Relative));
+        }
     }
 }

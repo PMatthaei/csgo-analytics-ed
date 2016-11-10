@@ -33,7 +33,7 @@ namespace csgo_analytics_console
                     highdetailplayer = true,
                     positioninterval = 8,
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-            };
+                };
 
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
                 using (var reader = new StreamReader(path.Replace(".dem", ".json")))

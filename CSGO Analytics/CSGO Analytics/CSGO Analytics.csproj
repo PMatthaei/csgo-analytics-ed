@@ -75,6 +75,7 @@
     <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
+    <Compile Include="src\encounterdetect\MatchReplay.cs" />
     <Compile Include="src\math\MathUtils.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\json\GameStateGenerator.cs" />
@@ -85,6 +86,10 @@
     <Compile Include="src\postgres\CommandText.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
     <Page Include="src\views\AnalyseDemosView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\views\Impressum.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -102,6 +107,9 @@
     </Compile>
     <Compile Include="src\views\AnalyseDemosView.xaml.cs">
       <DependentUpon>AnalyseDemosView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\views\Impressum.xaml.cs">
+      <DependentUpon>Impressum.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\views\ManageDemosView.xaml.cs">
       <DependentUpon>ManageDemosView.xaml</DependentUpon>

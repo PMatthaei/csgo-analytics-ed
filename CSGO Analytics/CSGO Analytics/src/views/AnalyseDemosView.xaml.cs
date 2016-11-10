@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,6 +17,10 @@ using System.Windows.Shapes;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.math;
+using DP = DemoInfoModded;
+using Newtonsoft.Json;
+using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.json.parser;
 
 namespace CSGO_Analytics.src.views
 {
@@ -26,11 +32,24 @@ namespace CSGO_Analytics.src.views
 
         private EncounterDetectionAlgorithm enDetect;
 
+        private MatchReplay matchreplay;
+
+        //
+        // MAP VARIABLES
+        //
         private double scalefactor_map;
         private double map_width;
         private double map_height;
         private double map_x;
         private double map_y;
+
+
+        private float tickrate;
+
+
+        //
+        // VISUALS
+        //
 
         /// <summary>
         /// Panel where all players and links are being drawn
@@ -52,14 +71,45 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         private List<LinkShape> links = new List<LinkShape>();
 
+        /// <summary>
+        /// Circles representing active nades(smoke=grey, fire=orange, henade=red, flash=white, decoy=outline only)
+        /// </summary>
         private List<Ellipse> activeNades = new List<Ellipse>();
+
+
 
         public AnalyseDemosView()
         {
+            var path = "match_0.dem";
+            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            {
+                ParseTask ptask = new ParseTask
+                {
+                    destpath = path,
+                    srcpath = path,
+                    usepretty = true,
+                    showsteps = true,
+                    specialevents = true,
+                    highdetailplayer = true,
+                    positioninterval = 8,
+                    settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                };
+            }
+            GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+            */
+
+            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+            {
+                var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                enDetect = new EncounterDetectionAlgorithm(deserializedGamestate);
+            }
+
+
             InitializeComponent();
 
             InitializeCanvas();
-            //InitializeEncounterDetection();
+
+            InitializeEncounterDetection();
         }
 
 
@@ -86,24 +136,15 @@ namespace CSGO_Analytics.src.views
             Canvas.SetLeft(minimap, (canvas.Width - minimap.Width) / 2);
             Canvas.SetTop(minimap, (canvas.Height - minimap.Height) / 2);
 
-            Player p = new Player()
-            {
-                position = new math.Vector((float)current.X, (float)current.Y, 20),
-                facing = new Facing { yaw = 90, pitch = 20 },
-                player_id = 1,
-                team = "Terrorist"
-            };
-
-            drawPlayer(p);
             canvas.Children.Add(minimap);
 
         }
 
         public void InitializeEncounterDetection()
         {
-            this.enDetect = new EncounterDetectionAlgorithm(new json.jsonobjects.Gamestate()); // Init Encounter Detection
-                                                                                               
-            this.enDetect.run(); // Run the algorithm
+            this.tickrate = enDetect.tickrate;
+
+            this.matchreplay = this.enDetect.run(); // Run the algorithm
 
             // Initalize all graphical player representations default/start
             foreach (var p in enDetect.getPlayers())
@@ -113,18 +154,34 @@ namespace CSGO_Analytics.src.views
 
         }
 
+
         private void playMatch()
         {
-            // Display each encounter with its links and players
-            foreach (var en in this.enDetect.getEncounters())
+
+            if (matchreplay == null)
+                return;
+            int last_tickid = 0;
+            foreach (var tuple in matchreplay.getReplayData())
             {
-                foreach (var c in en.cs)
+                Tick tick = tuple.Item1;
+                CombatComponent comp = tuple.Item2;
+
+                if (last_tickid == 0)
+                    last_tickid = tick.tick_id;
+                int dt = tick.tick_id - last_tickid;
+
+                int passedTime = (int)(dt * tickrate);
+
+                foreach (var p in tick.getUpdatedPlayers())
                 {
-                    foreach (var p in c.players)
-                    {
-                        updatePlayer(p);
-                    }
+                    //Console.WriteLine("Update player");
+                    drawPlayer(p); // PRoblems with threading as here the ui-thread will be called because shape properties are updated
+                    //matchThread.Join();
+
                 }
+
+                last_tickid = tick.tick_id;
+
             }
         }
 
@@ -170,7 +227,7 @@ namespace CSGO_Analytics.src.views
             else
                 ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
 
-            if(!links.Contains(ls))
+            if (!links.Contains(ls))
             {
                 links.Add(ls);
                 mapPanel.Children.Add(ls);
@@ -199,18 +256,19 @@ namespace CSGO_Analytics.src.views
             ps.Stroke = new SolidColorBrush(color);
             ps.StrokeThickness = 0.5;
 
-            //players.Add(enDetect.getID(p.player_id), ps);
-            players.Add(p.player_id, ps);
+            players.Add(enDetect.getID(p.player_id), ps);
             mapPanel.Children.Add(ps);
         }
 
 
         private void updatePlayer(Player p)
         {
+
             //if(p.) // TODO: test if player is dead -> no updates and let him look different
             PlayerShape ps;
-            if (players.TryGetValue(p.player_id, out ps))
+            if (players.TryGetValue(enDetect.getID(p.player_id), out ps))
             {
+
                 ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
                 ps.Y = MathUtils.CSPositionToUIPosition(p.position).y;
                 ps.Yaw = p.facing.yaw;
@@ -220,7 +278,7 @@ namespace CSGO_Analytics.src.views
                 Console.WriteLine("Could not map PlayerShape");
             }
 
-       }
+        }
 
 
         //
@@ -265,22 +323,16 @@ namespace CSGO_Analytics.src.views
 
         private bool isdragging;
 
+        Thread matchThread;
+
         private void Canvas_OnLeftMouseButtonDown(object sender, MouseButtonEventArgs e)
         {
             isdragging = true;
+
+            matchThread = new Thread(new ThreadStart(playMatch));
+            matchThread.Start();
+
             start = e.GetPosition(minimap);
-
-            Player p = new Player()
-            {
-                position = new math.Vector((float)current.X, (float)current.Y, 20),
-                facing = new Facing { yaw = 45, pitch = 20 },
-
-                player_id = 1,
-                team = "Terrorist"
-            };
-            updatePlayer(p);
-
-            
 
         }
 
@@ -302,23 +354,24 @@ namespace CSGO_Analytics.src.views
         }
 
         int count = 0;
+
         private void moveMap(double dx, double dy)
         {
-            
-                Console.WriteLine(dx);
-                Console.WriteLine(dy);
-                var x = Canvas.GetLeft(minimap);
-                var y = Canvas.GetTop(minimap);
-                Console.WriteLine(x);
-                Console.WriteLine(y);
-                var newx = x + dx * 0.3;
-                var newy = y + dy * 0.3;
-                Console.WriteLine(newx);
-                Console.WriteLine(newy);
-                Canvas.SetLeft(minimap, newx);
-                Canvas.SetTop(minimap, newy);
-                count++;
-            
+
+            Console.WriteLine(dx);
+            Console.WriteLine(dy);
+            var x = Canvas.GetLeft(minimap);
+            var y = Canvas.GetTop(minimap);
+            Console.WriteLine(x);
+            Console.WriteLine(y);
+            var newx = x + dx * 0.3;
+            var newy = y + dy * 0.3;
+            Console.WriteLine(newx);
+            Console.WriteLine(newy);
+            Canvas.SetLeft(minimap, newx);
+            Canvas.SetTop(minimap, newy);
+            count++;
+
         }
 
         private void Canvas_OnMouseLeave(object sender, MouseEventArgs e)

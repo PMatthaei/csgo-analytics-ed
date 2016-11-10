@@ -24,10 +24,14 @@ namespace CSGO_Analytics.src.encounterdetect
         //
         // VARIABLES AND CONSTANTS
         //
-        private float tau = 20;
-        private float ENCOUNTER_TIMEOUT = 20;
 
-        private float tickrate;
+        // Timeouts in sec.
+        private float TAU = 20;
+        private float ENCOUNTER_TIMEOUT = 20;
+        private float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 4;
+        private float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
+
+        public float tickrate;
 
         public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
 
@@ -144,8 +148,11 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// 
         /// </summary>
-        public void run()
+        public MatchReplay run()
         {
+
+            MatchReplay replay = new MatchReplay(); // Problem: empty ticks were left out -> gaps in tick_id -> cant use it as index in arrays
+
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             foreach (var tick in ticks) // Read all ticks
@@ -155,14 +162,18 @@ namespace CSGO_Analytics.src.encounterdetect
                 foreach (var p in tick.getUpdatedPlayers()) // Update tables
                 {
                     updatePosition(getID(p.player_id), p.position.getAsArray());
-                    //updateFacing(getID(p.player_id), p.position.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
-                    //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
+                    updateFacing(getID(p.player_id), p.facing.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
                     updateDistance(getID(p.player_id));
+                    //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
+
                 }
 
 
                 CombatComponent component = buildComponent(tick);
 
+                replay.insertComponents(tick, component); // Save the tick with its component in the replay class. 
+
+                // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
 
                 if (component == null) // No component in this tick
                     continue;
@@ -231,6 +242,8 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
             //TODO: dispose everything else. tickstream etc!!
             //tickstream.Dispose();
+
+            return replay;
         }
 
 
@@ -244,7 +257,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
             List<Encounter> predecessors = new List<Encounter>();
-            foreach (var e in open_encounters.Where(e => e.tick_id - comp.tick_id <= tau))
+            foreach (var e in open_encounters.Where(e => e.tick_id - comp.tick_id <= TAU))
             {
                 bool registered = false;
                 foreach (var c in e.cs) //Really iterate over components? -> yes because we need c.players
@@ -290,9 +303,9 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 cs.AddRange(e.cs); // Watch for OutOfMemory here if too many predecessors add up!! 
             }
-            var css = cs.OrderBy(x => x.tick_id);
+            var css = cs.OrderBy(x => x.tick_id).ToList();
             int encounter_tick_id = cs.OrderBy(x => x.tick_id).ElementAt(0).tick_id;
-            return new Encounter(encounter_tick_id, cs);
+            return new Encounter(encounter_tick_id, css);
         }
 
 
@@ -378,12 +391,12 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "flash_exploded":
                         FlashNade flash = (FlashNade)g;
                         type = ComponentType.SUPPORTLINK;
-                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember 
+                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( hase he prevented sight on one of his teammates) 
                         foreach (var flashedEnemyplayer in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher
                         {
                             foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != flashedEnemyplayer.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
                             {
-                                //testSight(flashedEnemyplayer, counterplayer); // Test if players can see each other
+                                //testSight(player, counterplayer); // Test if player1 can see player 2
                             }
                         }
                         continue;
@@ -395,7 +408,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "smoke_ended":
                     case "firenade_ended":
                         NadeEvents timedNadeEnd = (NadeEvents)g;
-                        //activeNades.Remove(timedNadeEnd);
+                        activeNades.Remove(timedNadeEnd);
                         continue;
                     default:
                         continue;
@@ -434,16 +447,22 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private List<Player> getSupportedPlayers()
         {
-            var supportedPlayer = new List<Player>();
+            var supportedPlayers = new List<Player>();
             //Test for Line of sight vs smoke collision
             foreach (var nadeevent in activeNades)
             {
                 foreach (var player in players.Where(player => player.team != nadeevent.actor.team))
                 {
-                    //checkNadeSphereCollision(nadeevent, player); //TODO
+                    /*if(checkNadeSphereCollision(nadeevent, player)) //If they saw into the smoke
+                        foreach(var counterplayer in players.Where(counterplayer => counterplayer.team != player.team){
+                            if(testSight(player, counterplayer)){// Test if player1 can see player 2
+                                supportePlayers.Add(counterplayer);
+                            }
+                        }
+                     */
                 }
             }
-            return supportedPlayer;
+            return supportedPlayers;
         }
 
 
@@ -466,22 +485,27 @@ namespace CSGO_Analytics.src.encounterdetect
                 int tick_dt = Math.Abs(wftick_id - tick_id);
                 if (tick_dt * tickrate / 1000 > 4)
                 {
-                    //If more than 20 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
+                    //If more than 4 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
                     pendingWeaponFireEvents.Remove(weaponfireevent);
                     continue;
                 }
 
                 if (ph.actor.Equals(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
                 {
-                    Link insertLink = new Link(weaponfireevent.actor, ph.victim, ComponentType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 43 links found...seems a bit small
+                    Link insertLink = new Link(weaponfireevent.actor, ph.victim, ComponentType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
-                    foreach (var en in open_encounters)
+                    foreach (var en in open_encounters) // Search the component this link has to be inserted 
                     {
+                        bool inserted = false;
                         foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
                         {
                             iCount++;
                             comp.links.Add(insertLink);
+                            inserted = true;
+                            break;
                         }
+                        if (inserted == true) //This should be useless if components and their tick_ids are unique
+                            break;
                     }
                     pendingWeaponFireEvents.Remove(weaponfireevent); // Delete the weaponfire event from the queue
                 }
@@ -507,14 +531,13 @@ namespace CSGO_Analytics.src.encounterdetect
                 var htick_id = item.Value;
 
                 int tick_dt = Math.Abs(htick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > 20)
+                if (tick_dt * tickrate / 1000 > 20) // 20 second timeout for hurt events
                 {
-                    //If more than 20 seconds are between a shoot and a hit. this hurtevent is irrelevant
                     registeredHurtEvents.Remove(hurtevent);
                     continue;
                 }
 
-                if (wf.actor.Equals(hurtevent.actor)) // If we find a actor that hurt somebody this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
+                if (wf.actor.Equals(hurtevent.actor)) // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 {
                     candidates.Add(hurtevent.victim);
                     registeredHurtEvents.Remove(hurtevent);

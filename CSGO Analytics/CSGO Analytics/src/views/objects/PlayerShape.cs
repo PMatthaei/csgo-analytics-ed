@@ -12,6 +12,7 @@ namespace CSGO_Analytics.src.views
 {
     class PlayerShape : Shape
     {
+
         private Point aimPoint;
 
         public double Radius { get; set; }
