@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,6 +30,10 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
+        /// <summary>
+        /// Thread where all positional and situationgraph updates are handled(draw new)
+        /// </summary>
+        private Thread updateThread;
 
         private EncounterDetectionAlgorithm enDetect;
 
@@ -64,7 +69,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// All players drawn on the minimap
         /// </summary>
-        private Dictionary<int, PlayerShape> players = new Dictionary<int, PlayerShape>();
+        private Dictionary<int, PlayerShape> playershapes = new Dictionary<int, PlayerShape>();
 
         /// <summary>
         /// All links between players that are currently drawn
@@ -76,33 +81,44 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         private List<Ellipse> activeNades = new List<Ellipse>();
 
+        private Ellipse plantedbomb = new Ellipse();
+
 
 
         public AnalyseDemosView()
         {
-            var path = "match_0.dem";
-            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            try
             {
-                ParseTask ptask = new ParseTask
+                var path = "match_0.dem";
+                /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
                 {
-                    destpath = path,
-                    srcpath = path,
-                    usepretty = true,
-                    showsteps = true,
-                    specialevents = true,
-                    highdetailplayer = true,
-                    positioninterval = 8,
-                    settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                };
-            }
-            GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-            */
+                    ParseTask ptask = new ParseTask
+                    {
+                        destpath = path,
+                        srcpath = path,
+                        usepretty = true,
+                        showsteps = true,
+                        specialevents = true,
+                        highdetailplayer = true,
+                        positioninterval = 8,
+                        settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                    };
+                }
+                GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+                */
 
-            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
-            {
-                var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                enDetect = new EncounterDetectionAlgorithm(deserializedGamestate);
+                using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                {
+                    var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                    enDetect = new EncounterDetectionAlgorithm(deserializedGamestate);
+                }
             }
+            catch ( Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+
 
 
             InitializeComponent();
@@ -166,19 +182,48 @@ namespace CSGO_Analytics.src.views
                 Tick tick = tuple.Item1;
                 CombatComponent comp = tuple.Item2;
 
+
                 if (last_tickid == 0)
                     last_tickid = tick.tick_id;
                 int dt = tick.tick_id - last_tickid;
 
                 int passedTime = (int)(dt * tickrate);
 
-                foreach (var p in tick.getUpdatedPlayers())
+                Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
                 {
-                    //Console.WriteLine("Update player");
-                    drawPlayer(p); // PRoblems with threading as here the ui-thread will be called because shape properties are updated
-                    //matchThread.Join();
+                    try
+                    {
+                        if (links.Count != 0)
+                        {
+                            foreach (var oldlink in links)
+                                mapPanel.Children.Remove(oldlink);
 
-                }
+                            links.Clear();
+                        }
+
+
+                        tick_label.Content = tick.tick_id;
+                        time_label.Content = (tick.tick_id * tickrate / 1000);
+                        if (comp != null && comp.links.Count != 0)
+                        {
+                            foreach (var link in comp.links)
+                            {
+                                drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
+                            }
+                        }
+
+                        foreach (var p in tick.getUpdatedPlayers())
+                        {
+                            updatePlayer(p); // Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
+                        }
+                    } catch(Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e.StackTrace);
+                    }
+
+                }));
+                Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
 
@@ -198,7 +243,7 @@ namespace CSGO_Analytics.src.views
             LinkShape ls = new LinkShape();
 
             PlayerShape aps;
-            if (players.TryGetValue(actor.player_id, out aps))
+            if (playershapes.TryGetValue(actor.player_id, out aps))
             {
                 ls.X1 = aps.X;
                 ls.Y1 = aps.Y;
@@ -208,7 +253,7 @@ namespace CSGO_Analytics.src.views
                 Console.WriteLine("Could not map PlayerShape");
             }
             PlayerShape rps;
-            if (players.TryGetValue(reciever.player_id, out rps))
+            if (playershapes.TryGetValue(reciever.player_id, out rps))
             {
                 ls.X2 = rps.X;
                 ls.Y2 = rps.Y;
@@ -227,11 +272,10 @@ namespace CSGO_Analytics.src.views
             else
                 ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
 
-            if (!links.Contains(ls))
-            {
-                links.Add(ls);
-                mapPanel.Children.Add(ls);
-            }
+
+            links.Add(ls);
+            mapPanel.Children.Add(ls);
+
         }
 
         private void updateLink(Player actor)
@@ -256,7 +300,7 @@ namespace CSGO_Analytics.src.views
             ps.Stroke = new SolidColorBrush(color);
             ps.StrokeThickness = 0.5;
 
-            players.Add(enDetect.getID(p.player_id), ps);
+            playershapes.Add(enDetect.getID(p.player_id), ps);
             mapPanel.Children.Add(ps);
         }
 
@@ -266,7 +310,7 @@ namespace CSGO_Analytics.src.views
 
             //if(p.) // TODO: test if player is dead -> no updates and let him look different
             PlayerShape ps;
-            if (players.TryGetValue(enDetect.getID(p.player_id), out ps))
+            if (playershapes.TryGetValue(enDetect.getID(p.player_id), out ps))
             {
 
                 ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
@@ -323,14 +367,13 @@ namespace CSGO_Analytics.src.views
 
         private bool isdragging;
 
-        Thread matchThread;
 
         private void Canvas_OnLeftMouseButtonDown(object sender, MouseButtonEventArgs e)
         {
             isdragging = true;
 
-            matchThread = new Thread(new ThreadStart(playMatch));
-            matchThread.Start();
+            updateThread = new Thread(new ThreadStart(playMatch));
+            updateThread.Start();
 
             start = e.GetPosition(minimap);
 

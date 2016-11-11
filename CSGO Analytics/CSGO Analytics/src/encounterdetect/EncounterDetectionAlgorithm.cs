@@ -26,10 +26,10 @@ namespace CSGO_Analytics.src.encounterdetect
         //
 
         // Timeouts in sec.
-        private float TAU = 20;
-        private float ENCOUNTER_TIMEOUT = 20;
-        private float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 4;
-        private float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
+        private const float TAU = 20;
+        private const float ENCOUNTER_TIMEOUT = 20;
+        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 4;
+        private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
 
         public float tickrate;
 
@@ -80,12 +80,12 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public EncounterDetectionAlgorithm(Gamestate gamestate)
         {
-            this.ticks = getTicks(gamestate);
+            this.ticks = extractTicks(gamestate);
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
 
             int ownid = 0;
-            foreach (var player in gamestate.meta.players) // Map all CS Entity IDs to our own
+            foreach (var player in players) // Map all CS Entity IDs to our own
             {
                 mappedPlayerIDs.Add(player.player_id, ownid);
                 ownid++;
@@ -110,7 +110,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="rounds"></param>
         /// <returns></returns>
-        public List<Tick> getTicks(Gamestate gs)
+        public List<Tick> extractTicks(Gamestate gs)
         {
             List<Tick> ticks = new List<Tick>();
 
@@ -171,7 +171,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 CombatComponent component = buildComponent(tick);
 
-                replay.insertComponents(tick, component); // Save the tick with its component in the replay class. 
+                replay.insertData(tick, component); // Save the tick with its component for later replaying. 
 
                 // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
 
@@ -396,7 +396,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         {
                             foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != flashedEnemyplayer.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
                             {
-                                //testSight(player, counterplayer); // Test if player1 can see player 2
+                                //testSight(player, counterplayer); // Test if player can see counterplayer
                             }
                         }
                         continue;
@@ -536,8 +536,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     registeredHurtEvents.Remove(hurtevent);
                     continue;
                 }
-
-                if (wf.actor.Equals(hurtevent.actor)) // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
+                // Watch out for teamdamage. No wrong combatlinks !!
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam()) // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 {
                     candidates.Add(hurtevent.victim);
                     registeredHurtEvents.Remove(hurtevent);
@@ -551,10 +551,13 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
-
             if (candidates.Count == 0)
             {
                 return null;
+            }
+            if (candidates.Count == 1)
+            {
+                return candidates[0];
             }
             //Console.WriteLine("Candidates found: " + candidates.Count);
             //Console.ReadLine();

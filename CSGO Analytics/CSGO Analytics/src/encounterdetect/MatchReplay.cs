@@ -15,9 +15,34 @@ namespace CSGO_Analytics.src.encounterdetect
     {
         List<Tuple<Tick, CombatComponent>> ticksdata = new List<Tuple<Tick, CombatComponent>>();
 
-        public void insertComponents(Tick tick, CombatComponent comp)
+        public void insertData(Tick tick, CombatComponent comp)
         {
             ticksdata.Add(new Tuple<Tick, CombatComponent>(tick , comp));
+        }
+
+        public List<Tuple<Tick, CombatComponent>> getTicksFromRound(int round_id)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Return all ticks with same or higher tick_id(inclusive)
+        /// </summary>
+        /// <param name="tick_id"></param>
+        /// <returns></returns>
+        public List<Tuple<Tick, CombatComponent>> getTicksFrom(int tick_id)
+        {
+            return ticksdata.Where(t => t.Item1.tick_id >= tick_id).ToList();
+        }
+
+        /// <summary>
+        /// Return all ticks with same or lower tick_id(inclusive)
+        /// </summary>
+        /// <param name="tick_id"></param>
+        /// <returns></returns>
+        public List<Tuple<Tick, CombatComponent>> getTicksUntil(int tick_id)
+        {
+            return ticksdata.Where(t => t.Item1.tick_id <= tick_id).ToList();
         }
 
         public List<Tuple<Tick, CombatComponent>> getReplayData()
@@ -27,7 +52,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            ticksdata = null;
         }
     }
 }

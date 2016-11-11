@@ -21,6 +21,24 @@ namespace CSGO_Analytics.src.data.gameevents
         {
             return new Player[] { actor };
         }
+
+
+        /// <summary>
+        /// Radius in which this nade affects players
+        /// </summary>
+        /// <returns></returns>
+        public int getEffectRadius()
+        {
+            switch (nadetype)
+            {
+                case "smoke_exploded":
+                    return 5;
+                case "fire_exploded":
+                    return 5;
+                default:
+                    return 0;
+            }
+        }
     }
 
     class FlashNade : NadeEvents

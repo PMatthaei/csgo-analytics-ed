@@ -9,7 +9,10 @@ namespace CSGO_Analytics.src.math
 {
     class MathUtils
     {
-
+        /// <summary>
+        /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords.
+        /// </summary>
+        private static Vector mapcenter = new Vector(200,200,0);
 
         /// <summary>
         /// Converts a CS:GO Position fetched from a replay file into a coordinate for our UI
@@ -18,8 +21,8 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static Vector CSPositionToUIPosition(Vector p)
         {
-            var x = p.x  / 10.0f + 200;
-            var y = p.y / 10.0f + 500;
+            var x = mapcenter.x + p.x  / 10.0f;
+            var y = mapcenter.y + p.y / 10.0f;
             return new Vector(x, y, 0);
         }
 
