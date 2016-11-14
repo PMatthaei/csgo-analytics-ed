@@ -10,7 +10,7 @@ using CSGO_Analytics.src.encounterdetect;
 namespace CSGO_Analytics.src.data.gameevents
 {
 
-    class WeaponFire : Gameevent
+    class WeaponFire : Event
     {
         public Weapon weapon { get; set; }
 
@@ -22,7 +22,7 @@ namespace CSGO_Analytics.src.data.gameevents
 
     }
 
-    class PlayerSpotted : Gameevent
+    class PlayerSpotted : Event
     {
         public Player spotter { get; set; } //TODO: how find out spotter? or do this in algorithm?
 
@@ -32,7 +32,7 @@ namespace CSGO_Analytics.src.data.gameevents
         }
     }
 
-    class PlayerHurt : Gameevent
+    class PlayerHurt : Event
     {
         public Player victim { get; set; }
         public int HP { get; set; }

@@ -7,23 +7,29 @@ using System.Windows.Shapes;
 
 namespace CSGO_Analytics.src.math
 {
-    class MathUtils
+    class MathLibrary
     {
         /// <summary>
-        /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords.
+        /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords. This is read by PropertieReader
         /// </summary>
-        private static Vector mapcenter = new Vector(200,200,0);
-
+        private static Vector map_origin = new Vector(-2400, 3383, 0);
+        //Size of Map in CSGO
+        private static double map_width;
+        private static double map_height;
+        // Size of Image (Bitmap)
+        private static double mappanel_width = 1024;
+        private static double mappanel_height = 1024;
         /// <summary>
-        /// Converts a CS:GO Position fetched from a replay file into a coordinate for our UI
+        /// Function getting a CS:GO Position fetched from a replay file which returns a coordinate for our UI
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
         public static Vector CSPositionToUIPosition(Vector p)
         {
-            var x = mapcenter.x + p.x  / 10.0f;
-            var y = mapcenter.y + p.y / 10.0f;
-            return new Vector(x, y, 0);
+            // Calculate a given demo point into a point suitable for our gui minimap: therefore we need a rotation factor, the origin of the coordinate and other data about the map. 
+            var x = Math.Abs(map_origin.x - p.x) / 8.8f; // * Math.Min(mappanel_width, map_width) / Math.Max(mappanel_width, map_width);
+            var y = Math.Abs(map_origin.y - p.y) / 8.8f; //* Math.Min(mappanel_height, map_height) / Math.Max(mappanel_height, map_height);
+            return new Vector((float)x, (float)y, p.z);
         }
 
         /// <summary>
@@ -65,7 +71,7 @@ namespace CSGO_Analytics.src.math
             double aimdy = aimY - actorV.y;
 
             //double theta = Math.Atan2(dy, dx);
-            double theta = toDegree( ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)) );
+            double theta = toDegree(ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
 
             if (theta < 45 && theta > -45)
                 return true;
@@ -94,7 +100,7 @@ namespace CSGO_Analytics.src.math
             //double theta = Math.Atan2(dy, dx);
             double theta = toDegree(ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
 
-            if (theta < FOVVertical && theta > -FOVVertical)
+            if (theta < FOVVertical / 2 && theta > -FOVVertical / 2)
                 return true;
             return false;
         }
@@ -122,6 +128,7 @@ namespace CSGO_Analytics.src.math
 
             double dx = aimX - actorV.y;
             double dy = aimY - actorV.y;
+            double dr = Math.Sqrt(dx * dx + dy * dy);
             double theta = Math.Atan2(dy, dx);
             double r = getEuclidDistance2D(actorV, new Vector(aimX, aimY, 0)) - ((sphereRadius * sphereRadius) / Math.Sqrt(Math.Pow(sphereRadius * Math.Cos(theta), 2) + Math.Pow(sphereRadius * Math.Sin(theta), 2)));
             //return new Vector((float)(actorposx + r * Math.Cos(theta)), (float)(actorposy + r * Math.Sin(theta)), 0);
@@ -155,7 +162,7 @@ namespace CSGO_Analytics.src.math
 
         private static Vector CrossProduct(Vector v1, Vector v2)
         {
-            return new Vector((v1.y * v2.z - v1.z * v2.y)  ,  (v1.z* v2.x -v1.x * v2.z)  ,  (v1.x* v2.y -v1.y * v2.x) );
+            return new Vector((v1.y * v2.z - v1.z * v2.y), (v1.z * v2.x - v1.x * v2.z), (v1.x * v2.y - v1.y * v2.x));
         }
 
         private static double toDegree(double radian)

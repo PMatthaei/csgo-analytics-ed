@@ -12,7 +12,7 @@ namespace CSGO_Analytics.src.json.jsonobjects
     public class Tick
     {
         public int tick_id { get; set; }
-        public List<Gameevent> tickevents { get; set; }
+        public List<Event> tickevents { get; set; }
 
         /// <summary>
         /// Return all players mentioned in a given tick.

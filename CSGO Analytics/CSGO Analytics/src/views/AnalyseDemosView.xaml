@@ -9,38 +9,51 @@
       Title="AnalyseDemosView" >
 
     <Grid>
-        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro">
+        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro" KeyDown="Page_KeyDown">
             <Grid Height="740" VerticalAlignment="Top" Width="1148">
-                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="715" Margin="10,10,0,0" VerticalAlignment="Top" Width="1128">
+                <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="715" Margin="10,10,0,0" VerticalAlignment="Top" Width="1128" KeyDown="TabControl_KeyDown">
                     <TabItem Header="Live view">
                         <Grid Background="#FFE5E5E5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="299*"/>
+                                <RowDefinition Height="7*"/>
+                                <RowDefinition Height="381*"/>
+                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="79*"/>
                                 <ColumnDefinition Width="1036*"/>
                             </Grid.ColumnDefinitions>
-                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="575" Margin="95,14,0,0" VerticalAlignment="Top" Width="935" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnLefttMouseButtonUp" MouseMove="Canvas_OnMouseMove" MouseLeave="Canvas_OnMouseLeave"/>
-                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,639,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1"/>
-                            <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114,591,0,0" VerticalAlignment="Top" Grid.Column="1"/>
-                            <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="938,591,0,0" VerticalAlignment="Top" Grid.Column="1"/>
-                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="511,0,462,70" VerticalAlignment="Bottom" Width="70" Grid.Column="1"/>
-                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="586,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="631,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="465,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="419,597,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1"/>
-                            <Menu x:Name="menu" HorizontalAlignment="Left" Height="592" Margin="10,10,0,0" VerticalAlignment="Top" Width="160" Grid.ColumnSpan="2">
+                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="575" Margin="95,15,0,0" VerticalAlignment="Top" Width="935" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnLefttMouseButtonUp" MouseMove="Canvas_OnMouseMove" MouseLeave="Canvas_OnMouseLeave" Grid.RowSpan="3"/>
+                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,338,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1" Grid.Row="2"/>
+                            <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
+                            <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="938,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="511,0,462,70" VerticalAlignment="Bottom" Width="70" Grid.Column="1" Click="Button_play" Grid.Row="2"/>
+                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="586,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="631,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="465,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="419,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Menu x:Name="menu" HorizontalAlignment="Left" Height="673" Margin="0,14,0,0" VerticalAlignment="Top" Width="170" Grid.ColumnSpan="2" Grid.RowSpan="3">
                                 <Label Content="Team Terrorists:"/>
-                                <ListBoxItem Content="Player1"/>
-                                <ListBoxItem Content="Player2"/>
-                                <ListBoxItem Content="Player3"/>
-                                <ListBoxItem Content="Player 4"/>
-                                <ListBoxItem Content="Player 5"/>
+                                <ListBoxItem Content="Player1" Width="150"/>
+                                <ListBoxItem Content="Player2" Width="150"/>
+                                <ListBoxItem Content="Player3" Width="150"/>
+                                <ListBoxItem Content="Player 4" Width="150"/>
+                                <ListBoxItem Content="Player 5" Width="150"/>
                                 <Label Content="Team CounterTerrorists:"/>
-                                <ListBoxItem Content="Player1"/>
-                                <ListBoxItem Content="Player2"/>
-                                <ListBoxItem Content="Player3"/>
-                                <ListBoxItem Content="Player 4"/>
-                                <ListBoxItem Content="Player 5"/>
+                                <ListBoxItem Content="Player1" Width="150"/>
+                                <ListBoxItem Content="Player2" Width="150"/>
+                                <ListBoxItem Content="Player3" Width="150"/>
+                                <ListBoxItem Content="Player 4" Width="150"/>
+                                <ListBoxItem Content="Player 5" Width="150"/>
+
+                                <RadioButton x:Name="combatButton1" Content="Show only selected players" Margin="0,20,0,0"/>
+                                <RadioButton x:Name="combatButton" Content="Show Combatlinks only" Margin="0,20,0,0"/>
+                                <RadioButton x:Name="supportButton" Content="Show Supportlinks only"/>
+                                <RadioButton x:Name="supportButton2" Content="Display names"/>
+                                <RadioButton x:Name="supportButton3" Content="Display health"/>
+                                <RadioButton x:Name="supportButton4" Content="Follow selected player"/>
                             </Menu>
+                            <Button x:Name="stop" Content="l l" Grid.Column="1" HorizontalAlignment="Left" Margin="532,315,0,0" VerticalAlignment="Top" Width="30" Click="Button_stop" Grid.Row="2"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Heatmap">

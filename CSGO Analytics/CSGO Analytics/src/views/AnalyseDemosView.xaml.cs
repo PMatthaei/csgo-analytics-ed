@@ -31,17 +31,20 @@ namespace CSGO_Analytics.src.views
     public partial class AnalyseDemosView : Page
     {
         /// <summary>
-        /// Thread where all positional and situationgraph updates are handled(draw new)
+        /// Thread where all positional and situationgraph updates are handled(update player positions and links as well as nades etc)
         /// </summary>
         private Thread updateThread;
 
         private EncounterDetectionAlgorithm enDetect;
+
+        private Gamestate gamestate;
 
         private MatchReplay matchreplay;
 
         //
         // MAP VARIABLES
         //
+        private string mapname;
         private double scalefactor_map;
         private double map_width;
         private double map_height;
@@ -64,7 +67,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// Component (holding mapPanel) used to drag around and zoom in
         /// </summary>
-        private Viewbox minimap;
+        private Viewbox map;
 
         /// <summary>
         /// All players drawn on the minimap
@@ -81,7 +84,6 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         private List<Ellipse> activeNades = new List<Ellipse>();
 
-        private Ellipse plantedbomb = new Ellipse();
 
 
 
@@ -91,85 +93,124 @@ namespace CSGO_Analytics.src.views
             {
                 var path = "match_0.dem";
                 /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
-                {
-                    ParseTask ptask = new ParseTask
-                    {
-                        destpath = path,
-                        srcpath = path,
-                        usepretty = true,
-                        showsteps = true,
-                        specialevents = true,
-                        highdetailplayer = true,
-                        positioninterval = 8,
-                        settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                    };
-                }
-                GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-                */
+                 {
+                     ParseTask ptask = new ParseTask
+                     {
+                         destpath = path,
+                         srcpath = path,
+                         usepretty = true,
+                         showsteps = true,
+                         specialevents = true,
+                         highdetailplayer = true,
+                         positioninterval = 8,
+                         settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                     };
+                     GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+                      
+            }*/
+
 
                 using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                 {
-                    var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                    enDetect = new EncounterDetectionAlgorithm(deserializedGamestate);
+                    gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                    enDetect = new EncounterDetectionAlgorithm(gamestate);
                 }
             }
-            catch ( Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
             }
 
 
+            try
+            {
 
-            InitializeComponent();
+                InitializeComponent();
 
-            InitializeCanvas();
+                InitializeGUI();
 
-            InitializeEncounterDetection();
+                InitializeMap();
+
+                InitializeEncounterDetection();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+
+        }
+
+        private void InitializeGUI()
+        {
+            this.tickrate = gamestate.meta.tickrate;
+            this.mapname = gamestate.meta.mapname;
+            time_slider.Minimum = 0;
+            time_slider.Maximum = gamestate.match.rounds.Last().ticks.Last().tick_id;
         }
 
 
         /// <summary>
         /// MapPanel and minimap viewbox are initalized
         /// </summary>
-        private void InitializeCanvas()
+        private void InitializeMap()
         {
+
             canvas.ClipToBounds = true;
-            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\de_dust2_map.jpg", UriKind.Relative));
+            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
             map_width = bi.Width; // Save original size to apply scaling
             map_height = bi.Height;
             mapPanel.Background = new ImageBrush(bi);
 
             scalefactor_map = canvas.Height / map_height;
-            minimap = new Viewbox();
-            minimap.StretchDirection = StretchDirection.Both;
-            minimap.Stretch = Stretch.Fill;
-            minimap.Child = mapPanel;
+            map = new Viewbox();
+            map.StretchDirection = StretchDirection.Both;
+            map.Stretch = Stretch.Fill;
+            map.Child = mapPanel;
 
-            mapPanel.Width = minimap.Width = bi.Width * scalefactor_map;
-            mapPanel.Height = minimap.Height = bi.Height * scalefactor_map;
+            mapPanel.Width = map.Width = bi.Width * scalefactor_map;
+            mapPanel.Height = map.Height = bi.Height * scalefactor_map;
 
-            Canvas.SetLeft(minimap, (canvas.Width - minimap.Width) / 2);
-            Canvas.SetTop(minimap, (canvas.Height - minimap.Height) / 2);
+            Canvas.SetLeft(map, (canvas.Width - map.Width) / 2);
+            Canvas.SetTop(map, (canvas.Height - map.Height) / 2);
 
-            canvas.Children.Add(minimap);
+            canvas.Children.Add(map);
 
         }
 
+
+
+
+
+
+
         public void InitializeEncounterDetection()
         {
-            this.tickrate = enDetect.tickrate;
 
             this.matchreplay = this.enDetect.run(); // Run the algorithm
 
             // Initalize all graphical player representations default/start
-            foreach (var p in enDetect.getPlayers())
+            foreach (var p in enDetect.getPlayers()) // TODO: old data loaded here -> players are drawn where they stood when freeze began
             {
                 drawPlayer(p);
             }
 
         }
 
+        private void Button_play(object sender, RoutedEventArgs e)
+        {
+            if (updateThread == null)
+                updateThread = new Thread(new ThreadStart(playMatch));
+
+            updateThread.Start();
+        }
+
+        private void Button_stop(object sender, RoutedEventArgs e)
+        {
+            if (updateThread != null) ;
+            //TODO: pause and resume
+        }
 
         private void playMatch()
         {
@@ -181,7 +222,6 @@ namespace CSGO_Analytics.src.views
             {
                 Tick tick = tuple.Item1;
                 CombatComponent comp = tuple.Item2;
-
 
                 if (last_tickid == 0)
                     last_tickid = tick.tick_id;
@@ -201,9 +241,10 @@ namespace CSGO_Analytics.src.views
                             links.Clear();
                         }
 
-
-                        tick_label.Content = tick.tick_id;
-                        time_label.Content = (tick.tick_id * tickrate / 1000);
+                        time_slider.Value = tick.tick_id;
+                        tick_label.Content = "Tick: " + tick.tick_id;
+                        var timesec = (int)(tick.tick_id * tickrate / 1000);
+                        time_label.Content = "Time: " + ":" + timesec;
                         if (comp != null && comp.links.Count != 0)
                         {
                             foreach (var link in comp.links)
@@ -216,7 +257,8 @@ namespace CSGO_Analytics.src.views
                         {
                             updatePlayer(p); // Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                         }
-                    } catch(Exception e)
+                    }
+                    catch (Exception e)
                     {
                         Console.WriteLine(e.Message);
                         Console.WriteLine(e.StackTrace);
@@ -287,8 +329,8 @@ namespace CSGO_Analytics.src.views
         {
             var ps = new PlayerShape();
             ps.Yaw = p.facing.yaw;
-            ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
-            ps.Y = MathUtils.CSPositionToUIPosition(p.position).y;
+            ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
+            ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
             ps.Radius = 4;
             Color color;
             if (p.getTeam() == Team.T)
@@ -313,8 +355,8 @@ namespace CSGO_Analytics.src.views
             if (playershapes.TryGetValue(enDetect.getID(p.player_id), out ps))
             {
 
-                ps.X = MathUtils.CSPositionToUIPosition(p.position).x;
-                ps.Y = MathUtils.CSPositionToUIPosition(p.position).y;
+                ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
+                ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
                 ps.Yaw = p.facing.yaw;
             }
             else
@@ -324,7 +366,34 @@ namespace CSGO_Analytics.src.views
 
         }
 
+        private void captureScreenshot()
+        {
 
+            RenderTargetBitmap rtb = new RenderTargetBitmap(
+                (int)canvas.RenderSize.Width + 95,
+                (int)canvas.RenderSize.Height + 15,
+                96d,
+                96d,
+                System.Windows.Media.PixelFormats.Default);
+
+            rtb.Render(canvas);
+
+            var crop = new CroppedBitmap(rtb, new Int32Rect(95, 15, (int)canvas.RenderSize.Width, (int)canvas.RenderSize.Height));
+
+            BitmapEncoder pngEncoder = new PngBitmapEncoder();
+            pngEncoder.Frames.Add(BitmapFrame.Create(crop));
+
+            using (var fs = System.IO.File.OpenWrite("logo.png"))
+            {
+                pngEncoder.Save(fs);
+            }
+        }
+
+        private void createMatchAVI()
+        {
+
+
+        }
         //
         //
         // EVENTS
@@ -350,14 +419,14 @@ namespace CSGO_Analytics.src.views
                 scalefactor_map = newscale;
             else return;
 
-            minimap.Width = map_width * scalefactor_map;
-            minimap.Height = map_height * scalefactor_map;
+            map.Width = map_width * scalefactor_map;
+            map.Height = map_height * scalefactor_map;
             var mx = current.X;
             var my = current.Y;
-            double x = (canvas.Width - minimap.Width) / 2.0;
-            double y = (canvas.Height - minimap.Height) / 2.0;
-            Canvas.SetLeft(minimap, x);
-            Canvas.SetTop(minimap, y);
+            double x = (canvas.Width - map.Width) / 2.0;
+            double y = (canvas.Height - map.Height) / 2.0;
+            Canvas.SetLeft(map, x);
+            Canvas.SetTop(map, y);
 
         }
 
@@ -371,11 +440,7 @@ namespace CSGO_Analytics.src.views
         private void Canvas_OnLeftMouseButtonDown(object sender, MouseButtonEventArgs e)
         {
             isdragging = true;
-
-            updateThread = new Thread(new ThreadStart(playMatch));
-            updateThread.Start();
-
-            start = e.GetPosition(minimap);
+            start = e.GetPosition(map);
 
         }
 
@@ -386,7 +451,7 @@ namespace CSGO_Analytics.src.views
 
         private void Canvas_OnMouseMove(object sender, MouseEventArgs e)
         {
-            current = e.GetPosition(minimap);
+            current = e.GetPosition(map);
 
             if (!isdragging)
                 return;
@@ -403,16 +468,16 @@ namespace CSGO_Analytics.src.views
 
             Console.WriteLine(dx);
             Console.WriteLine(dy);
-            var x = Canvas.GetLeft(minimap);
-            var y = Canvas.GetTop(minimap);
+            var x = Canvas.GetLeft(map);
+            var y = Canvas.GetTop(map);
             Console.WriteLine(x);
             Console.WriteLine(y);
             var newx = x + dx * 0.3;
             var newy = y + dy * 0.3;
             Console.WriteLine(newx);
             Console.WriteLine(newy);
-            Canvas.SetLeft(minimap, newx);
-            Canvas.SetTop(minimap, newy);
+            Canvas.SetLeft(map, newx);
+            Canvas.SetTop(map, newy);
             count++;
 
         }
@@ -426,6 +491,25 @@ namespace CSGO_Analytics.src.views
         {
             return canvas;
         }
+
+        private void Page_KeyDown(object sender, KeyEventArgs e)
+        {
+
+        }
+
+        private void TabControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.S)
+            {
+                captureScreenshot();
+            }
+        }
+
+        private void Canvas_KeyDown(object sender, KeyEventArgs e)
+        {
+
+        }
+
 
 
         //

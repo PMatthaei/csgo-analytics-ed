@@ -101,7 +101,7 @@ namespace CSGO_Analytics.src.json.parser
             //Init lists
             match.rounds = new List<Round>();
             round.ticks = new List<Tick>();
-            tick.tickevents = new List<Gameevent>();
+            tick.tickevents = new List<Event>();
         }
 
         /// <summary>
@@ -287,9 +287,9 @@ namespace CSGO_Analytics.src.json.parser
             {
                 if (hasMatchStarted)
                 {
-                    if (e.Stepper != null)
+                    if (e.Stepper != null && parser.PlayingParticipants.Contains(e.Stepper)) //Prevent spectating players from producing steps 
                         tick.tickevents.Add(jsonparser.assemblePlayerStepped(e));
-                    steppers.Add(e.Stepper);
+                        steppers.Add(e.Stepper);
                 }
 
             };
@@ -423,24 +423,6 @@ namespace CSGO_Analytics.src.json.parser
             };
             #endregion
 
-            #region Futureevents
-            /*
-            //Extraevents maybe useful
-            parser.RoundFinal += (object sender, RoundFinalEventArgs e) => {
-
-            };
-            parser.RoundMVP += (object sender, RoundMVPEventArgs e) => {
-
-            };
-            parser.RoundOfficiallyEnd += (object sender, RoundOfficiallyEndedEventArgs e) => {
-
-            };
-            parser.LastRoundHalf += (object sender, LastRoundHalfEventArgs e) => {
-
-            };
-            */
-            #endregion
-
             #region Tickevent / Ticklogic
             //Assemble a tick object with the above gameevents
             parser.TickDone += (sender, e) =>
@@ -449,10 +431,10 @@ namespace CSGO_Analytics.src.json.parser
                         return;
 
 
-                    // Dumb playerpositions every positioninterval-ticks when freezetime has ended
+                    // Dump playerpositions every positioninterval-ticks when freezetime has ended
                     if ((tick_id % positioninterval == 0) && hasFreeezEnded)
                     {
-                        foreach (var player in parser.PlayingParticipants.Where(player => steppers.Contains(player)))
+                        foreach (var player in parser.PlayingParticipants.Where(player => !steppers.Contains(player)))
                         {
                             tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
                         }
@@ -479,7 +461,7 @@ namespace CSGO_Analytics.src.json.parser
                             round.ticks.Add(tick);
                             tickcount++;
                             tick = new Tick();
-                            tick.tickevents = new List<Gameevent>();
+                            tick.tickevents = new List<Event>();
                         }
 
                     }
@@ -496,6 +478,40 @@ namespace CSGO_Analytics.src.json.parser
                 jsonparser.stopParser();
                 watch.Stop();
             }
+            #endregion
+
+            #region Serverevents
+            parser.PlayerDisconnect += (sender, e) =>
+            {
+                Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " disconnected");
+                tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
+            };
+
+            // Use this to identify if a new player has joined or similar
+            parser.PlayerBind += (sender, e) =>
+            {
+                Console.WriteLine("Player: "+e.Player.Name +" ID: " + e.Player.EntityID + " is binded");
+                tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
+            };
+            #endregion
+
+
+            #region Futureevents
+            /*
+            //Extraevents maybe useful
+            parser.RoundFinal += (object sender, RoundFinalEventArgs e) => {
+
+            };
+            parser.RoundMVP += (object sender, RoundMVPEventArgs e) => {
+
+            };
+            parser.RoundOfficiallyEnd += (object sender, RoundOfficiallyEndedEventArgs e) => {
+
+            };
+            parser.LastRoundHalf += (object sender, LastRoundHalfEventArgs e) => {
+
+            };
+            */
             #endregion
 
         }

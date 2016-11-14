@@ -51,6 +51,13 @@ namespace CSGO_Analytics.src.math
 
         }
 
+        public Vector Normalize()
+        {
+
+            return new Vector((float)(x/Absolute()), (float)(y /Absolute()), (float)(z /Absolute()));
+
+        }
+
         public double AbsoluteSquared()
 
         {

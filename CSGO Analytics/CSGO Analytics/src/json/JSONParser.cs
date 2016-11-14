@@ -77,6 +77,7 @@ namespace CSGO_Analytics.src.json.parser
                 players = assemblePlayers(players.ToArray())
             };
         }
+
         #region Gameevents
 
         public PlayerKilled assemblePlayerKilled(PlayerKilledEventArgs pke)
@@ -97,6 +98,16 @@ namespace CSGO_Analytics.src.json.parser
             return new WeaponFire
             {
                 gameevent = "weapon_fire",
+                actor = assemblePlayerDetailed(we.Shooter),
+                weapon = assembleWeapon(we.Weapon)
+            };
+        }
+
+        public WeaponFire assembleWeaponFireEmpty(WeaponFiredEmptyEventArgs we)
+        {
+            return new WeaponFire
+            {
+                gameevent = "weapon_fire_empty",
                 actor = assemblePlayerDetailed(we.Shooter),
                 weapon = assembleWeapon(we.Weapon)
             };
@@ -171,9 +182,7 @@ namespace CSGO_Analytics.src.json.parser
 
         #endregion
 
-
-
-        #region SUBEVENTS
+        #region Subevents
 
         public List<CSGO_Analytics.src.data.gameobjects.Player> assemblePlayers(DemoInfoModded.Player[] ps)
         {
@@ -211,7 +220,7 @@ namespace CSGO_Analytics.src.json.parser
             return player;
         }
 
-        internal Gameevent assemblePlayerJumped(PlayerJumpedEventArgs e)
+        internal Event assemblePlayerJumped(PlayerJumpedEventArgs e)
         {
             return new MovementEvents
             {
@@ -220,7 +229,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        internal Gameevent assemblePlayerFallen(PlayerFallEventArgs e)
+        internal Event assemblePlayerFallen(PlayerFallEventArgs e)
         {
             return new MovementEvents
             {
@@ -229,7 +238,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        internal Gameevent assembleWeaponReload(WeaponReloadEventArgs we)
+        internal Event assembleWeaponReload(WeaponReloadEventArgs we)
         {
             return new MovementEvents
             {
@@ -238,7 +247,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        internal Gameevent assemblePlayerStepped(PlayerSteppedEventArgs e)
+        internal Event assemblePlayerStepped(PlayerSteppedEventArgs e)
         {
             return new MovementEvents
             {
@@ -400,13 +409,23 @@ namespace CSGO_Analytics.src.json.parser
         }
         #endregion
 
-        public WeaponFire assembleWeaponFireEmpty(WeaponFiredEmptyEventArgs we)
+
+
+        internal Event assemblePlayerBind(DemoInfoModded.Player player)
         {
-            return new WeaponFire
+            return new Event
             {
-                gameevent = "weapon_fire_empty",
-                actor = assemblePlayerDetailed(we.Shooter),
-                weapon = assembleWeapon(we.Weapon)
+                gameevent = "player_bind",
+                actor = assemblePlayer(player)
+            };
+        }
+
+        internal Event assemblePlayerDisconnected(DemoInfoModded.Player player)
+        {
+            return new Event
+            {
+                gameevent = "player_disconnected",
+                actor = assemblePlayer(player)
             };
         }
     }

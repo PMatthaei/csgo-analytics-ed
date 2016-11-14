@@ -65,9 +65,10 @@
     </ApplicationDefinition>
     <Compile Include="src\data\gameevents\BombEvents.cs" />
     <Compile Include="src\data\gameevents\CombatEvents.cs" />
-    <Compile Include="src\data\gameevents\Gameevent.cs" />
+    <Compile Include="src\data\gameevents\Event.cs" />
     <Compile Include="src\data\gameevents\NadeEvents.cs" />
     <Compile Include="src\data\gameevents\MovementEvents.cs" />
+    <Compile Include="src\data\gameevents\ServerEvent.cs" />
     <Compile Include="src\data\gameobjects\GameObject.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
@@ -76,7 +77,7 @@
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\MatchReplay.cs" />
-    <Compile Include="src\math\MathUtils.cs" />
+    <Compile Include="src\math\MathLibrary.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\json\GameStateGenerator.cs" />
     <Compile Include="src\json\Gamestate.cs" />
@@ -105,6 +106,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\utils\MapDataPropertyReader.cs" />
     <Compile Include="src\views\AnalyseDemosView.xaml.cs">
       <DependentUpon>AnalyseDemosView.xaml</DependentUpon>
     </Compile>
@@ -149,15 +151,14 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <Resource Include="src\views\maps\de_dust2_map.jpg" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj">
       <Project>{859f0c7d-a7d5-4209-abae-3140a70c7afb}</Project>
       <Name>demoinfo-modded</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="src\views\maps\de_dust2_radar.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

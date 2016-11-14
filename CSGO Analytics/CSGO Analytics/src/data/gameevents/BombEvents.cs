@@ -10,7 +10,7 @@ namespace CSGO_Analytics.src.data.gameevents
     /// <summary>
     /// Events for bomb planted, defused, abort plant and abort defuse
     /// </summary>
-    class BombEvents : Gameevent
+    class BombEvents : Event
     {
         public char site { get; set; }
         public bool haskit { get; set; }
@@ -24,7 +24,7 @@ namespace CSGO_Analytics.src.data.gameevents
     /// <summary>
     /// Events for bomb pickup and bomb drop
     /// </summary>
-    public class BombState : Gameevent
+    public class BombState : Event
     {
 
         public override Player[] getPlayers()

@@ -7,7 +7,7 @@ using CSGO_Analytics.src.data.gameobjects;
 
 namespace CSGO_Analytics.src.data.gameevents
 {
-    public class Gameevent
+    public class Event
     {
         public string gameevent { get; set; } // Just needed to build valid gameevent json-objects
         /// <summary>

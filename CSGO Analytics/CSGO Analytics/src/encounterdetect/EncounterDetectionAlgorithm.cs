@@ -43,11 +43,11 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// All ticks we have from this match.
         /// </summary>
-        private List<Tick> ticks;
+        private Match match;
 
 
         /// <summary>
-        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
+        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.(Watch out for mysterious id changes while the match runs!!)
         /// </summary>
         private Dictionary<int, int> mappedPlayerIDs = new Dictionary<int, int>();
 
@@ -80,7 +80,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public EncounterDetectionAlgorithm(Gamestate gamestate)
         {
-            this.ticks = extractTicks(gamestate);
+            this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
 
@@ -106,22 +106,6 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
         /// <summary>
-        /// Returns a list of all ticks
-        /// </summary>
-        /// <param name="rounds"></param>
-        /// <returns></returns>
-        public List<Tick> extractTicks(Gamestate gs)
-        {
-            List<Tick> ticks = new List<Tick>();
-
-            foreach (var r in gs.match.rounds)
-            {
-                ticks.AddRange(r.ticks);
-            }
-            return ticks;
-        }
-
-        /// <summary>
         /// All currently running, not timed out, encounters
         /// </summary>
         private List<Encounter> open_encounters = new List<Encounter>();
@@ -143,7 +127,8 @@ namespace CSGO_Analytics.src.encounterdetect
         int iCount = 0;
 
 
-
+        private int c = 0;
+        private int b = 0;
         private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
         /// 
@@ -155,70 +140,88 @@ namespace CSGO_Analytics.src.encounterdetect
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            foreach (var tick in ticks) // Read all ticks
+            foreach (var round in match.rounds)
             {
-                //Console.WriteLine("Current tick: " + tick.tick_id);
-
-                foreach (var p in tick.getUpdatedPlayers()) // Update tables
+                foreach (var tick in round.ticks) // Read all ticks
                 {
-                    updatePosition(getID(p.player_id), p.position.getAsArray());
-                    updateFacing(getID(p.player_id), p.facing.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
-                    updateDistance(getID(p.player_id));
-                    //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
+                    //Console.WriteLine("Current tick: " + tick.tick_id);
 
-                }
-
-
-                CombatComponent component = buildComponent(tick);
-
-                replay.insertData(tick, component); // Save the tick with its component for later replaying. 
-
-                // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
-
-                if (component == null) // No component in this tick
-                    continue;
-
-                predecessors = searchPredecessors(component); // Check if this component has predecessors
-
-                if (predecessors.Count == 0)
-                {
-                    open_encounters.Add(new Encounter(component)); nCount++;
-
-                }
-
-
-                if (predecessors.Count == 1)
-                {
-                    predecessors.ElementAt(0).update(component); uCount++;
-
-                }
-
-
-                if (predecessors.Count > 1)
-                {
-                    // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
-                    open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); }); //TODO: is contains working? -> if not encounters slip through and waste memory.... a lot
-                    var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
-                    joint_encounter.update(component);
-                    open_encounters.Add(joint_encounter);
-                    mCount++;
-                }
-
-                predecessors.Clear();
-
-                // Check encounter timeouts
-                for (int i = open_encounters.Count - 1; i >= 0; i--)
-                {
-                    Encounter e = open_encounters[i];
-                    if (Math.Abs(e.tick_id - tick.tick_id) > ENCOUNTER_TIMEOUT)
+                    foreach (var p in tick.getUpdatedPlayers()) // Update tables
                     {
-                        open_encounters.Remove(e);
-                        closed_encounters.Add(e);
-                    }
-                }
-                // NEXT TICK
+                        int id = 0;
+                        try
+                        {
+                            id = getID(p.player_id);
 
-            } //NO TICKS LEFT
+                        }
+                        catch (ArgumentOutOfRangeException e) // Watch out for id changes through spectator or something else
+                        {
+                            handleChangedID(p);
+                            //id = getID(p.player_id);
+                        }
+  
+
+                        updatePosition(id, p.position.getAsArray());
+                        updateFacing(id, p.facing.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
+                        updateDistance(id);
+                        //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
+
+                    }
+
+
+                    CombatComponent component = buildComponent(tick);
+
+                    replay.insertData(tick, component); // Save the tick with its component for later replaying. 
+
+                    //
+                    // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
+                    //
+                    if (component == null) // No component in this tick
+                        continue;
+
+                    predecessors = searchPredecessors(component); // Check if this component has predecessors
+
+                    if (predecessors.Count == 0)
+                    {
+                        open_encounters.Add(new Encounter(component)); nCount++;
+
+                    }
+
+
+                    if (predecessors.Count == 1)
+                    {
+                        predecessors.ElementAt(0).update(component); uCount++;
+
+                    }
+
+
+                    if (predecessors.Count > 1)
+                    {
+                        // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
+                        open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); }); //TODO: is contains working? -> if not encounters slip through and waste memory.... a lot
+                        var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
+                        joint_encounter.update(component);
+                        open_encounters.Add(joint_encounter);
+                        mCount++;
+                    }
+
+                    predecessors.Clear();
+
+                    // Check encounter timeouts
+                    for (int i = open_encounters.Count - 1; i >= 0; i--)
+                    {
+                        Encounter e = open_encounters[i];
+                        if (Math.Abs(e.tick_id - tick.tick_id) > ENCOUNTER_TIMEOUT)
+                        {
+                            open_encounters.Remove(e);
+                            closed_encounters.Add(e);
+                        }
+                    }
+                    // NEXT TICK
+
+                } //NO TICKS LEFT
+            }
+           
 
             //We are done. -> move open encounters to closed encounters
             closed_encounters.AddRange(open_encounters);
@@ -245,6 +248,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
             return replay;
         }
+
+
 
 
         /// <summary>
@@ -305,6 +310,8 @@ namespace CSGO_Analytics.src.encounterdetect
             }
             var css = cs.OrderBy(x => x.tick_id).ToList();
             int encounter_tick_id = cs.OrderBy(x => x.tick_id).ElementAt(0).tick_id;
+            var merged_encounter = new Encounter(encounter_tick_id, css);
+            merged_encounter.cs.ForEach(comp => comp.parent = merged_encounter); // Set new parent encounter for all components
             return new Encounter(encounter_tick_id, css);
         }
 
@@ -396,7 +403,10 @@ namespace CSGO_Analytics.src.encounterdetect
                         {
                             foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != flashedEnemyplayer.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
                             {
-                                //testSight(player, counterplayer); // Test if player can see counterplayer
+                                //if(testSight(flashedEnemyplayer, counterplayer)){ // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
+                                //Link flashsupportlink = new Link(flash.actor, counterplayer, ComponentType.SUPPORTLINK, Direction.DEFAULT);
+                                //links.Add(flashsupportlink);
+                                //}
                             }
                         }
                         continue;
@@ -414,7 +424,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         continue;
                 }
 
-                // Test for supportlinks created by nades as these cant be read from events directly
+                // Test for supportlinks created by nades(except flashbang) as these cant be read from events directly
                 List<Player> supportedPlayers = getSupportedPlayers();
                 foreach (var supportreciever in supportedPlayers)
                 {
@@ -516,14 +526,14 @@ namespace CSGO_Analytics.src.encounterdetect
         private List<Player> candidates = new List<Player>();
         /// <summary>
         /// Searches the player that has most probable Hurt another player with the given weapon fire event
+        /// This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor.
+        /// And in most cases a player fires and misses therefore theres a long time between when he might hit the seen opponent because he hides. But still he saw and shot at him. These events are lost here
         /// </summary>
         /// <param name="wf"></param>
         /// <returns></returns>
         private Player searchVictimCandidate(WeaponFire wf, int tick_id)
         {
-            //Console.WriteLine(registeredHurtEvents.Count);
-            // This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor
-            // And in most cases a player fires and misses and theres a long time between he might hit the seen opponent because he hides. But still he saw and shot at him. these events are lost here
+
             for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
             {
                 var item = registeredHurtEvents.ElementAt(index);
@@ -627,7 +637,7 @@ namespace CSGO_Analytics.src.encounterdetect
             for (int i = 0; i < distance_table[entityid].Length; i++)
             {
                 if (entityid != i)
-                    distance_table[entityid][i] = MathUtils.getEuclidDistance3D(new Vector(position_table[entityid]), new Vector(position_table[i]));
+                    distance_table[entityid][i] = MathLibrary.getEuclidDistance3D(new Vector(position_table[entityid]), new Vector(position_table[i]));
             }
         }
 
@@ -644,13 +654,44 @@ namespace CSGO_Analytics.src.encounterdetect
         //
         //
 
-        public int getID(int csid)
+        public int getID(int csid) // Problem with ID Mapping: Player disconnect or else changes ID of this player
         {
             int id;
             if (mappedPlayerIDs.TryGetValue(csid, out id))
+            {
                 return id;
-            else
-                Console.WriteLine("Can`t map csid: " + csid + ", on id"); return -99;
+
+            } else
+            {
+                Console.WriteLine("Can`t map csid: " + csid + ", on id. Maybe a random id change occured -> Key changed");
+                throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        /// <summary>
+        /// IDs given from CS:GO can change after certain events -> this kills our table updates
+        /// So we just add a new id for this player to the dictionary. getID is not injective!
+        /// </summary>
+        /// <param name="p"></param>
+        private void handleChangedID(Player p)
+        {
+            int changedKey = -99;
+            int value = -99;
+            for (int i = 0; i < players.Count() - 1; i++)
+            {
+                if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
+                {
+                    changedKey = players[i].player_id; // The old key we used but which is not up to date
+                    value = i; // Our value is always the position in the initalisation playerarray
+                    players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
+                    Console.WriteLine("Found new ID for player "+p.playername);
+                }
+            }
+            mappedPlayerIDs.Add(p.player_id, value);
+            foreach (var temp in mappedPlayerIDs)
+            {
+                Console.WriteLine("key: "+ temp.Key +" value: "+temp.Value);
+            }
         }
     }
 }

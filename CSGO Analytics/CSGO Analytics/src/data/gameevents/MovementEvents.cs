@@ -10,7 +10,7 @@ namespace CSGO_Analytics.src.data.gameevents
     /// <summary>
     /// Movementevents just give us a hint that we should update the current position of this player.
     /// </summary>
-    class MovementEvents : Gameevent
+    class MovementEvents : Event
     {
 
         public override Player[] getPlayers()
