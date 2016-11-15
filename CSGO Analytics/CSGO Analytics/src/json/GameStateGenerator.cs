@@ -481,6 +481,10 @@ namespace CSGO_Analytics.src.json.parser
             #endregion
 
             #region Serverevents
+
+            //
+            // Rare. Not tested yet. TODO:
+            //
             parser.PlayerDisconnect += (sender, e) =>
             {
                 Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " disconnected");

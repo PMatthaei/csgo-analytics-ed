@@ -213,9 +213,10 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionY, pitch = p.ViewDirectionX },
+                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
+                
             };
             return player;
         }
@@ -275,8 +276,9 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionY, pitch = p.ViewDirectionX },
+                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
+                isSpotted = p.IsSpotted
             };
             return player;
         }
@@ -301,7 +303,7 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionY, pitch = p.ViewDirectionX },
+                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 isSpotted = p.IsSpotted,
@@ -325,7 +327,7 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionY, pitch = p.ViewDirectionX },
+                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 hasHelmet = p.HasHelmet,

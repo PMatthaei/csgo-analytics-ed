@@ -74,7 +74,14 @@ namespace CSGO_Analytics.src.views
         {
             get
             {
-                aimPoint = new Point(X + 100, Y );
+                var aimX = (X + 40* Math.Cos(-Yaw)); // Aim vector from Yaw TODO: seems not right? forumla or data fail?
+                var aimY = (Y + 40*Math.Sin(-Yaw));
+
+                if(aimPoint == null)
+                    aimPoint = new Point(aimX, aimY);
+
+                aimPoint.X = aimX;
+                aimPoint.Y = aimY;
                 Geometry line = new LineGeometry(new Point(X, Y), aimPoint);
                 Geometry e = new EllipseGeometry(new Point(X, Y), Radius, Radius);
                 GeometryGroup combined = new GeometryGroup();

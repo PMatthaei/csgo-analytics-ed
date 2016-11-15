@@ -19,7 +19,7 @@ namespace CSGO_Analytics.src.json.jsonobjects
         /// </summary>
         /// <param name="tick"></param>
         /// <returns></returns>
-        public List<Player> getUpdatedPlayers()
+        public List<Player> getUpdatedPlayers() //TODO: what happens if one player is added multiple times
         {
             List<Player> ps = new List<Player>();
             foreach (var g in tickevents)

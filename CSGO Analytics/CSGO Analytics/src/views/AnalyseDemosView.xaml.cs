@@ -101,13 +101,14 @@ namespace CSGO_Analytics.src.views
                          usepretty = true,
                          showsteps = true,
                          specialevents = true,
-                         highdetailplayer = true,
+                         highdetailplay
+                         er = true,
                          positioninterval = 8,
                          settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                      };
                      GameStateGenerator.GenerateJSONFile(demoparser, ptask);
                       
-            }*/
+            } */
 
 
                 using (var reader = new StreamReader(path.Replace(".dem", ".json")))
@@ -130,8 +131,9 @@ namespace CSGO_Analytics.src.views
 
                 InitializeGUI();
 
-                InitializeMap();
+                InitializeMapGraphic();
 
+                MathLibrary.initalizeConstants();
                 InitializeEncounterDetection();
             }
             catch (Exception e)
@@ -148,13 +150,14 @@ namespace CSGO_Analytics.src.views
             this.mapname = gamestate.meta.mapname;
             time_slider.Minimum = 0;
             time_slider.Maximum = gamestate.match.rounds.Last().ticks.Last().tick_id;
+
         }
 
 
         /// <summary>
         /// MapPanel and minimap viewbox are initalized
         /// </summary>
-        private void InitializeMap()
+        private void InitializeMapGraphic()
         {
 
             canvas.ClipToBounds = true;
@@ -172,6 +175,8 @@ namespace CSGO_Analytics.src.views
             mapPanel.Width = map.Width = bi.Width * scalefactor_map;
             mapPanel.Height = map.Height = bi.Height * scalefactor_map;
 
+            Console.WriteLine(mapPanel.Width);
+            Console.WriteLine(mapPanel.Height);
             Canvas.SetLeft(map, (canvas.Width - map.Width) / 2);
             Canvas.SetTop(map, (canvas.Height - map.Height) / 2);
 
@@ -461,25 +466,17 @@ namespace CSGO_Analytics.src.views
             //moveMap(dx, dy);
         }
 
-        int count = 0;
 
         private void moveMap(double dx, double dy)
         {
-
-            Console.WriteLine(dx);
-            Console.WriteLine(dy);
             var x = Canvas.GetLeft(map);
             var y = Canvas.GetTop(map);
-            Console.WriteLine(x);
-            Console.WriteLine(y);
+
             var newx = x + dx * 0.3;
             var newy = y + dy * 0.3;
-            Console.WriteLine(newx);
-            Console.WriteLine(newy);
+
             Canvas.SetLeft(map, newx);
             Canvas.SetTop(map, newy);
-            count++;
-
         }
 
         private void Canvas_OnMouseLeave(object sender, MouseEventArgs e)
@@ -492,11 +489,6 @@ namespace CSGO_Analytics.src.views
             return canvas;
         }
 
-        private void Page_KeyDown(object sender, KeyEventArgs e)
-        {
-
-        }
-
         private void TabControl_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.S)
@@ -505,10 +497,6 @@ namespace CSGO_Analytics.src.views
             }
         }
 
-        private void Canvas_KeyDown(object sender, KeyEventArgs e)
-        {
-
-        }
 
 
 

@@ -21,6 +21,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
     public class EncounterDetectionAlgorithm
     {
+        public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
+
         //
         // VARIABLES AND CONSTANTS
         //
@@ -31,17 +33,18 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 4;
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
 
+        /// <summary>
+        /// Tickrate of the demo this algorithm runs on. 
+        /// </summary>
         public float tickrate;
 
-        public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
-
         /// <summary>
-        /// All players participating in this match.
+        /// All players - communicated by the meta-data - which are participating in this match.
         /// </summary>
         private Player[] players;
 
         /// <summary>
-        /// All ticks we have from this match.
+        /// All data we have from this match.
         /// </summary>
         private Match match;
 
@@ -127,8 +130,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int iCount = 0;
 
 
-        private int c = 0;
-        private int b = 0;
+
         private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
         /// 
@@ -136,7 +138,7 @@ namespace CSGO_Analytics.src.encounterdetect
         public MatchReplay run()
         {
 
-            MatchReplay replay = new MatchReplay(); // Problem: empty ticks were left out -> gaps in tick_id -> cant use it as index in arrays
+            MatchReplay replay = new MatchReplay(); // Problem: empty ticks were thrown away -> gaps in tick_id -> cant use it as index in arrays
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -144,28 +146,30 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var tick in round.ticks) // Read all ticks
                 {
-                    //Console.WriteLine("Current tick: " + tick.tick_id);
-
                     foreach (var p in tick.getUpdatedPlayers()) // Update tables
                     {
                         int id = 0;
-                        try
-                        {
-                            id = getID(p.player_id);
 
-                        }
+                        try { id = getID(p.player_id); }
                         catch (ArgumentOutOfRangeException e) // Watch out for id changes through spectator or something else
                         {
                             handleChangedID(p);
-                            //id = getID(p.player_id);
                         }
   
 
                         updatePosition(id, p.position.getAsArray());
-                        updateFacing(id, p.facing.getAsArray()); //TODO how handle facing and calculate field of view? Facing class!?!?
+                        updateFacing(id, p.facing.getAsArray());
                         updateDistance(id);
-                        //updateSpotted(getID(p.player_id), p.spotted); //TODO where calc who spotted him?
 
+                        //updateSpotted(id, p.isSpotted); // Spotted boolean extracted from CSGO Demo
+
+                        // Check if one of the enemy players saw the current player -> he was spotted
+                        foreach(var counterplayer in tick.getUpdatedPlayers().Where(player => player.getTeam() != p.getTeam()))
+                        {
+                            //bool isSpotted = checkLineOfSight();
+                           // updateSpotted(id, isSpotted); // Spotted boolean extracted from CSGO Demo
+
+                        }
                     }
 
 
@@ -207,7 +211,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     predecessors.Clear();
 
-                    // Check encounter timeouts
+                    // Check encounter timeouts every tick
                     for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
                         Encounter e = open_encounters[i];
@@ -663,7 +667,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             } else
             {
-                Console.WriteLine("Can`t map csid: " + csid + ", on id. Maybe a random id change occured -> Key changed");
+                Console.WriteLine("Can`t map csid: " + csid + ", on id. Maybe a random CS-ID change occured -> Key needs update");
                 throw new ArgumentOutOfRangeException();
             }
         }
@@ -684,14 +688,10 @@ namespace CSGO_Analytics.src.encounterdetect
                     changedKey = players[i].player_id; // The old key we used but which is not up to date
                     value = i; // Our value is always the position in the initalisation playerarray
                     players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
-                    Console.WriteLine("Found new ID for player "+p.playername);
                 }
             }
             mappedPlayerIDs.Add(p.player_id, value);
-            foreach (var temp in mappedPlayerIDs)
-            {
-                Console.WriteLine("key: "+ temp.Key +" value: "+temp.Value);
-            }
+
         }
     }
 }
