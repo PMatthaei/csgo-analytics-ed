@@ -8,22 +8,25 @@ using System.Text.RegularExpressions;
 
 namespace CSGO_Analytics.src.utils
 {
-    class MapDataPropertyReader
+    public class MapMetaData
     {
-        public string mapname;
-        public int mapcenter_x;
-        public int mapcenter_y;
-        public int map_ingame_width;
-        public int map_ingame_height;
+        public string mapname { get; set; }
+        public int mapcenter_x { get; set; }
+        public int mapcenter_y { get; set; }
         public double scale;
-        public int rotate;
-        public double zoom;
+        public int rotate { get; set; }
+        public double zoom { get; set; }
+    }
+
+    public class MapMetaDataPropertyReader
+    {
+        public MapMetaData metadata;
 
         /// <summary>
         /// Reads a map info file "<mapname>".txt and extracts the relevant data about the map
         /// </summary>
         /// <param name="path"></param>
-        public MapDataPropertyReader(string path)
+        public MapMetaDataPropertyReader(string path)
         {
             string line;
 
@@ -34,23 +37,23 @@ namespace CSGO_Analytics.src.utils
 
                 if (line.Contains("pos_x"))
                 {
-                    mapcenter_x = Int32.Parse(resultString);
+                    metadata.mapcenter_x = Int32.Parse(resultString);
                 }
                 else if (line.Contains("pos_y"))
                 {
-                    mapcenter_y = Int32.Parse(resultString);
+                    metadata.mapcenter_y = Int32.Parse(resultString);
                 }
                 else if (line.Contains("scale"))
                 {
-                    scale = Double.Parse(resultString);
+                    metadata.scale = Double.Parse(resultString);
                 }
                 else if (line.Contains("rotate"))
                 {
-                    rotate = Int32.Parse(resultString);
+                    metadata.rotate = Int32.Parse(resultString);
                 }
                 else if (line.Contains("zoom"))
                 {
-                    zoom = Double.Parse(resultString);
+                    metadata.zoom = Double.Parse(resultString);
                 }
             }
 

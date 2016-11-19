@@ -22,6 +22,7 @@ using DP = DemoInfoModded;
 using Newtonsoft.Json;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
+using CSGO_Analytics.src.utils;
 
 namespace CSGO_Analytics.src.views
 {
@@ -42,7 +43,7 @@ namespace CSGO_Analytics.src.views
         private MatchReplay matchreplay;
 
         //
-        // MAP VARIABLES
+        // VARIABLES FOR GAMEVISUALS
         //
         private string mapname;
         private double scalefactor_map;
@@ -60,7 +61,7 @@ namespace CSGO_Analytics.src.views
 
 
         //
-        // VISUALS
+        // VISUALS OF THE GAME 
         //
 
         /// <summary>
@@ -86,67 +87,61 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// Circles representing active nades(smoke=grey, fire=orange, henade=red, flash=white, decoy=outline only)
         /// </summary>
-        private List<Ellipse> activeNades = new List<Ellipse>();
+        private List<NadeShape> activeNades = new List<NadeShape>();
 
 
 
 
         public AnalyseDemosView()
         {
-            try
-            {
-                var path = "match_0.dem";
-                /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+
+            var path = "match_0.dem";
+            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+             {
+                 ParseTask ptask = new ParseTask
                  {
-                     ParseTask ptask = new ParseTask
-                     {
-                         destpath = path,
-                         srcpath = path,
-                         usepretty = true,
-                         showsteps = true,
-                         specialevents = true,
-                         highdetailplay
-                         er = true,
-                         positioninterval = 8,
-                         settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                     };
-                     GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-                      
-            } */
+                     destpath = path,
+                     srcpath = path,
+                     usepretty = true,
+                     showsteps = true,
+                     specialevents = true,
+                     highdetailplay
+                     er = true,
+                     positioninterval = 8,
+                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                 };
+                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+
+        } */
 
 
-                using (var reader = new StreamReader(path.Replace(".dem", ".json")))
-                {
-                    gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                    enDetect = new EncounterDetectionAlgorithm(gamestate);
-                }
-            }
-            catch (Exception e)
+            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
-                Console.WriteLine(e.Message);
-                Console.WriteLine(e.StackTrace);
+                gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                enDetect = new EncounterDetectionAlgorithm(gamestate);
             }
 
 
-            try
-            {
 
-                InitializeComponent();
+            InitializeComponent();
 
-                InitializeGUIData();
+            //LoadMapData();
 
-                InitializeMapGraphic();
+            InitializeGUIData();
 
-                MathLibrary.initalizeConstants();
+            InitializeMapGraphic();
 
-                InitializeEncounterDetection();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                Console.WriteLine(e.StackTrace);
-            }
+            MathLibrary.initalizeConstants();
 
+            InitializeEncounterDetection();
+
+
+        }
+
+        private MapMetaData LoadMapData()
+        {
+            string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
+            return new MapMetaDataPropertyReader(path).metadata;
         }
 
         private void InitializeGUIData()
@@ -181,9 +176,6 @@ namespace CSGO_Analytics.src.views
             mapPanel.Width = map.Width = bi.Width * scalefactor_map;
             mapPanel.Height = map.Height = bi.Height * scalefactor_map;
 
-
-            Console.WriteLine(mapPanel.Width);
-            Console.WriteLine(mapPanel.Height);
             Canvas.SetLeft(map, (canvas.Width - map.Width) / 2);
             Canvas.SetTop(map, (canvas.Height - map.Height) / 2);
 
@@ -241,22 +233,30 @@ namespace CSGO_Analytics.src.views
 
                 int passedTime = (int)(dt * tickrate);
 
-                //Run UI changes in a Non-UI-Blocking thread 
+                //Run UI changes in a Non-UI-Blocking thread. Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                 Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
                 {
 
                     if (links.Count != 0)
                     {
-                        foreach (var oldlink in links)
-                            mapPanel.Children.Remove(oldlink);
-
+                        links.ForEach(l => mapPanel.Children.Remove(l));
                         links.Clear();
                     }
 
+                    // Update UI: timers, labels etc
                     time_slider.Value = tick.tick_id;
                     tick_label.Content = "Tick: " + tick.tick_id;
-                    var timesec = (int)(tick.tick_id * tickrate / 1000);
-                    time_label.Content = "Time: " + ":" + timesec;
+                    double ticks = (double)(tick.tick_id * tickrate);
+                    TimeSpan time = TimeSpan.FromMilliseconds(ticks);
+                    DateTime startdate = new DateTime(1970, 1, 1) + time;
+                    time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;
+
+                    // Update map with all active components, player etc 
+                    foreach (var p in tick.getUpdatedPlayers())
+                    {
+                        updatePlayer(p);
+                    }
+
 
                     if (comp != null && comp.links.Count != 0)
                     {
@@ -266,16 +266,16 @@ namespace CSGO_Analytics.src.views
                         }
                     }
 
-                    foreach (var p in tick.getUpdatedPlayers())
-                    {
-                        updatePlayer(p); // Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
-                    }
 
                     // Draw all event relevant graphics(nades, bombs etc)
-                    foreach (var p in tick.tickevents.Where(t => t.gameevent == "smoke_exploded" || t.gameevent == "flash_exploded" || t.gameevent == "fire_exploded"))
+                    if(tick.getNadeEvents().Count != 0)
                     {
-
+                        foreach (var n in tick.getNadeEvents())
+                        {
+                            drawNade(n);
+                        }
                     }
+                    
 
 
                 }));
@@ -288,11 +288,26 @@ namespace CSGO_Analytics.src.views
 
 
 
+
+
         //
         //
         // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
         //
         //
+
+        private void drawNade(data.gameevents.NadeEvents n)
+        {
+            math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
+            NadeShape ns = new NadeShape();
+            ns.X = nadepos.x;
+            ns.Y = nadepos.y;
+            ns.Radius = 20;
+            ns.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            activeNades.Add(ns);
+            mapPanel.Children.Add(ns);
+        }
 
         private void drawLink(Player actor, Player reciever, ComponentType type)
         {
@@ -302,13 +317,11 @@ namespace CSGO_Analytics.src.views
             ls.X1 = aps.X;
             ls.Y1 = aps.Y;
 
-
             PlayerShape rps = playershapes[enDetect.getID(reciever.player_id)];
             ls.X2 = rps.X;
             ls.Y2 = rps.Y;
 
             ls.StrokeThickness = 2;
-            ls.Stroke = System.Windows.Media.Brushes.DarkRed;
 
             if (type == ComponentType.COMBATLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkRed;
@@ -329,8 +342,9 @@ namespace CSGO_Analytics.src.views
         {
             var ps = new PlayerShape();
             ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
-            ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
-            ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
+            var vector = MathLibrary.CSPositionToUIPosition(p.position);
+            ps.X = vector.x;
+            ps.Y = vector.y;
             ps.Radius = 4;
             Color color;
 
@@ -343,11 +357,12 @@ namespace CSGO_Analytics.src.views
             ps.Stroke = new SolidColorBrush(color);
             ps.StrokeThickness = 0.5;
             ps.Active = true;
+
             playershapes[enDetect.getID(p.player_id)] = ps;
             mapPanel.Children.Add(ps);
         }
 
-        Color deadcolor = Color.FromArgb(255, 0, 0, 0);
+        private Color deadcolor = Color.FromArgb(255, 0, 0, 0);
 
         private void updatePlayer(Player p)
         {
@@ -359,9 +374,9 @@ namespace CSGO_Analytics.src.views
                 ps.Stroke = new SolidColorBrush(deadcolor);
                 return;
             }
-
-            ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
-            ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
+            var vector = MathLibrary.CSPositionToUIPosition(p.position);
+            ps.X = vector.x;
+            ps.Y = vector.y;
             ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
 
         }
@@ -476,7 +491,7 @@ namespace CSGO_Analytics.src.views
         }
 
 
-        private void moveMap(double dx, double dy)
+        private void moveMapBy(double dx, double dy)
         {
             var x = Canvas.GetLeft(map);
             var y = Canvas.GetTop(map);

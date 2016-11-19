@@ -12,7 +12,7 @@ namespace CSGO_Analytics.src.data.gameevents
     /// <summary>
     /// Nadeevents hold the start and end or explosiontime of a nade.
     /// </summary>
-    class NadeEvents : Event
+    public class NadeEvents : Event
     {
         public string nadetype { get; set; }
         public Vector position { get; set; }

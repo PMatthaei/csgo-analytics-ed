@@ -32,6 +32,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float ENCOUNTER_TIMEOUT = 20;
         private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 4;
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
+        private const float ATTACKRANGE = 500.0f;
 
         /// <summary>
         /// Tickrate of the demo this algorithm runs on. 
@@ -155,7 +156,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         {
                             handleChangedID(p);
                         }
-  
+
 
                         updatePosition(id, p.position.getAsArray());
                         updateFacing(id, p.facing.getAsArray());
@@ -164,10 +165,10 @@ namespace CSGO_Analytics.src.encounterdetect
                         //updateSpotted(id, p.isSpotted); // Spotted boolean extracted from CSGO Demo
 
                         // Check if one of the enemy players saw the current player -> he was spotted
-                        foreach(var counterplayer in tick.getUpdatedPlayers().Where(player => player.getTeam() != p.getTeam()))
+                        foreach (var counterplayer in tick.getUpdatedPlayers().Where(player => player.getTeam() != p.getTeam()))
                         {
                             //bool isSpotted = checkLineOfSight();
-                           // updateSpotted(id, isSpotted); // Spotted boolean extracted from CSGO Demo
+                            // updateSpotted(id, isSpotted); // Spotted boolean extracted from CSGO Demo
 
                         }
                     }
@@ -176,6 +177,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     CombatComponent component = buildComponent(tick);
 
                     replay.insertData(tick, component); // Save the tick with its component for later replaying. 
+
+
 
                     //
                     // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
@@ -225,7 +228,12 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 } //NO TICKS LEFT
             }
-           
+
+            watch.Stop();
+            var sec = watch.ElapsedMilliseconds / 1000.0f;
+
+            // Clear data
+            this.match = null;
 
             //We are done. -> move open encounters to closed encounters
             closed_encounters.AddRange(open_encounters);
@@ -243,12 +251,8 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\nNades tested for Supportlinks: " + activeNades.Count);
             Console.WriteLine("\n\n  Encounters found: " + closed_encounters.Count);
 
-            watch.Stop();
-            var sec = watch.ElapsedMilliseconds / 1000.0f;
 
             Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
-            //TODO: dispose everything else. tickstream etc!!
-            //tickstream.Dispose();
 
             return replay;
         }
@@ -348,20 +352,62 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="g"></param>
         private CombatComponent buildComponent(Tick tick)
         {
-
             List<Link> links = new List<Link>();
 
-            foreach (var g in tick.tickevents) // Read all gameevents in that tick and build a component with it
+            // TODO: Dead players are still present in data and build links
+            //searchDistancebasedCombatLinks(tick, links);
+
+            searchEventbasedCombatLinks(tick, links);
+
+            // Test for supportlinks created by nades(except flashbang) as these cant be read from events directly
+            links.AddRange(searchSupportlinks());
+
+            CombatComponent combcomp = null;
+            if (links.Count != 0)
+            {
+                combcomp = new CombatComponent(tick.tick_id);
+                combcomp.links = links;
+                combcomp.assignPlayers();
+            }
+
+            return combcomp;
+        }
+
+
+
+
+
+
+
+        private void searchDistancebasedCombatLinks(Tick tick, List<Link> links)
+        {
+            foreach (var player in tick.getUpdatedPlayers())
+            {
+                for (int i = 0; i < distance_table[getID(player.player_id)].Length; i++)
+                {
+                    if (distance_table[getID(player.player_id)][i] < ATTACKRANGE)
+                    {
+                        var actor = players[getID(player.player_id)];
+                        var reciever = players[i];
+                        if (actor.getTeam() != reciever.getTeam())  
+                            links.Add(new Link(actor, reciever, ComponentType.COMBATLINK, Direction.DEFAULT));
+                    }
+                }
+            }
+        }
+
+
+
+
+        private void searchEventbasedCombatLinks(Tick tick, List<Link> links)
+        {
+            foreach (var g in tick.tickevents) // Read all gameevents in that tick and build links for a component
             {
                 Player reciever = null;
                 ComponentType type = 0;
 
-                switch (g.gameevent) //TODO: SWITCH OR implement in event class? problem: switch is mess and classes need sources from gamestate
+                switch (g.gameevent)
                 {
-                    //
-                    // CSGO GAMEEVENTS
-                    //
-
                     //
                     //  Combatlinks
                     //
@@ -382,17 +428,17 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "weapon_fire":
                         wfeCount++;
                         WeaponFire wf = (WeaponFire)g;
-                        var victim = searchVictimCandidate(wf, tick.tick_id);
+                        var potential_victim = searchVictimCandidate(wf, tick.tick_id);
 
-                        if (victim == null) // No candidate found. Either wait for a playerhurt event or there was not nearly victim
+                        if (potential_victim == null) // No candidate found. Either wait for a incoming playerhurt event or there was not nearly victim
                             continue;
                         wfCount++;
-                        reciever = victim;
+                        reciever = potential_victim;
                         type = ComponentType.COMBATLINK;
                         break;
                     case "player_spotted":
-                        /*PlayerSpotted ps = (PlayerSpotted)g;
-                        type = ComponentType.COMBATLINK;*/
+                        //PlayerSpotted ps = (PlayerSpotted)g;
+                        //type = ComponentType.COMBATLINK;
 
                         continue;
 
@@ -402,8 +448,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "flash_exploded":
                         FlashNade flash = (FlashNade)g;
                         type = ComponentType.SUPPORTLINK;
-                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( hase he prevented sight on one of his teammates) 
-                        foreach (var flashedEnemyplayer in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher
+                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
+                        foreach (var flashedEnemyplayer in flash.flashedplayers.Where(player => player.team != flash.actor.team)) // Every player not in the team of the flasher(sort out all teamflashes)
                         {
                             foreach (var counterplayer in players.Where(counterplayer => counterplayer.team != flashedEnemyplayer.team && flash.actor != counterplayer)) // Every player not in the team of the flashed(and not the flasher)
                             {
@@ -428,42 +474,19 @@ namespace CSGO_Analytics.src.encounterdetect
                         continue;
                 }
 
-                // Test for supportlinks created by nades(except flashbang) as these cant be read from events directly
-                List<Player> supportedPlayers = getSupportedPlayers();
-                foreach (var supportreciever in supportedPlayers)
-                {
-                    Link link = new Link(g.actor, supportreciever, ComponentType.SUPPORTLINK, Direction.DEFAULT);
-                    links.Add(link);
-                }
-
-                int actor_id = getID(g.actor.player_id);
-                int reciever_id = getID(reciever.player_id);
-
-                if (type == ComponentType.SUPPORTLINK) continue;
-                if (distance_table[actor_id][reciever_id] < 5000)
-                {
-                    Link link = new Link(g.actor, reciever, type, Direction.DEFAULT);
-                    links.Add(link);
-                }
+                if (g.actor == null || reciever == null) continue;
+                Link link = new Link(g.actor, reciever, type, Direction.DEFAULT);
+                links.Add(link);
 
             }
-
-            CombatComponent combcomp = null;
-            if (links.Count != 0)
-            {
-                combcomp = new CombatComponent(tick.tick_id);
-                combcomp.links = links;
-                combcomp.assignPlayers(); // Assign players in this encounter from all links
-            }
-
-            return combcomp;
         }
 
-        private List<Player> getSupportedPlayers()
+        private List<Link> searchSupportlinks()
         {
-            var supportedPlayers = new List<Player>();
+            var supportlinks = new List<Link>();
+
             //Test for Line of sight vs smoke collision
-            foreach (var nadeevent in activeNades)
+            foreach (var nadeevent in activeNades.Where(nade => nade.gameevent == "smoke_exploded"))
             {
                 foreach (var player in players.Where(player => player.team != nadeevent.actor.team))
                 {
@@ -471,12 +494,14 @@ namespace CSGO_Analytics.src.encounterdetect
                         foreach(var counterplayer in players.Where(counterplayer => counterplayer.team != player.team){
                             if(testSight(player, counterplayer)){// Test if player1 can see player 2
                                 supportePlayers.Add(counterplayer);
+                                Link link = new Link(nadevent.actor, supportreciever, ComponentType.SUPPORTLINK, Direction.DEFAULT);
+                                supportlinks.Add(link);
                             }
                         }
                      */
                 }
             }
-            return supportedPlayers;
+            return supportlinks;
         }
 
 
@@ -662,19 +687,16 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             int id;
             if (mappedPlayerIDs.TryGetValue(csid, out id))
-            {
                 return id;
-
-            } else
-            {
+            else
                 Console.WriteLine("Could not map unkown csid: " + csid + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
                 throw new ArgumentOutOfRangeException(); //TODO: our own exception?
-            }
+
         }
 
         /// <summary>
         /// IDs given from CS:GO can change after certain events -> this kills our table updates
-        /// So we just add a new id for this player to the dictionary. getID is not injective!
+        /// So we just add a new id for this player to the dictionary. getID is not injective! ( f(a) = f(b) a =/= b )
         /// </summary>
         /// <param name="p"></param>
         private void handleChangedID(Player p)

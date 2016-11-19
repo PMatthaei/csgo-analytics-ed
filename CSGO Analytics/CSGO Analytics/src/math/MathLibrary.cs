@@ -167,12 +167,12 @@ namespace CSGO_Analytics.src.math
         // BASICS
         //
         //
-        private static double ScalarProduct(Vector v1, Vector v2)
+        public static double ScalarProduct(Vector v1, Vector v2)
         {
             return (v1.x * v2.x + v1.y * v2.y - v1.z * v2.z) / (v1.Absolute() * v2.Absolute());
         }
 
-        private static Vector CrossProduct(Vector v1, Vector v2)
+        public static Vector CrossProduct(Vector v1, Vector v2)
         {
             return new Vector((v1.y * v2.z - v1.z * v2.y), (v1.z * v2.x - v1.x * v2.z), (v1.x * v2.y - v1.y * v2.x));
         }
@@ -198,12 +198,26 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public Vector getAimVector(Vector pos, Facing facing)
         {
-            var aimX = (float)(pos.x + Math.Cos(facing.yaw)); // Aim vector from Yaw
-            var aimY = (float)(pos.y + Math.Sin(facing.yaw));
+            var aimX = (float)(pos.x + Math.Cos(toRadian(-facing.yaw)));// Aim vector from Yaw
+            var aimY = (float)(pos.y + Math.Sin(toRadian(-facing.yaw)));
 
             return new Vector(aimX, aimY, 0); //TODO: 3D level calc is missing(z achsis change with pitch)
         }
 
+        /// <summary>
+        /// Alternative for cantor pairing function: http://stackoverflow.com/questions/919612/mapping-two-integers-to-one-in-a-unique-and-deterministic-way
+        /// Used to distinct links with their participants ids
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public int SzudzikFunction(int a , int b)
+        {
+            if (a >= 0 && b >= 0)
+                return a >= b ? a * a + a + b : a + b * b;
+            else
+                return -1;
+        }
 
     }
 

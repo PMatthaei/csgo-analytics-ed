@@ -117,6 +117,7 @@
     <Compile Include="src\views\ManageDemosView.xaml.cs">
       <DependentUpon>ManageDemosView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\views\objects\NadeShape.cs" />
     <Compile Include="src\views\objects\LinkShape.cs" />
     <Compile Include="src\views\objects\PlayerShape.cs" />
     <Compile Include="StartView.xaml.cs">

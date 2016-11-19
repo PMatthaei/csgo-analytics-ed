@@ -6,24 +6,26 @@ using System.Threading.Tasks;
 using System.Windows.Shapes;
 using System.Windows.Media;
 using System.Windows;
-using CSGO_Analytics.src.data.gameobjects;
-using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.views
 {
     class PlayerShape : Shape
     {
-
-        public bool Active { get; set; }
+        /// <summary>
+        /// Line of sight length of a playershape
+        /// </summary>
+        private const int LOS_LENGTH = 40;
 
         private Point aimPoint;
+
+        public bool Active { get; set; }
 
         public double Radius { get; set; }
 
         public double Yaw
         {
             get { return (double)GetValue(yawProperty); }
-            set { SetValue(yawProperty, value);}
+            set { SetValue(yawProperty, value); }
         }
 
         // DependencyProperty - Yaw
@@ -43,7 +45,7 @@ namespace CSGO_Analytics.src.views
             get { return (double)GetValue(xProperty); }
             set { SetValue(xProperty, value); }
         }
-         
+
         // DependencyProperty - Position X
         private static FrameworkPropertyMetadata XMetadata =
                 new FrameworkPropertyMetadata(
@@ -77,10 +79,10 @@ namespace CSGO_Analytics.src.views
         {
             get
             {
-                var aimX = (X + 40* Math.Cos(Yaw)); // Aim vector from Yaw TODO: seems not right? forumla or data fail?
-                var aimY = (Y + 40*Math.Sin(Yaw));
+                var aimX = (X + LOS_LENGTH * Math.Cos(Yaw)); // Aim vector from Yaw -> dont forget toRadian for this calc
+                var aimY = (Y + LOS_LENGTH * Math.Sin(Yaw));
 
-                if(aimPoint == null)
+                if (aimPoint == null)
                     aimPoint = new Point(aimX, aimY);
 
                 aimPoint.X = aimX;
