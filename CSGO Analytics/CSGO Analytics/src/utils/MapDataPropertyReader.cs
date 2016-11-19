@@ -13,6 +13,8 @@ namespace CSGO_Analytics.src.utils
         public string mapname;
         public int mapcenter_x;
         public int mapcenter_y;
+        public int map_ingame_width;
+        public int map_ingame_height;
         public double scale;
         public int rotate;
         public double zoom;

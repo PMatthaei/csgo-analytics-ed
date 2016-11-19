@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Shapes;
+using CSGO_Analytics.src.data.gameobjects;
 
 namespace CSGO_Analytics.src.math
 {
@@ -176,12 +177,12 @@ namespace CSGO_Analytics.src.math
             return new Vector((v1.y * v2.z - v1.z * v2.y), (v1.z * v2.x - v1.x * v2.z), (v1.x * v2.y - v1.y * v2.x));
         }
 
-        private static double toDegree(double radian)
+        public static double toDegree(double radian)
         {
             return radian * 180.0 / Math.PI;
         }
 
-        private static double toRadian(double degree)
+        public static double toRadian(double degree)
         {
             return degree * Math.PI / 180.0;
         }
@@ -195,10 +196,10 @@ namespace CSGO_Analytics.src.math
         /// <param name="pos"></param>
         /// <param name="yaw"></param>
         /// <returns></returns>
-        public Vector getAimVector(Vector pos, float yaw)
+        public Vector getAimVector(Vector pos, Facing facing)
         {
-            var aimX = (float)(pos.x + Math.Cos(yaw)); // Aim vector from Yaw
-            var aimY = (float)(pos.y + Math.Sin(yaw));
+            var aimX = (float)(pos.x + Math.Cos(facing.yaw)); // Aim vector from Yaw
+            var aimY = (float)(pos.y + Math.Sin(facing.yaw));
 
             return new Vector(aimX, aimY, 0); //TODO: 3D level calc is missing(z achsis change with pitch)
         }

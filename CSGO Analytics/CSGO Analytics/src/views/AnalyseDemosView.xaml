@@ -24,14 +24,14 @@
                                 <ColumnDefinition Width="1036*"/>
                             </Grid.ColumnDefinitions>
                             <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="575" Margin="95,15,0,0" VerticalAlignment="Top" Width="935" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnLefttMouseButtonUp" MouseMove="Canvas_OnMouseMove" MouseLeave="Canvas_OnMouseLeave" Grid.RowSpan="3"/>
-                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,338,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1" Grid.Row="2"/>
+                            <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,321,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1" Grid.Row="2"/>
                             <Label x:Name="time_label" Content="Time: 23:43:02" HorizontalAlignment="Left" Margin="114,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
                             <Label x:Name="tick_label" Content="Tick: 234302" HorizontalAlignment="Left" Margin="938,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
-                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="511,0,462,70" VerticalAlignment="Bottom" Width="70" Grid.Column="1" Click="Button_play" Grid.Row="2"/>
-                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="586,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
-                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="631,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
-                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="465,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
-                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="419,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button" Content="PLAY" HorizontalAlignment="Center" Margin="495,0,478,70" VerticalAlignment="Bottom" Width="70" Grid.Column="1" Click="Button_play" Grid.Row="2"/>
+                            <Button x:Name="button1" Content="&gt;" HorizontalAlignment="Left" Margin="601,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button2" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="644,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button3" Content="&lt;" HorizontalAlignment="Left" Margin="451,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
+                            <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="406,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
                             <Menu x:Name="menu" HorizontalAlignment="Left" Height="673" Margin="0,14,0,0" VerticalAlignment="Top" Width="170" Grid.ColumnSpan="2" Grid.RowSpan="3">
                                 <Label Content="Team Terrorists:"/>
                                 <ListBoxItem Content="Player1" Width="150"/>
@@ -53,7 +53,8 @@
                                 <RadioButton x:Name="supportButton3" Content="Display health"/>
                                 <RadioButton x:Name="supportButton4" Content="Follow selected player"/>
                             </Menu>
-                            <Button x:Name="stop" Content="l l" Grid.Column="1" HorizontalAlignment="Left" Margin="532,315,0,0" VerticalAlignment="Top" Width="30" Click="Button_stop" Grid.Row="2"/>
+                            <Button x:Name="stop" Content="l l" Grid.Column="1" HorizontalAlignment="Left" Margin="568,291,0,0" VerticalAlignment="Top" Width="30" Click="Button_stop" Grid.Row="2"/>
+                            <Label x:Name="eventlabel" Content="" Grid.Column="1" HorizontalAlignment="Left" Margin="527,353,0,0" Grid.Row="2" VerticalAlignment="Top"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Heatmap">

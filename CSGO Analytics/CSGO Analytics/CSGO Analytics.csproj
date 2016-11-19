@@ -107,6 +107,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\utils\MapDataPropertyReader.cs" />
+    <Compile Include="src\views\AnalyseDemosModel.cs" />
     <Compile Include="src\views\AnalyseDemosView.xaml.cs">
       <DependentUpon>AnalyseDemosView.xaml</DependentUpon>
     </Compile>

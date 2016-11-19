@@ -667,8 +667,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
             } else
             {
-                Console.WriteLine("Can`t map csid: " + csid + ", on id. Maybe a random CS-ID change occured -> Key needs update");
-                throw new ArgumentOutOfRangeException();
+                Console.WriteLine("Could not map unkown csid: " + csid + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
+                throw new ArgumentOutOfRangeException(); //TODO: our own exception?
             }
         }
 
@@ -679,7 +679,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="p"></param>
         private void handleChangedID(Player p)
         {
-            int changedKey = -99;
+            int changedKey = -99; //Deprecated
             int value = -99;
             for (int i = 0; i < players.Count() - 1; i++)
             {

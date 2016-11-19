@@ -89,11 +89,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         public float yaw { get; set; }
         public float pitch { get; set; }
 
-        public Vector getFacingVector(Vector v)
-        {
-            return new Vector();
-        }
-
         internal Facing Copy()
         {
             return new Facing() { yaw = yaw, pitch = pitch };

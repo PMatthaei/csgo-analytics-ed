@@ -7,11 +7,14 @@ using System.Windows.Shapes;
 using System.Windows.Media;
 using System.Windows;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.views
 {
     class PlayerShape : Shape
     {
+
+        public bool Active { get; set; }
 
         private Point aimPoint;
 
@@ -74,8 +77,8 @@ namespace CSGO_Analytics.src.views
         {
             get
             {
-                var aimX = (X + 40* Math.Cos(-Yaw)); // Aim vector from Yaw TODO: seems not right? forumla or data fail?
-                var aimY = (Y + 40*Math.Sin(-Yaw));
+                var aimX = (X + 40* Math.Cos(Yaw)); // Aim vector from Yaw TODO: seems not right? forumla or data fail?
+                var aimY = (Y + 40*Math.Sin(Yaw));
 
                 if(aimPoint == null)
                     aimPoint = new Point(aimX, aimY);

@@ -28,6 +28,11 @@ namespace CSGO_Analytics.src.json.jsonobjects
             }
             return ps;
         }
+
+        public List<Event> getNadeEvents()
+        {
+            return tickevents.Where(t => t.gameevent == "smoke_exploded" || t.gameevent == "flash_exploded" || t.gameevent == "fire_exploded").ToList();
+        }
     }
 
 

@@ -50,7 +50,11 @@ namespace CSGO_Analytics.src.views
         private double map_height;
         private double map_x;
         private double map_y;
-
+        private int mapcenter_x;
+        private int mapcenter_y;
+        private double scale;
+        private int rotate;
+        private double zoom;
 
         private float tickrate;
 
@@ -60,7 +64,7 @@ namespace CSGO_Analytics.src.views
         //
 
         /// <summary>
-        /// Panel where all players and links are being drawn
+        /// Panel where all players and links are being drawn on
         /// </summary>
         private Canvas mapPanel = new Canvas();
 
@@ -72,7 +76,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// All players drawn on the minimap
         /// </summary>
-        private Dictionary<int, PlayerShape> playershapes = new Dictionary<int, PlayerShape>();
+        private PlayerShape[] playershapes;
 
         /// <summary>
         /// All links between players that are currently drawn
@@ -129,11 +133,12 @@ namespace CSGO_Analytics.src.views
 
                 InitializeComponent();
 
-                InitializeGUI();
+                InitializeGUIData();
 
                 InitializeMapGraphic();
 
                 MathLibrary.initalizeConstants();
+
                 InitializeEncounterDetection();
             }
             catch (Exception e)
@@ -144,10 +149,11 @@ namespace CSGO_Analytics.src.views
 
         }
 
-        private void InitializeGUI()
+        private void InitializeGUIData()
         {
             this.tickrate = gamestate.meta.tickrate;
             this.mapname = gamestate.meta.mapname;
+            playershapes = new PlayerShape[gamestate.meta.players.Count];
             time_slider.Minimum = 0;
             time_slider.Maximum = gamestate.match.rounds.Last().ticks.Last().tick_id;
 
@@ -175,6 +181,7 @@ namespace CSGO_Analytics.src.views
             mapPanel.Width = map.Width = bi.Width * scalefactor_map;
             mapPanel.Height = map.Height = bi.Height * scalefactor_map;
 
+
             Console.WriteLine(mapPanel.Width);
             Console.WriteLine(mapPanel.Height);
             Canvas.SetLeft(map, (canvas.Width - map.Width) / 2);
@@ -196,7 +203,7 @@ namespace CSGO_Analytics.src.views
             this.matchreplay = this.enDetect.run(); // Run the algorithm
 
             // Initalize all graphical player representations default/start
-            foreach (var p in enDetect.getPlayers()) // TODO: old data loaded here -> players are drawn where they stood when freeze began
+            foreach (var p in gamestate.meta.players) // TODO: old data loaded here -> players are drawn where they stood when freeze began
             {
                 drawPlayer(p);
             }
@@ -234,40 +241,42 @@ namespace CSGO_Analytics.src.views
 
                 int passedTime = (int)(dt * tickrate);
 
+                //Run UI changes in a Non-UI-Blocking thread 
                 Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
                 {
-                    try
+
+                    if (links.Count != 0)
                     {
-                        if (links.Count != 0)
-                        {
-                            foreach (var oldlink in links)
-                                mapPanel.Children.Remove(oldlink);
+                        foreach (var oldlink in links)
+                            mapPanel.Children.Remove(oldlink);
 
-                            links.Clear();
-                        }
+                        links.Clear();
+                    }
 
-                        time_slider.Value = tick.tick_id;
-                        tick_label.Content = "Tick: " + tick.tick_id;
-                        var timesec = (int)(tick.tick_id * tickrate / 1000);
-                        time_label.Content = "Time: " + ":" + timesec;
-                        if (comp != null && comp.links.Count != 0)
-                        {
-                            foreach (var link in comp.links)
-                            {
-                                drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
-                            }
-                        }
+                    time_slider.Value = tick.tick_id;
+                    tick_label.Content = "Tick: " + tick.tick_id;
+                    var timesec = (int)(tick.tick_id * tickrate / 1000);
+                    time_label.Content = "Time: " + ":" + timesec;
 
-                        foreach (var p in tick.getUpdatedPlayers())
+                    if (comp != null && comp.links.Count != 0)
+                    {
+                        foreach (var link in comp.links)
                         {
-                            updatePlayer(p); // Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
+                            drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
                         }
                     }
-                    catch (Exception e)
+
+                    foreach (var p in tick.getUpdatedPlayers())
                     {
-                        Console.WriteLine(e.Message);
-                        Console.WriteLine(e.StackTrace);
+                        updatePlayer(p); // Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                     }
+
+                    // Draw all event relevant graphics(nades, bombs etc)
+                    foreach (var p in tick.tickevents.Where(t => t.gameevent == "smoke_exploded" || t.gameevent == "flash_exploded" || t.gameevent == "fire_exploded"))
+                    {
+
+                    }
+
 
                 }));
                 Thread.Sleep(passedTime);
@@ -289,36 +298,22 @@ namespace CSGO_Analytics.src.views
         {
             LinkShape ls = new LinkShape();
 
-            PlayerShape aps;
-            if (playershapes.TryGetValue(actor.player_id, out aps))
-            {
-                ls.X1 = aps.X;
-                ls.Y1 = aps.Y;
-            }
-            else
-            {
-                Console.WriteLine("Could not map PlayerShape");
-            }
-            PlayerShape rps;
-            if (playershapes.TryGetValue(reciever.player_id, out rps))
-            {
-                ls.X2 = rps.X;
-                ls.Y2 = rps.Y;
-            }
-            else
-            {
-                Console.WriteLine("Could not map PlayerShape");
-            }
+            PlayerShape aps = playershapes[enDetect.getID(actor.player_id)];
+            ls.X1 = aps.X;
+            ls.Y1 = aps.Y;
+
+
+            PlayerShape rps = playershapes[enDetect.getID(reciever.player_id)];
+            ls.X2 = rps.X;
+            ls.Y2 = rps.Y;
 
             ls.StrokeThickness = 2;
             ls.Stroke = System.Windows.Media.Brushes.DarkRed;
-
 
             if (type == ComponentType.COMBATLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkRed;
             else
                 ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
-
 
             links.Add(ls);
             mapPanel.Children.Add(ls);
@@ -333,11 +328,12 @@ namespace CSGO_Analytics.src.views
         private void drawPlayer(Player p)
         {
             var ps = new PlayerShape();
-            ps.Yaw = p.facing.yaw;
+            ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
             ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
             ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
             ps.Radius = 4;
             Color color;
+
             if (p.getTeam() == Team.T)
                 color = Color.FromArgb(255, 255, 0, 0);
             else
@@ -346,34 +342,37 @@ namespace CSGO_Analytics.src.views
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
             ps.StrokeThickness = 0.5;
-
-            playershapes.Add(enDetect.getID(p.player_id), ps);
+            ps.Active = true;
+            playershapes[enDetect.getID(p.player_id)] = ps;
             mapPanel.Children.Add(ps);
         }
 
+        Color deadcolor = Color.FromArgb(255, 0, 0, 0);
 
         private void updatePlayer(Player p)
         {
 
-            //if(p.) // TODO: test if player is dead -> no updates and let him look different
-            PlayerShape ps;
-            if (playershapes.TryGetValue(enDetect.getID(p.player_id), out ps))
+            PlayerShape ps = playershapes[enDetect.getID(p.player_id)];
+            if (!ps.Active)
             {
+                ps.Fill = new SolidColorBrush(deadcolor);
+                ps.Stroke = new SolidColorBrush(deadcolor);
+                return;
+            }
 
-                ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
-                ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
-                ps.Yaw = p.facing.yaw;
-            }
-            else
-            {
-                Console.WriteLine("Could not map PlayerShape");
-            }
+            ps.X = MathLibrary.CSPositionToUIPosition(p.position).x;
+            ps.Y = MathLibrary.CSPositionToUIPosition(p.position).y;
+            ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
 
         }
 
+        private bool screenshotcooldown = false;
         private void captureScreenshot()
         {
-
+            if (screenshotcooldown)
+            {
+                return;
+            }
             RenderTargetBitmap rtb = new RenderTargetBitmap(
                 (int)canvas.RenderSize.Width + 95,
                 (int)canvas.RenderSize.Height + 15,
@@ -388,10 +387,20 @@ namespace CSGO_Analytics.src.views
             BitmapEncoder pngEncoder = new PngBitmapEncoder();
             pngEncoder.Frames.Add(BitmapFrame.Create(crop));
 
-            using (var fs = System.IO.File.OpenWrite("logo.png"))
+            using (var fs = File.OpenWrite(mapname + "_screenshot_" + GetTimestamp() + ".png"))
             {
                 pngEncoder.Save(fs);
             }
+            eventlabel.Content = "Captured screenshot: " + mapname + "_screenshot_" + GetTimestamp() + ".png";
+            screenshotcooldown = true;
+
+            Task.Factory.StartNew(() => Thread.Sleep(2 * 1000)) // Wait 2 sec for nex screenshot
+            .ContinueWith((t) =>
+            {
+                eventlabel.Content = "";
+                screenshotcooldown = false;
+
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         private void createMatchAVI()
@@ -506,5 +515,12 @@ namespace CSGO_Analytics.src.views
         //
         //
 
+        public static string GetTimestamp()
+        {
+            long ticks = DateTime.UtcNow.Ticks - DateTime.Parse("01/01/1970 00:00:00").Ticks;
+            ticks /= 10000000; //Convert windows ticks to seconds
+            return ticks.ToString();
+
+        }
     }
 }
