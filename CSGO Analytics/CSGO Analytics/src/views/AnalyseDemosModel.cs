@@ -52,7 +52,6 @@ namespace CSGO_Analytics.src.views
             timeslider_min = 0;
             timeslider_max = gamestate.match.rounds.Last().ticks.Last().tick_id;
 
-            MathLibrary.initalizeConstants();
         }
     }
 }

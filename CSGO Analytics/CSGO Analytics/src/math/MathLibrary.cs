@@ -5,11 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Shapes;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.utils;
 
 namespace CSGO_Analytics.src.math
 {
     class MathLibrary
     {
+        private const float FOVVertical = 90;
         /// <summary>
         /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords. This is read by PropertieReader
         /// </summary>
@@ -22,9 +24,9 @@ namespace CSGO_Analytics.src.math
         private static double mappanel_width;
         private static double mappanel_height;
 
-        public static void initalizeConstants() //TODO: initalize this with Data read from files about the current maps
+        public static void initalizeConstants(MapMetaData metadata) //TODO: initalize this with Data read from files about the current maps
         {
-            map_origin = new Vector(-2400, 3383, 0);
+            map_origin = new Vector((float)metadata.mapcenter_x, (float)metadata.mapcenter_y, 0);
             map_width = 4500;
             map_height = 4500;
             mappanel_width = 575;
@@ -50,9 +52,9 @@ namespace CSGO_Analytics.src.math
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <returns></returns>
-        public static int getEuclidDistance2D(Vector p1, Vector p2)
+        public static double getEuclidDistance2D(Vector p1, Vector p2)
         {
-            return (int)Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2));
+            return Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2));
         }
 
         /// <summary>
@@ -61,13 +63,13 @@ namespace CSGO_Analytics.src.math
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <returns></returns>
-        public static int getEuclidDistance3D(Vector p1, Vector p2)
+        public static double getEuclidDistance3D(Vector p1, Vector p2)
         {
-            return (int)Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2) + Math.Pow(p1.z - p2.z, 2));
+            return Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2) + Math.Pow(p1.z - p2.z, 2));
         }
 
         /// <summary>
-        /// Test if a vector is facing another one
+        /// Test if a vector is facing another one -> 
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
@@ -76,43 +78,38 @@ namespace CSGO_Analytics.src.math
             double dx = recieverV.x - actorV.x;
             double dy = recieverV.y - actorV.y;
 
-            var aimX = (float)(actorV.x + Math.Cos(actorYaw)); // Aim vector from Yaw
-            var aimY = (float)(actorV.y + Math.Sin(actorYaw));
-
-            double aimdx = aimX - actorV.x;
-            double aimdy = aimY - actorV.y;
+            var aimX = (float)(actorV.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw
+            var aimY = (float)(actorV.y + Math.Sin(toRadian(-actorYaw)));
 
             //double theta = Math.Atan2(dy, dx);
-            double theta = toDegree(ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
+            double theta = toDegree(ScalarProductAngle(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
 
-            if (theta < 45 && theta > -45)
+            if (theta < 45 || theta > -45)
                 return true;
             return false;
         }
 
         /// <summary>
-        /// Checks if a position is within a certain field of view
+        /// Checks if reciever is within the field of view (FOVVertical) of the actor
         /// </summary>
         /// <param name="posP1"></param>
         /// <param name="angleV"></param>
         /// <param name="angleH"></param>
         /// <param name="posP2"></param>
         /// <returns></returns>
-        public static bool FOVcontainsPoint(Vector actorV, float actorYaw, Vector recieverV, float FOVVertical)
+        public static bool isInFOV(Vector actorV, float actorYaw, Vector recieverV)
         {
             double dx = recieverV.x - actorV.x;
             double dy = recieverV.y - actorV.y;
 
-            var aimX = (float)(actorV.x + Math.Cos(actorYaw)); // Aim vector from Yaw
-            var aimY = (float)(actorV.y + Math.Sin(actorYaw));
+            var aimX = (float)(actorV.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw
+            var aimY = (float)(actorV.y + Math.Sin(toRadian(-actorYaw)));
 
-            double aimdx = aimX - actorV.x;
-            double aimdy = aimY - actorV.y;
+            var aimdx = aimX - actorV.x;
+            var aimdy = aimY - actorV.y;
 
-            //double theta = Math.Atan2(dy, dx);
-            double theta = toDegree(ScalarProduct(new Vector(aimX, aimY, 0), new Vector((float)dx, (float)dy, 0)));
-
-            if (theta < FOVVertical / 2 && theta > -FOVVertical / 2)
+            double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
+            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2  && getEuclidDistance2D(actorV,recieverV) < 500)
                 return true;
             return false;
         }
@@ -121,31 +118,59 @@ namespace CSGO_Analytics.src.math
         /// Tests if a vector clips a sphere simplified as a Ellipse/Circle(Smoke grenade)
         /// </summary>
         /// <param name="sphere"></param>
-        /// <param name="actorV"></param>
+        /// <param name="actorpos"></param>
         /// <param name="actorYaw"></param>
         /// <returns></returns>
-        public static bool vectorClipsSphere2D(Ellipse sphere, Vector actorV, float actorYaw)
+        public static bool vectorClipsSphere2D(float sphereCenterX, float sphereCenterY, float sphereRadius, Vector actorpos, float actorYaw)
         {
-            var actorposx = actorV.x; // Position of player
-            var actorposy = actorV.y;
+            var aimX = (float)(actorpos.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw (SET YAW NEGATIVE BECAUSE CS:GO LOGIC!!!!)
+            var aimY = (float)(actorpos.y + Math.Sin(toRadian(-actorYaw)));
 
-            var aimX = (float)(actorposx + Math.Cos(actorYaw)); // Aim vector from Yaw
-            var aimY = (float)(actorposy + Math.Sin(actorYaw));
+            // compute the euclidean distance between actor and aimvector
+            var LAB = Math.Sqrt((actorpos.x - aimX) * (actorpos.x - aimX) + (actorpos.y - aimY) * (actorpos.y - aimY));
 
-            var sphereCenterX = sphere.Margin.Left; // Center of the nade
-            var sphereCenterY = sphere.Margin.Top;
+            // compute the direction vector D from Actor to aimvector
+            var dx = (actorpos.x - aimX) / LAB;
+            var dy = (actorpos.y - aimY) / LAB;
 
-            var sphereRadius = Math.Min(sphere.Width, sphere.Height); // Radius of the nade
+            // Now the line equation is x = Dx*t + Ax, y = Dy*t + Ay with 0 <= t <= 1.
 
+            // compute the value t of the closest point to the circle center (Cx, Cy)
+            var t = dx * (sphereCenterX - aimX) + dy * (sphereCenterY - aimY);
 
-            double dx = aimX - actorV.y;
-            double dy = aimY - actorV.y;
-            double dr = Math.Sqrt(dx * dx + dy * dy);
-            double theta = Math.Atan2(dy, dx);
-            double r = getEuclidDistance2D(actorV, new Vector(aimX, aimY, 0)) - ((sphereRadius * sphereRadius) / Math.Sqrt(Math.Pow(sphereRadius * Math.Cos(theta), 2) + Math.Pow(sphereRadius * Math.Sin(theta), 2)));
-            //return new Vector((float)(actorposx + r * Math.Cos(theta)), (float)(actorposy + r * Math.Sin(theta)), 0);
+            // This is the projection of C on the line from A to B.
 
-            return false;
+            // compute the coordinates of the point E on line and closest to C
+            var ex = t * dx + aimX;
+            var ey = t * dy + aimY;
+
+            // compute the euclidean distance from E to C
+            var distance = Math.Sqrt((ex - sphereCenterX) * (ex - sphereCenterX) + (ey - sphereCenterY) * (ey - sphereCenterY));
+
+            // test if the line intersects the circle
+            if (distance < sphereRadius)
+            {
+                return true;
+
+                /*
+                // compute distance from t to circle intersection point
+                var dt = Math.Sqrt(sphereRadius * sphereRadius - LEC * LEC);
+
+                // compute first intersection point
+                var Fx = (t - dt) * Dx + aimX;
+                var Fy = (t - dt) * Dy + aimY;
+
+                // compute second intersection point
+                var Gx = (t + dt) * Dx + aimX;
+                var Gy = (t + dt) * Dy + aimY;
+                */
+            }
+
+            // else test if the line is tangent to circle
+            else if (distance == sphereRadius) // tangent point to circle is E
+                return true;
+            else // line doesn't touch circle
+                return false;
         }
 
 
@@ -167,9 +192,9 @@ namespace CSGO_Analytics.src.math
         // BASICS
         //
         //
-        public static double ScalarProduct(Vector v1, Vector v2)
+        public static double ScalarProductAngle(Vector v1, Vector v2)
         {
-            return (v1.x * v2.x + v1.y * v2.y - v1.z * v2.z) / (v1.Absolute() * v2.Absolute());
+            return Math.Acos((v1.x * v2.x + v1.y * v2.y + v1.z * v2.z) / (v1.Absolute() * v2.Absolute()));
         }
 
         public static Vector CrossProduct(Vector v1, Vector v2)
@@ -211,7 +236,7 @@ namespace CSGO_Analytics.src.math
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        public int SzudzikFunction(int a , int b)
+        public int SzudzikFunction(int a, int b)
         {
             if (a >= 0 && b >= 0)
                 return a >= b ? a * a + a + b : a + b * b;

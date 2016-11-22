@@ -17,6 +17,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.math;
 using DP = DemoInfoModded;
 using Newtonsoft.Json;
@@ -61,7 +62,7 @@ namespace CSGO_Analytics.src.views
 
 
         //
-        // VISUALS OF THE GAME 
+        // VISUALS OF THE GAME-REPRESENTATION
         //
 
         /// <summary>
@@ -95,6 +96,8 @@ namespace CSGO_Analytics.src.views
         public AnalyseDemosView()
         {
 
+            InitializeComponent();
+
             var path = "match_0.dem";
             /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
              {
@@ -117,13 +120,9 @@ namespace CSGO_Analytics.src.views
 
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
-                gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                enDetect = new EncounterDetectionAlgorithm(gamestate);
+                this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                this.enDetect = new EncounterDetectionAlgorithm(gamestate);
             }
-
-
-
-            InitializeComponent();
 
             //LoadMapData();
 
@@ -131,7 +130,7 @@ namespace CSGO_Analytics.src.views
 
             InitializeMapGraphic();
 
-            MathLibrary.initalizeConstants();
+            MathLibrary.initalizeConstants(LoadMapData());
 
             InitializeEncounterDetection();
 
@@ -244,12 +243,7 @@ namespace CSGO_Analytics.src.views
                     }
 
                     // Update UI: timers, labels etc
-                    time_slider.Value = tick.tick_id;
-                    tick_label.Content = "Tick: " + tick.tick_id;
-                    double ticks = (double)(tick.tick_id * tickrate);
-                    TimeSpan time = TimeSpan.FromMilliseconds(ticks);
-                    DateTime startdate = new DateTime(1970, 1, 1) + time;
-                    time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;
+                    updateUI(tick);
 
                     // Update map with all active components, player etc 
                     foreach (var p in tick.getUpdatedPlayers())
@@ -262,22 +256,29 @@ namespace CSGO_Analytics.src.views
                     {
                         foreach (var link in comp.links)
                         {
-                            drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
+                            if (hasActiveLinkShape(link))
+                                updateLink(link);
+                            else
+                                drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
                         }
                     }
 
 
                     // Draw all event relevant graphics(nades, bombs etc)
-                    if(tick.getNadeEvents().Count != 0)
+                    /*if(tick.getNadeEvents().Count != 0)
                     {
                         foreach (var n in tick.getNadeEvents())
                         {
                             drawNade(n);
                         }
                     }
-                    
-
-
+                    if (tick.getNadeEndEvents().Count != 0)
+                    {
+                        foreach (var n in tick.getNadeEndEvents())
+                        {
+                            updateNades(n);
+                        }
+                    }*/
                 }));
                 Thread.Sleep(passedTime);
 
@@ -286,7 +287,28 @@ namespace CSGO_Analytics.src.views
             }
         }
 
+        private void updateUI(Tick tick)
+        {
+            time_slider.Value = tick.tick_id;
+            tick_label.Content = "Tick: " + tick.tick_id;
 
+            double ticks = (double)(tick.tick_id * tickrate);
+            TimeSpan time = TimeSpan.FromMilliseconds(ticks);
+            DateTime startdate = new DateTime(1970, 1, 1) + time;
+            time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;
+        }
+
+        private bool hasActiveLinkShape(Link link)
+        {
+            foreach (var l in links)
+            {
+                if (l.actor.Equals(link.getActor()) || l.actor.Equals(link.getReciever()) && l.reciever.Equals(link.getActor()) || l.reciever.Equals(link.getReciever()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
 
 
@@ -296,7 +318,7 @@ namespace CSGO_Analytics.src.views
         //
         //
 
-        private void drawNade(data.gameevents.NadeEvents n)
+        private void drawNade(NadeEvents n)
         {
             math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
             NadeShape ns = new NadeShape();
@@ -309,9 +331,23 @@ namespace CSGO_Analytics.src.views
             mapPanel.Children.Add(ns);
         }
 
+        private void updateNades(NadeEvents n)
+        {
+            math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
+
+            for (int i = activeNades.Count - 1; i > 0; i--)
+            {
+                var ns = activeNades[i];
+                if (ns.X == nadepos.x && ns.Y == nadepos.y)
+                    activeNades.Remove(ns);
+                mapPanel.Children.Remove(ns);
+            }
+
+        }
+
         private void drawLink(Player actor, Player reciever, ComponentType type)
         {
-            LinkShape ls = new LinkShape();
+            LinkShape ls = new LinkShape(actor, reciever);
 
             PlayerShape aps = playershapes[enDetect.getID(actor.player_id)];
             ls.X1 = aps.X;
@@ -333,9 +369,39 @@ namespace CSGO_Analytics.src.views
 
         }
 
-        private void updateLink(Player actor)
+        private void updateLink(Link link)
         {
+            Player actor = link.getActor();
+            Player reciever = link.getReciever();
+            Console.WriteLine("Update link");
+            foreach (var ls in links)
+            {
+                if (ls.actor.Equals(actor))
+                {
+                    var psa = playershapes[enDetect.getID(actor.player_id)];
+                    ls.X1 = psa.X;
+                    ls.Y1 = psa.Y;
+                }
+                else if (ls.actor.Equals(reciever))
+                {
+                    var psa = playershapes[enDetect.getID(reciever.player_id)];
+                    ls.X1 = psa.X;
+                    ls.Y1 = psa.Y;
+                }
 
+                if (ls.reciever.Equals(actor))
+                {
+                    var psa = playershapes[enDetect.getID(actor.player_id)];
+                    ls.X2 = psa.X;
+                    ls.Y2 = psa.Y;
+                }
+                else if (ls.reciever.Equals(reciever))
+                {
+                    var psa = playershapes[enDetect.getID(reciever.player_id)];
+                    ls.X2 = psa.X;
+                    ls.Y2 = psa.Y;
+                }
+            }
         }
 
         private void drawPlayer(Player p)

@@ -13,6 +13,9 @@ namespace CSGO_Analytics.src.views
 {
     class LinkShape : Shape
     {
+        public Player actor;
+        public Player reciever;
+
         private Direction linkdirection;
 
         public double Length { get; set; }
@@ -83,6 +86,12 @@ namespace CSGO_Analytics.src.views
             DependencyProperty.Register("Y2", typeof(double), typeof(LinkShape), Y2Metadata);
 
 
+
+        public LinkShape(Player actor, Player reciever)
+        {
+            this.actor = actor;
+            this.reciever = reciever;
+        }
 
         protected override Geometry DefiningGeometry
         {

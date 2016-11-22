@@ -123,6 +123,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         int pCount = 0;
+        int sCount = 0;
         int wfCount = 0;
         int wfeCount = 0;
         int mCount = 0;
@@ -130,7 +131,10 @@ namespace CSGO_Analytics.src.encounterdetect
         int uCount = 0;
         int iCount = 0;
 
-
+        int usCount = 0;
+        int ussCount = 0;
+        int stCount = 0;
+        int dsCount = 0;
 
         private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
@@ -147,29 +151,33 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var tick in round.ticks) // Read all ticks
                 {
-                    foreach (var p in tick.getUpdatedPlayers()) // Update tables
+                    foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
                     {
                         int id = 0;
 
-                        try { id = getID(p.player_id); }
+                        try { id = getID(updatedPlayer.player_id); }
                         catch (ArgumentOutOfRangeException e) // Watch out for id changes through spectator or something else
                         {
-                            handleChangedID(p);
+                            handleChangedID(updatedPlayer);
                         }
 
 
-                        updatePosition(id, p.position.getAsArray());
-                        updateFacing(id, p.facing.getAsArray());
+                        updatePosition(id, updatedPlayer.position.getAsArray());
+                        updateFacing(id, updatedPlayer.facing.getAsArray());
                         updateDistance(id);
 
                         //updateSpotted(id, p.isSpotted); // Spotted boolean extracted from CSGO Demo
-
-                        // Check if one of the enemy players saw the current player -> he was spotted
-                        foreach (var counterplayer in tick.getUpdatedPlayers().Where(player => player.getTeam() != p.getTeam()))
+                        if (updatedPlayer.isSpotted) stCount++;
+                        // Check if the updatedPlayer sees an enemy or is seen by someone who was also updated
+                        foreach (var counterplayer in tick.getUpdatedPlayers().Where(player => player.getTeam() != updatedPlayer.getTeam()))
                         {
-                            //bool isSpotted = checkLineOfSight();
-                            // updateSpotted(id, isSpotted); // Spotted boolean extracted from CSGO Demo
+                            bool updatedPlayerSpots = MathLibrary.isInFOV(updatedPlayer.position, updatedPlayer.facing.yaw, counterplayer.position); //Has the updated player spotted someone
+                            bool updatedPlayerSpotted = MathLibrary.isInFOV(counterplayer.position, counterplayer.facing.yaw, updatedPlayer.position); //Has someone spotted the player
+                            //updateSpotted(id, isSpotted);
 
+                            if (updatedPlayerSpots) usCount++;
+                            if (updatedPlayerSpotted) ussCount++;
+                            if (updatedPlayerSpotted != updatedPlayerSpots) dsCount++;
                         }
                     }
 
@@ -228,7 +236,6 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 } //NO TICKS LEFT
             }
-
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
 
@@ -245,12 +252,23 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("New Encounter occured: " + nCount);
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
+
             Console.WriteLine("\nWeaponfire-Events total: " + wfeCount);
             Console.WriteLine("Weaponfire-Event where victims were found: " + wfCount);
             Console.WriteLine("Weaponfire-Events inserted into existing components: " + iCount);
-            Console.WriteLine("\nNades tested for Supportlinks: " + activeNades.Count);
-            Console.WriteLine("\n\n  Encounters found: " + closed_encounters.Count);
 
+
+            Console.WriteLine("\nSpotted-Events occured: " + sCount);
+            Console.WriteLine("\nPlayerspotted ticks(compare with UpdatedPlayer-Entries): " + stCount);
+            Console.WriteLine("Spotted-Events found by Algorithm with Spotrange 500: ");
+            Console.WriteLine("UpdatedPlayer spotted someone: " + usCount);
+            Console.WriteLine("UpdatedPlayer was spotted: " + ussCount);
+            Console.WriteLine("Spotdifferences(only one can see the other): " + ussCount);
+
+            Console.WriteLine("\nNades tested for Supportlinks: " + activeNades.Count);
+
+
+            Console.WriteLine("\n\n  Encounters found: " + closed_encounters.Count);
 
             Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
 
@@ -389,7 +407,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         var actor = players[getID(player.player_id)];
                         var reciever = players[i];
-                        if (actor.getTeam() != reciever.getTeam())  
+                        if (actor.getTeam() != reciever.getTeam())
                             links.Add(new Link(actor, reciever, ComponentType.COMBATLINK, Direction.DEFAULT));
                     }
                 }
@@ -439,7 +457,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "player_spotted":
                         //PlayerSpotted ps = (PlayerSpotted)g;
                         //type = ComponentType.COMBATLINK;
-
+                        sCount++;
                         continue;
 
                     //    
@@ -475,6 +493,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
 
                 if (g.actor == null || reciever == null) continue;
+
                 Link link = new Link(g.actor, reciever, type, Direction.DEFAULT);
                 links.Add(link);
 
@@ -635,10 +654,10 @@ namespace CSGO_Analytics.src.encounterdetect
                 distance_table[i] = new float[playeramount]; // distance between each player
             }
 
-            spotted_table = new bool[playeramount][];
+            spotted_table = new bool[playeramount / 2 + 1][]; // +1 because we need one extra row to determine who spotted who
             for (int i = 0; i < spotted_table.Length; i++)
             {
-                spotted_table[i] = new bool[playeramount]; // spotted(true/false) between each player
+                spotted_table[i] = new bool[playeramount / 2 + 1]; // spotted(true/false) between each player
             }
         }
 
@@ -666,14 +685,13 @@ namespace CSGO_Analytics.src.encounterdetect
             for (int i = 0; i < distance_table[entityid].Length; i++)
             {
                 if (entityid != i)
-                    distance_table[entityid][i] = MathLibrary.getEuclidDistance3D(new Vector(position_table[entityid]), new Vector(position_table[i]));
+                    distance_table[entityid][i] = (float)MathLibrary.getEuclidDistance2D(new Vector(position_table[entityid]), new Vector(position_table[i]));
             }
         }
 
-        private void updateSpotted(int entityid, bool spotted)
+        private void updateSpotted(int acid, int recid, bool spotted, bool actor, bool reciever)
         {
-            spotted_table[entityid][entityid] = spotted;
-            // TODO: Check who spotted the player entityid?
+            spotted_table[acid][recid] = spotted;
         }
 
 
@@ -690,7 +708,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 return id;
             else
                 Console.WriteLine("Could not map unkown csid: " + csid + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
-                throw new ArgumentOutOfRangeException(); //TODO: our own exception?
+            throw new ArgumentOutOfRangeException(); //TODO: our own exception?
 
         }
 

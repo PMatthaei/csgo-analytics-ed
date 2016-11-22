@@ -5,14 +5,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace CSGO_Analytics.src.utils
 {
     public class MapMetaData
     {
         public string mapname { get; set; }
-        public int mapcenter_x { get; set; }
-        public int mapcenter_y { get; set; }
+        public double mapcenter_x { get; set; }
+        public double mapcenter_y { get; set; }
         public double scale;
         public int rotate { get; set; }
         public double zoom { get; set; }
@@ -30,18 +31,22 @@ namespace CSGO_Analytics.src.utils
         {
             string line;
 
+            var fmt = new NumberFormatInfo();
+            fmt.NegativeSign = "-";
+
+            metadata = new MapMetaData();
             StreamReader file = new StreamReader(path);
             while ((line = file.ReadLine()) != null)
             {
-                var resultString = Regex.Match(line, @"\d+").Value;
+                var resultString = Regex.Match(line, @"-?\d+").Value; //Match negative and positive int numbers
 
                 if (line.Contains("pos_x"))
                 {
-                    metadata.mapcenter_x = Int32.Parse(resultString);
+                    metadata.mapcenter_x = double.Parse(resultString, fmt);
                 }
                 else if (line.Contains("pos_y"))
                 {
-                    metadata.mapcenter_y = Int32.Parse(resultString);
+                    metadata.mapcenter_y = double.Parse(resultString, fmt);
                 }
                 else if (line.Contains("scale"))
                 {

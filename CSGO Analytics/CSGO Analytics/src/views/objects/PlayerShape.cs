@@ -16,8 +16,6 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         private const int LOS_LENGTH = 40;
 
-        private Point aimPoint;
-
         public bool Active { get; set; }
 
         public double Radius { get; set; }
@@ -75,6 +73,7 @@ namespace CSGO_Analytics.src.views
             DependencyProperty.Register("Y", typeof(double), typeof(PlayerShape), YMetadata);
 
 
+        private Point aimPoint;
         protected override Geometry DefiningGeometry
         {
             get
