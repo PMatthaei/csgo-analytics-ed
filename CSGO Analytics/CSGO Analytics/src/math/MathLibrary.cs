@@ -109,8 +109,9 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.y;
 
             double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2  && getEuclidDistance2D(actorV,recieverV) < 500) // Max sight distance to restrict FOV
-                return true;
+             if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
+            //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 ) // No max sight distance to restrict FOV
+                    return true;
             return false;
         }
 
@@ -128,7 +129,7 @@ namespace CSGO_Analytics.src.math
             var aimY = (float)(actorpos.y + Math.Sin(toRadian(-actorYaw)));
 
             // compute the euclidean distance between actor and aim
-            var distanceActorAim = Math.Sqrt((actorpos.x - aimX) * (actorpos.x - aimX) + (actorpos.y - aimY) * (actorpos.y - aimY));
+            var distanceActorAim = getEuclidDistance2D(actorpos, new Vector(aimX, aimY, 0));
 
             // compute the direction vector D from Actor to aimvector
             var dx = (actorpos.x - aimX) / distanceActorAim;
@@ -144,7 +145,7 @@ namespace CSGO_Analytics.src.math
             var ey = t * dy + aimY;
 
             // compute the euclidean distance from E to C
-            var distanceEC = Math.Sqrt((ex - sphereCenterX) * (ex - sphereCenterX) + (ey - sphereCenterY) * (ey - sphereCenterY));
+            var distanceEC = getEuclidDistance2D(new Vector((float)ex, (float)ey,0), new Vector(sphereCenterX,sphereCenterY,0));
 
             // test if the line intersects the circle
             if (distanceEC < sphereRadius)

@@ -28,7 +28,7 @@ namespace CSGO_Analytics.src.data.gameevents
 
         public override Player[] getPlayers()
         {
-            return new Player[] { spotter, actor };
+            return new Player[] { actor };
         }
     }
 

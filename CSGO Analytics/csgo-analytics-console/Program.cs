@@ -5,7 +5,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CSGO_Analytics.src.data.gameobjects;
+using CS = CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.json;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.postgres;
@@ -20,6 +20,7 @@ namespace csgo_analytics_console
     {
         static void Main(string[] args)
         {
+
             var path = args[0];
             using ( var demoparser = new DemoParser(File.OpenRead(path)))
             {

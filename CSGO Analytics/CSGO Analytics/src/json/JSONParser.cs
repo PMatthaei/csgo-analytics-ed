@@ -113,12 +113,12 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public MovementEvents assemblePlayerSpotted(PlayerSpottedEventArgs e)
+        public PlayerSpotted assemblePlayerSpotted(PlayerSpottedEventArgs e)
         {
-            return new MovementEvents
+            return new PlayerSpotted
             {
                 gameevent = "player_spotted",
-                actor = assemblePlayerDetailed(e.player),
+                actor = assemblePlayerDetailed(e.player)
             };
         }
 

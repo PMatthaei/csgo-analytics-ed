@@ -52,25 +52,22 @@ namespace CSGO_Analytics.src.data.gameevents
                     return false;
             }
         }
-        /*
+         //Not working atm
         public override bool Equals(object obj)
         {
             NadeEvents other = obj as NadeEvents;
             if (other == null)
             {
-                Console.WriteLine("Nade null");
                 return false;
             }
 
-            if (other.gameevent == this.gameevent && other.actor == this.actor && other.nadetype == this.nadetype)
+            if (this.isEndEvent(other) && this.actor.Equals(other.actor) && this.nadetype == other.nadetype)
             {
-                 var dx = Math.Abs(other.position.x - this.position.x);
+                var dx = Math.Abs(other.position.x - this.position.x);
                 var dy = Math.Abs(other.position.y - this.position.y);
                 if (dx < 20 && dy < 20)
-                    Console.WriteLine("Nade test true");
                     return true;
             }
-            Console.WriteLine("Nade test false");
             return false;
         }
 
@@ -83,7 +80,7 @@ namespace CSGO_Analytics.src.data.gameevents
                 hash = hash * 23 + position.y.GetHashCode();
                 return hash;
             }
-        }*/
+        }
     }
 
     class FlashNade : NadeEvents

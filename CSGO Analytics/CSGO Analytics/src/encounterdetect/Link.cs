@@ -9,7 +9,7 @@ namespace CSGO_Analytics.src.encounterdetect
 {
     public enum LinkType { COMBATLINK, SUPPORTLINK };
 
-    public enum Direction { UNDIRECTED, DEFAULT }; //DEFAULT means Link from actor to reciever, UNDIRECTED means both to each other
+    public enum Direction { UNDIRECTED, DEFAULT }; // DEFAULT means Link from actor to reciever, UNDIRECTED means to each other
 
     public class Link
     {

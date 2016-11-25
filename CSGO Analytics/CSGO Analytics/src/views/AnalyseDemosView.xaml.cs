@@ -375,33 +375,31 @@ namespace CSGO_Analytics.src.views
         {
             Player actor = link.getActor();
             Player reciever = link.getReciever();
-            Console.WriteLine("Update link");
+            var psr = playershapes[enDetect.getID(reciever.player_id)];
+            var psa = playershapes[enDetect.getID(actor.player_id)];
+
             foreach (var ls in links)
             {
                 if (ls.actor.Equals(actor))
                 {
-                    var psa = playershapes[enDetect.getID(actor.player_id)];
                     ls.X1 = psa.X;
                     ls.Y1 = psa.Y;
                 }
                 else if (ls.actor.Equals(reciever))
                 {
-                    var psa = playershapes[enDetect.getID(reciever.player_id)];
-                    ls.X1 = psa.X;
-                    ls.Y1 = psa.Y;
+                    ls.X1 = psr.X;
+                    ls.Y1 = psr.Y;
                 }
 
                 if (ls.reciever.Equals(actor))
                 {
-                    var psa = playershapes[enDetect.getID(actor.player_id)];
                     ls.X2 = psa.X;
                     ls.Y2 = psa.Y;
                 }
                 else if (ls.reciever.Equals(reciever))
                 {
-                    var psa = playershapes[enDetect.getID(reciever.player_id)];
-                    ls.X2 = psa.X;
-                    ls.Y2 = psa.Y;
+                    ls.X2 = psr.X;
+                    ls.Y2 = psr.Y;
                 }
             }
         }

@@ -27,6 +27,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public Vector position { get; set; }
         public Facing facing { get; set; }
         public bool isSpotted { get; set; }
+
         /// <summary>
         /// Maps strings back to Team.Enum
         /// </summary>
