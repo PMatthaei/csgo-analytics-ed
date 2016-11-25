@@ -238,7 +238,7 @@ namespace CSGO_Analytics.src.views
 
                     if (links.Count != 0)
                     {
-                        links.ForEach(l => mapPanel.Children.Remove(l));
+                        links.ForEach(l => mapPanel.Children.Remove(l)); //TODO: das muss weg. stattdessen sollen links sterben wenn sie nicht mehr gebraucht werden. wann ist das?
                         links.Clear();
                     }
 
@@ -256,16 +256,16 @@ namespace CSGO_Analytics.src.views
                     {
                         foreach (var link in comp.links)
                         {
-                            if (hasActiveLinkShape(link))
+                            if (hasActiveLinkShape(link)) // Old link -> update else draw new
                                 updateLink(link);
                             else
-                                drawLink(link.getActor(), link.getReciever(), ComponentType.COMBATLINK);
+                                drawLink(link.getActor(), link.getReciever(), LinkType.COMBATLINK);
                         }
                     }
 
 
                     // Draw all event relevant graphics(nades, bombs etc)
-                    /*if(tick.getNadeEvents().Count != 0)
+                    if(tick.getNadeEvents().Count != 0)
                     {
                         foreach (var n in tick.getNadeEvents())
                         {
@@ -278,7 +278,7 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }*/
+                    }
                 }));
                 Thread.Sleep(passedTime);
 
@@ -335,17 +335,19 @@ namespace CSGO_Analytics.src.views
         {
             math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
 
-            for (int i = activeNades.Count - 1; i > 0; i--)
+            foreach (var ns in activeNades)
             {
-                var ns = activeNades[i];
                 if (ns.X == nadepos.x && ns.Y == nadepos.y)
+                {
                     activeNades.Remove(ns);
-                mapPanel.Children.Remove(ns);
+                    mapPanel.Children.Remove(ns);
+                    break;
+                }
             }
 
         }
 
-        private void drawLink(Player actor, Player reciever, ComponentType type)
+        private void drawLink(Player actor, Player reciever, LinkType type)
         {
             LinkShape ls = new LinkShape(actor, reciever);
 
@@ -359,9 +361,9 @@ namespace CSGO_Analytics.src.views
 
             ls.StrokeThickness = 2;
 
-            if (type == ComponentType.COMBATLINK)
+            if (type == LinkType.COMBATLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkRed;
-            else
+            else if(type == LinkType.SUPPORTLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
 
             links.Add(ls);

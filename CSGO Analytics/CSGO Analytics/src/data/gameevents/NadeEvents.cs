@@ -39,6 +39,51 @@ namespace CSGO_Analytics.src.data.gameevents
                     return 0;
             }
         }
+
+        public bool isEndEvent(NadeEvents n)
+        {
+            switch (gameevent)
+            {
+                case "smoke_exploded":
+                    return n.gameevent == "smoke_ended";
+                case "fire_exploded":
+                    return n.gameevent == "firenade_ended";
+                default:
+                    return false;
+            }
+        }
+        /*
+        public override bool Equals(object obj)
+        {
+            NadeEvents other = obj as NadeEvents;
+            if (other == null)
+            {
+                Console.WriteLine("Nade null");
+                return false;
+            }
+
+            if (other.gameevent == this.gameevent && other.actor == this.actor && other.nadetype == this.nadetype)
+            {
+                 var dx = Math.Abs(other.position.x - this.position.x);
+                var dy = Math.Abs(other.position.y - this.position.y);
+                if (dx < 20 && dy < 20)
+                    Console.WriteLine("Nade test true");
+                    return true;
+            }
+            Console.WriteLine("Nade test false");
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + position.x.GetHashCode();
+                hash = hash * 23 + position.y.GetHashCode();
+                return hash;
+            }
+        }*/
     }
 
     class FlashNade : NadeEvents

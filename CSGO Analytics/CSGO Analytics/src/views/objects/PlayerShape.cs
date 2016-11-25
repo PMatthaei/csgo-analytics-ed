@@ -73,16 +73,13 @@ namespace CSGO_Analytics.src.views
             DependencyProperty.Register("Y", typeof(double), typeof(PlayerShape), YMetadata);
 
 
-        private Point aimPoint;
+        private Point aimPoint = new Point(0, 0);
         protected override Geometry DefiningGeometry
         {
             get
             {
                 var aimX = (X + LOS_LENGTH * Math.Cos(Yaw)); // Aim vector from Yaw -> dont forget toRadian for this calc
                 var aimY = (Y + LOS_LENGTH * Math.Sin(Yaw));
-
-                if (aimPoint == null)
-                    aimPoint = new Point(aimX, aimY);
 
                 aimPoint.X = aimX;
                 aimPoint.Y = aimY;

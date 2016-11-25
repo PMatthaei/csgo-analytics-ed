@@ -109,7 +109,7 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.y;
 
             double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2  && getEuclidDistance2D(actorV,recieverV) < 500)
+            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2  && getEuclidDistance2D(actorV,recieverV) < 500) // Max sight distance to restrict FOV
                 return true;
             return false;
         }
@@ -123,53 +123,35 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static bool vectorClipsSphere2D(float sphereCenterX, float sphereCenterY, float sphereRadius, Vector actorpos, float actorYaw)
         {
-            var aimX = (float)(actorpos.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw (SET YAW NEGATIVE BECAUSE CS:GO LOGIC!!!!)
+            // Yaw has to be negated (csgo -> normal)
+            var aimX = (float)(actorpos.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw 
             var aimY = (float)(actorpos.y + Math.Sin(toRadian(-actorYaw)));
 
-            // compute the euclidean distance between actor and aimvector
-            var LAB = Math.Sqrt((actorpos.x - aimX) * (actorpos.x - aimX) + (actorpos.y - aimY) * (actorpos.y - aimY));
+            // compute the euclidean distance between actor and aim
+            var distanceActorAim = Math.Sqrt((actorpos.x - aimX) * (actorpos.x - aimX) + (actorpos.y - aimY) * (actorpos.y - aimY));
 
             // compute the direction vector D from Actor to aimvector
-            var dx = (actorpos.x - aimX) / LAB;
-            var dy = (actorpos.y - aimY) / LAB;
+            var dx = (actorpos.x - aimX) / distanceActorAim;
+            var dy = (actorpos.y - aimY) / distanceActorAim;
 
-            // Now the line equation is x = Dx*t + Ax, y = Dy*t + Ay with 0 <= t <= 1.
-
+            // Now the line equation is x = dx*t + aimX, y = dy*t + aimY with 0 <= t <= 1.
             // compute the value t of the closest point to the circle center (Cx, Cy)
             var t = dx * (sphereCenterX - aimX) + dy * (sphereCenterY - aimY);
 
-            // This is the projection of C on the line from A to B.
-
+            // This is the projection of C on the line from actor to aim.
             // compute the coordinates of the point E on line and closest to C
             var ex = t * dx + aimX;
             var ey = t * dy + aimY;
 
             // compute the euclidean distance from E to C
-            var distance = Math.Sqrt((ex - sphereCenterX) * (ex - sphereCenterX) + (ey - sphereCenterY) * (ey - sphereCenterY));
+            var distanceEC = Math.Sqrt((ex - sphereCenterX) * (ex - sphereCenterX) + (ey - sphereCenterY) * (ey - sphereCenterY));
 
             // test if the line intersects the circle
-            if (distance < sphereRadius)
-            {
+            if (distanceEC < sphereRadius)
                 return true;
-
-                /*
-                // compute distance from t to circle intersection point
-                var dt = Math.Sqrt(sphereRadius * sphereRadius - LEC * LEC);
-
-                // compute first intersection point
-                var Fx = (t - dt) * Dx + aimX;
-                var Fy = (t - dt) * Dy + aimY;
-
-                // compute second intersection point
-                var Gx = (t + dt) * Dx + aimX;
-                var Gy = (t + dt) * Dy + aimY;
-                */
-            }
-
-            // else test if the line is tangent to circle
-            else if (distance == sphereRadius) // tangent point to circle is E
+            else if (distanceEC == sphereRadius) // line is tangent to circle
                 return true;
-            else // line doesn't touch circle
+            else // line doesnt touch circle
                 return false;
         }
 

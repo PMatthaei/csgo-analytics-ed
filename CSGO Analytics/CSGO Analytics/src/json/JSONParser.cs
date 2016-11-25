@@ -8,7 +8,7 @@ using DemoInfoModded;
 using Newtonsoft.Json;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
-using CSGO_Analytics.src.data.gameobjects;
+using CS = CSGO_Analytics.src.data.gameobjects;
     
 namespace CSGO_Analytics.src.json.parser
 {
@@ -195,25 +195,25 @@ namespace CSGO_Analytics.src.json.parser
             return players;
         }
 
-        public List<PlayerFlashed> assembleFlashedPlayers(DemoInfoModded.Player[] ps)
+        public List<CS.PlayerFlashed> assembleFlashedPlayers(DemoInfoModded.Player[] ps)
         {
             if (ps == null)
                 return null;
-            List<PlayerFlashed> players = new List<PlayerFlashed>();
+            List<CS.PlayerFlashed> players = new List<CS.PlayerFlashed>();
             foreach (var player in ps)
                 players.Add(assembleFlashPlayer(player));
 
             return players;
         }
 
-        private PlayerFlashed assembleFlashPlayer(DemoInfoModded.Player p)
+        private CS.PlayerFlashed assembleFlashPlayer(DemoInfoModded.Player p)
         {
-            PlayerFlashed player = new PlayerFlashed
+            CS.PlayerFlashed player = new CS.PlayerFlashed
             {
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
                 
@@ -276,16 +276,16 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isSpotted = p.IsSpotted
             };
             return player;
         }
 
-        public PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
+        public CS.PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
         {
-            PlayerMeta player = new PlayerMeta
+            CS.PlayerMeta player = new CS.PlayerMeta
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -296,14 +296,14 @@ namespace CSGO_Analytics.src.json.parser
             return player;
         }
 
-        public PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
+        public CS.PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
         {
-            PlayerDetailed playerdetailed = new PlayerDetailed
+            CS.PlayerDetailed playerdetailed = new CS.PlayerDetailed
             {
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 isSpotted = p.IsSpotted,
@@ -320,14 +320,14 @@ namespace CSGO_Analytics.src.json.parser
         }
 
 
-        public PlayerDetailedWithItems assemblePlayerDetailedWithItems(DemoInfoModded.Player p)
+        public CS.PlayerDetailedWithItems assemblePlayerDetailedWithItems(DemoInfoModded.Player p)
         {
-            PlayerDetailedWithItems playerdetailed = new PlayerDetailedWithItems
+            CS.PlayerDetailedWithItems playerdetailed = new CS.PlayerDetailedWithItems
             {
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 hasHelmet = p.HasHelmet,
@@ -341,24 +341,24 @@ namespace CSGO_Analytics.src.json.parser
             return playerdetailed;
         }
 
-        public List<Weapon> assembleWeapons(IEnumerable<Equipment> wps)
+        public List<CS.Weapon> assembleWeapons(IEnumerable<Equipment> wps)
         {
-            List<Weapon> jwps = new List<Weapon>();
+            List<CS.Weapon> jwps = new List<CS.Weapon>();
             foreach (var w in wps)
                 jwps.Add(assembleWeapon(w));
 
             return jwps;
         }
 
-        public Weapon assembleWeapon(Equipment wp)
+        public CS.Weapon assembleWeapon(Equipment wp)
         {
             if (wp == null)
             {
                 Console.WriteLine("Weapon null. Bytestream not suitable for this version of DemoInfo");
-                return new Weapon();
+                return new CS.Weapon();
             }
 
-            Weapon jwp = new Weapon
+            CS.Weapon jwp = new CS.Weapon
             {
                 name = wp.Weapon.ToString(),
                 ammo_in_magazine = wp.AmmoInMagazine

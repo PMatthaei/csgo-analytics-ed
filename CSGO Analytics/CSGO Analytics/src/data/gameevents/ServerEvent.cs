@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CSGO_Analytics.src.data.gameevents
 {
-    class ServerEvent : Event
+    class ServerEvent : Event //TODO: Disconnects etc
     {
 
     }
