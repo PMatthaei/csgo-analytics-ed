@@ -53,7 +53,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             return false;
         }
 
-        //[JsonIgnore]
         public override bool Equals(object obj) //Why does a true overriden Equals kill the json serialisation?!?
         {
             Player p = obj as Player;

@@ -95,44 +95,51 @@ namespace CSGO_Analytics.src.views
 
         public AnalyseDemosView()
         {
-
-            InitializeComponent();
-
-            var path = "match_0.dem";
-            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
-             {
-                 ParseTask ptask = new ParseTask
-                 {
-                     destpath = path,
-                     srcpath = path,
-                     usepretty = true,
-                     showsteps = true,
-                     specialevents = true,
-                     highdetailplay
-                     er = true,
-                     positioninterval = 8,
-                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                 };
-                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-
-        } */
-
-
-            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+            try
             {
-                this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                this.enDetect = new EncounterDetectionAlgorithm(gamestate);
+                InitializeComponent();
+
+                var path = "match_0.dem";
+                /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+                {
+                    ParseTask ptask = new ParseTask
+                    {
+                        destpath = path,
+                        srcpath = path,
+                        usepretty = true,
+                        showsteps = true,
+                        specialevents = true,
+                        highdetailplayer = true,
+                        positioninterval = 8,
+                        settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                    };
+                    GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+
+                }*/
+
+
+                using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                {
+                    this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                    this.enDetect = new EncounterDetectionAlgorithm(gamestate);
+                }
+
+                //LoadMapData();
+
+                InitializeGUIData();
+
+                InitializeMapGraphic();
+
+                MathLibrary.initalizeConstants(LoadMapData());
+
+                InitializeEncounterDetection();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
             }
 
-            //LoadMapData();
-
-            InitializeGUIData();
-
-            InitializeMapGraphic();
-
-            MathLibrary.initalizeConstants(LoadMapData());
-
-            InitializeEncounterDetection();
 
 
         }
@@ -259,13 +266,13 @@ namespace CSGO_Analytics.src.views
                             if (hasActiveLinkShape(link)) // Old link -> update else draw new
                                 updateLink(link);
                             else
-                                drawLink(link.getActor(), link.getReciever(), LinkType.COMBATLINK);
+                                drawLink(link.getActor(), link.getReciever(), link.getLinkType());
                         }
                     }
 
 
                     // Draw all event relevant graphics(nades, bombs etc)
-                    if(tick.getNadeEvents().Count != 0)
+                    if (tick.getNadeEvents().Count != 0)
                     {
                         foreach (var n in tick.getNadeEvents())
                         {
@@ -351,11 +358,11 @@ namespace CSGO_Analytics.src.views
         {
             LinkShape ls = new LinkShape(actor, reciever);
 
-            PlayerShape aps = playershapes[enDetect.getID(actor.player_id)];
+            PlayerShape aps = playershapes[enDetect.getTableID(actor)];
             ls.X1 = aps.X;
             ls.Y1 = aps.Y;
 
-            PlayerShape rps = playershapes[enDetect.getID(reciever.player_id)];
+            PlayerShape rps = playershapes[enDetect.getTableID(reciever)];
             ls.X2 = rps.X;
             ls.Y2 = rps.Y;
 
@@ -363,7 +370,7 @@ namespace CSGO_Analytics.src.views
 
             if (type == LinkType.COMBATLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkRed;
-            else if(type == LinkType.SUPPORTLINK)
+            else if (type == LinkType.SUPPORTLINK)
                 ls.Stroke = System.Windows.Media.Brushes.DarkGreen;
 
             links.Add(ls);
@@ -375,8 +382,8 @@ namespace CSGO_Analytics.src.views
         {
             Player actor = link.getActor();
             Player reciever = link.getReciever();
-            var psr = playershapes[enDetect.getID(reciever.player_id)];
-            var psa = playershapes[enDetect.getID(actor.player_id)];
+            var psr = playershapes[enDetect.getTableID(reciever)];
+            var psa = playershapes[enDetect.getTableID(actor)];
 
             foreach (var ls in links)
             {
@@ -424,7 +431,7 @@ namespace CSGO_Analytics.src.views
             ps.StrokeThickness = 0.5;
             ps.Active = true;
 
-            playershapes[enDetect.getID(p.player_id)] = ps;
+            playershapes[enDetect.getTableID(p)] = ps;
             mapPanel.Children.Add(ps);
         }
 
@@ -433,7 +440,7 @@ namespace CSGO_Analytics.src.views
         private void updatePlayer(Player p)
         {
 
-            PlayerShape ps = playershapes[enDetect.getID(p.player_id)];
+            PlayerShape ps = playershapes[enDetect.getTableID(p)];
             if (!ps.Active)
             {
                 ps.Fill = new SolidColorBrush(deadcolor);

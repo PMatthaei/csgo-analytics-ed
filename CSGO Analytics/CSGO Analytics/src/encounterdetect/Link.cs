@@ -48,6 +48,11 @@ namespace CSGO_Analytics.src.encounterdetect
             return players[1];
         }
 
+        public LinkType getLinkType()
+        {
+            return type;
+        }
+
         override public string ToString()
         {
             return type.ToString() + " | Actor: " + players[0].playername + "- Reciever: " + players[1].playername;
