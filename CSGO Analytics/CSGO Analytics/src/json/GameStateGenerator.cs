@@ -301,7 +301,6 @@ namespace CSGO_Analytics.src.json.parser
                     //the killer is null if vicitm is killed by the world - eg. by falling
                     if (e.Killer != null)
                         tick.tickevents.Add(jsonparser.assemblePlayerKilled(e));
-
                 }
 
             };

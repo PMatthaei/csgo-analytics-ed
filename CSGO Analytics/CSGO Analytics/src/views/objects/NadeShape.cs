@@ -56,12 +56,12 @@ namespace CSGO_Analytics.src.views
         {
             get
             {
-                Geometry effectCircle = new EllipseGeometry(new Point(X, Y), Radius, Radius);
-
+                EllipseGeometry effectCircle = new EllipseGeometry(new Point(X, Y), Radius, Radius);
+                LineGeometry center = new LineGeometry(new Point(X, Y), new Point(X, Y));
 
                 GeometryGroup combined = new GeometryGroup();
-                //combined.Children.Add(geometry);
                 combined.Children.Add(effectCircle);
+                combined.Children.Add(center);
                 return combined;
             }
         }

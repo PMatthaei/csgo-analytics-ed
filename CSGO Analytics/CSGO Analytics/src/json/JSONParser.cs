@@ -87,6 +87,7 @@ namespace CSGO_Analytics.src.json.parser
                 gameevent = "player_killed",
                 actor = assemblePlayerDetailed(pke.Killer),
                 victim = assemblePlayerDetailed(pke.Victim),
+                assister = assemblePlayerDetailed(pke.Assister),
                 headshot = pke.Headshot,
                 penetrated = pke.PenetratedObjects,
                 weapon = assembleWeapon(pke.Weapon)
@@ -271,7 +272,7 @@ namespace CSGO_Analytics.src.json.parser
 
         public CSGO_Analytics.src.data.gameobjects.Player assemblePlayer(DemoInfoModded.Player p)
         {
-            CSGO_Analytics.src.data.gameobjects.Player player = new CSGO_Analytics.src.data.gameobjects.Player
+            return new CSGO_Analytics.src.data.gameobjects.Player
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -280,12 +281,11 @@ namespace CSGO_Analytics.src.json.parser
                 team = p.Team.ToString(),
                 isSpotted = p.IsSpotted
             };
-            return player;
         }
 
         public CS.PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
         {
-            CS.PlayerMeta player = new CS.PlayerMeta
+            return new CS.PlayerMeta
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -293,12 +293,13 @@ namespace CSGO_Analytics.src.json.parser
                 clanname = p.AdditionaInformations.Clantag,
                 steam_id = p.SteamID,
             };
-            return player;
         }
 
         public CS.PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
         {
-            CS.PlayerDetailed playerdetailed = new CS.PlayerDetailed
+            if (p == null) return null;
+
+            return new CS.PlayerDetailed
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -315,8 +316,6 @@ namespace CSGO_Analytics.src.json.parser
                 armor = p.Armor,
                 velocity = p.Velocity.Absolute //Length of Movementvector -> Velocity
             };
-
-            return playerdetailed;
         }
 
 
@@ -360,6 +359,7 @@ namespace CSGO_Analytics.src.json.parser
 
             CS.Weapon jwp = new CS.Weapon
             {
+                //owner = assemblePlayerDetailed(wp.Owner),
                 name = wp.Weapon.ToString(),
                 ammo_in_magazine = wp.AmmoInMagazine
             };

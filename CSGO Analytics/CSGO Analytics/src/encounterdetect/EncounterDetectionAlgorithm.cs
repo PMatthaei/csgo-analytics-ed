@@ -32,6 +32,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float ENCOUNTER_TIMEOUT = 20;
         private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 20;
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
+        private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;
 
         private const float ATTACKRANGE = 500.0f;
         private const float SUPPORTRANGE = 300.0f;
@@ -139,7 +140,9 @@ namespace CSGO_Analytics.src.encounterdetect
         int stCount = 0;
         int dsCount = 0;
 
+        int assistCount = 0;
         int smokeAssistCount = 0;
+        int dAssistCount = 0;
         int fCount = 0;
 
         private List<Encounter> predecessors = new List<Encounter>();
@@ -168,7 +171,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         if (updatedPlayer.isSpotted) stCount++;
 
                     }
-                    
+
 
                     CombatComponent component = buildComponent(tick);
 
@@ -238,20 +241,22 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
 
-            Console.WriteLine("\n Weaponfire-Events total: " + wfeCount);
+            Console.WriteLine("\nWeaponfire-Events total: " + wfeCount);
             Console.WriteLine("Weaponfire-Event where victims were found: " + wfCount);
             Console.WriteLine("Weaponfire-Events inserted into existing components: " + iCount);
 
 
-            Console.WriteLine("\n Spotted-Events occured: " + sCount);
+            Console.WriteLine("\nSpotted-Events occured: " + sCount);
             Console.WriteLine("Spotters found: " + sfCount);
-            Console.WriteLine("\n Player is spotted in: " + stCount + " ticks(compare with UpdatedPlayer-Entries)");
+            Console.WriteLine("\nPlayer is spotted in: " + stCount + " ticks(compare with UpdatedPlayer-Entries)");
             Console.WriteLine("Spotted-Events found by Algorithm with Spotrange 500: ");
             Console.WriteLine("UpdatedPlayer spotted someone: " + usCount);
             Console.WriteLine("UpdatedPlayer was spotted: " + ussCount);
             Console.WriteLine("Spotdifferences(only one can see the other): " + ussCount); //TODO: nie im selben tick gegenseitig spotten
 
-            Console.WriteLine("\n Nade-Supportlinks: ");
+            Console.WriteLine("\nAssist-Supportlinks: " + assistCount);
+            Console.WriteLine("DamageAssist-Supportlinks: " + dAssistCount);
+            Console.WriteLine("Nade-Supportlinks: ");
             Console.WriteLine("Smoke Supportlinks: " + smokeAssistCount);
             Console.WriteLine("Flash Supportlinks: " + fCount);
 
@@ -290,9 +295,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
 
-                    for (int i = 1; i < intersectPlayers.Count(); i++)
+                    foreach (var p in intersectPlayers)
                     {
-                        var p = intersectPlayers[i];
                         // Team different to one we know -> this encounter e is a predecessor of the component comp
                         if (knownteam != Team.None && knownteam != p.getTeam())
                         {
@@ -433,12 +437,18 @@ namespace CSGO_Analytics.src.encounterdetect
                         PlayerHurt ph = (PlayerHurt)g;
                         links.Add(new Link(ph.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT));
 
-                        handleIncomingHurtEvent(ph, tick.tick_id);
+                        handleIncomingHurtEvent(ph, tick.tick_id, links);
 
                         break;
                     case "player_killed":
                         PlayerKilled pk = (PlayerKilled)g;
                         links.Add(new Link(pk.actor, pk.victim, LinkType.COMBATLINK, Direction.DEFAULT));
+
+                        if (pk.assister != null)
+                        {
+                            links.Add(new Link(pk.assister, pk.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                            assistCount++;
+                        }
 
                         break;
                     case "weapon_fire":
@@ -472,12 +482,12 @@ namespace CSGO_Analytics.src.encounterdetect
                         // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
                         if (flash.flashedplayers.Count == 0)
                             break;
-                        
+
                         //TODO: prevent GOTV player and others!! from being tracked in the parser THIS SUCKS -.- so only names registered as playing not watching ids are valid
                         var playernames = new List<string>();
                         players.ToList().ForEach(player => playernames.Add(player.playername));
 
-                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && playernames.Contains(player.playername) ); // Teamflashes are not helpful so no supportlink 
+                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && playernames.Contains(player.playername)); // Teamflashes are not helpful so no supportlink 
                         if (flashedenemies.Count() == 0)
                             break;
 
@@ -568,7 +578,7 @@ namespace CSGO_Analytics.src.encounterdetect
             var smokenades = activeNades.Where(nade => nade.gameevent == "smoke_exploded");
             foreach (var nadeevent in smokenades)
             {
-                foreach (var counterplayer in players.Where(player => player.getTeam() != nadeevent.actor.getTeam())) 
+                foreach (var counterplayer in players.Where(player => player.getTeam() != nadeevent.actor.getTeam()))
                 {
                     var counterplayer_id = getTableID(counterplayer);
                     var counterplayerpos = new Vector(position_table[counterplayer_id]);
@@ -597,7 +607,6 @@ namespace CSGO_Analytics.src.encounterdetect
 
             // Test covered areas TODO:
             // Test weapon drop assists TODO:
-            // Test kill assists TODO:
             return supportlinks;
         }
 
@@ -608,8 +617,25 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="ph"></param>
         /// <param name="tick_id"></param>
-        private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id)
+        private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id, List<Link> links)
         {
+            //For every incoming hurt event test if it was near a hurtevent with same victim but different actors from the same team -> damageassist
+            foreach (var hurtevententry in registeredHurtEvents)
+            {
+                var hurtevent = hurtevententry.Key;
+                var htick_id = hurtevententry.Value;
+                int tick_dt = Math.Abs(htick_id - tick_id);
+                if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && tick_dt * tickrate / 1000 < PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                {
+                    if (ph.actor.getTeam() == hurtevent.actor.getTeam())
+                    {
+                        links.Add(new Link(ph.actor, hurtevent.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                        dAssistCount++; //TODO: what if players hit an enemy alternating so that they build supportlinks between each other constantly for every hit ?
+                    }
+
+                }
+            }
+
             registeredHurtEvents.Add(ph, tick_id);
 
             for (int index = pendingWeaponFireEvents.Count - 1; index >= 0; index--) //TODO: with where statement?
@@ -674,10 +700,10 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 // Watch out for teamdamage. No wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam()) 
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam())
                 {
                     candidates.Add(hurtevent.victim);
-                    registeredHurtEvents.Remove(hurtevent);
+                    //registeredHurtEvents.Remove(hurtevent);
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
@@ -835,7 +861,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 Console.WriteLine("Could not map unkown csid: " + player.player_id + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
                 foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
-                    Console.WriteLine("Key: "+pair.Key + " Value: "+pair.Value);
+                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
                 handleChangedID(player);
                 return getTableID(player);
             }
@@ -854,7 +880,6 @@ namespace CSGO_Analytics.src.encounterdetect
             int value = -99;
             for (int i = 0; i < players.Count() - 1; i++)
             {
-                Console.WriteLine(p.playername + " is equals "+ players[i].playername);
                 if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
                 {
                     changedKey = players[i].player_id; // The old key we used but which is not up to date
@@ -867,7 +892,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             if (value == -99)
             {
-                Console.WriteLine("No suitable ID found"); return;
+                throw new Exception("No suitable ID found in map.");
             }
 
         }

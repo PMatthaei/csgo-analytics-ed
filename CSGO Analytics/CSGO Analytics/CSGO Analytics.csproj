@@ -83,7 +83,7 @@
     <Compile Include="src\json\Gamestate.cs" />
     <Compile Include="src\json\JSONParser.cs" />
     <Compile Include="src\encounterdetect\Tick.cs" />
-    <Compile Include="src\json\ParseTask.cs" />
+    <Compile Include="src\json\JSONParseTask.cs" />
     <Compile Include="src\postgres\CommandText.cs" />
     <Compile Include="src\postgres\NPGSQLDelegator.cs" />
     <Page Include="src\views\AnalyseDemosView.xaml">

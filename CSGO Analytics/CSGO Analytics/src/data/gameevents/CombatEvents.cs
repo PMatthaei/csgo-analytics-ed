@@ -53,6 +53,7 @@ namespace CSGO_Analytics.src.data.gameevents
 
         public bool headshot { get; set; }
         public int penetrated { get; set; }
+        public Player assister { get; set; }
 
         // buildLink() should be inherited by PlayerHurt
 

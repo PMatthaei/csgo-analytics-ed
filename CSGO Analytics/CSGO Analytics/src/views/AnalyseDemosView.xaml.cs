@@ -265,7 +265,7 @@ namespace CSGO_Analytics.src.views
                         {
                             if (hasActiveLinkShape(link)) // Old link -> update else draw new
                                 updateLink(link);
-                            else
+                            else  
                                 drawLink(link.getActor(), link.getReciever(), link.getLinkType());
                         }
                     }
