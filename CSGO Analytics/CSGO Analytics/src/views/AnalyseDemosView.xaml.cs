@@ -237,7 +237,7 @@ namespace CSGO_Analytics.src.views
                     last_tickid = tick.tick_id;
                 int dt = tick.tick_id - last_tickid;
 
-                int passedTime = (int)(dt * tickrate);
+                int passedTime = (int)(dt * tickrate);// + 2000;
 
                 //Run UI changes in a Non-UI-Blocking thread. Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                 Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
@@ -265,7 +265,7 @@ namespace CSGO_Analytics.src.views
                         {
                             if (hasActiveLinkShape(link)) // Old link -> update else draw new
                                 updateLink(link);
-                            else  
+                            else
                                 drawLink(link.getActor(), link.getReciever(), link.getLinkType());
                         }
                     }
@@ -332,7 +332,23 @@ namespace CSGO_Analytics.src.views
             ns.X = nadepos.x;
             ns.Y = nadepos.y;
             ns.Radius = 20;
-            ns.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+            Color color = Color.FromArgb(0, 0, 0, 0);
+            switch (n.gameevent)
+            {
+                case "hegrenade_exploded":
+                    color = Color.FromArgb(255, 255, 85, 50);
+                    break;
+                case "flash_exploded":
+                    color = Color.FromArgb(255, 244, 255, 184);
+                    break;
+                case "smoke_exploded":
+                    color = Color.FromArgb(255, 220, 220, 220);
+                    break;
+                case "firenade_exploded":
+                    color = Color.FromArgb(255, 255, 132, 0);
+                    break;
+            }
+            ns.Fill = new SolidColorBrush(color);
 
             activeNades.Add(ns);
             mapPanel.Children.Add(ns);
@@ -439,7 +455,6 @@ namespace CSGO_Analytics.src.views
 
         private void updatePlayer(Player p)
         {
-
             PlayerShape ps = playershapes[enDetect.getTableID(p)];
             if (!ps.Active)
             {
@@ -447,7 +462,23 @@ namespace CSGO_Analytics.src.views
                 ps.Stroke = new SolidColorBrush(deadcolor);
                 return;
             }
-            var vector = MathLibrary.CSPositionToUIPosition(p.position);
+            else if (p.isSpotted)
+            {
+                if (p.getTeam() == Team.T)
+                    ps.Fill = new SolidColorBrush(Color.FromArgb(255, 225, 160, 160));
+                else
+                    ps.Fill = new SolidColorBrush(Color.FromArgb(255, 160, 160, 225));
+            }
+            else if (!p.isSpotted)
+            {
+
+                if (p.getTeam() == Team.T)
+                    ps.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 0, 0));
+                else
+                    ps.Fill = new SolidColorBrush(Color.FromArgb(255, 0, 0, 255));
+            }
+
+                var vector = MathLibrary.CSPositionToUIPosition(p.position);
             ps.X = vector.x;
             ps.Y = vector.y;
             ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);

@@ -152,7 +152,7 @@ namespace CSGO_Analytics.src.encounterdetect
         public MatchReplay run()
         {
 
-            MatchReplay replay = new MatchReplay(); // Problem: empty ticks were thrown away -> gaps in tick_id -> cant use it as index in arrays
+            MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -483,11 +483,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         if (flash.flashedplayers.Count == 0)
                             break;
 
-                        //TODO: prevent GOTV player and others!! from being tracked in the parser THIS SUCKS -.- so only names registered as playing not watching ids are valid
-                        var playernames = new List<string>();
-                        players.ToList().ForEach(player => playernames.Add(player.playername));
-
-                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && playernames.Contains(player.playername)); // Teamflashes are not helpful so no supportlink 
+                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() ); // Teamflashes are not helpful so no supportlink 
                         if (flashedenemies.Count() == 0)
                             break;
 
@@ -765,7 +761,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 candidates.Clear();
                 return player;
             }
-            if (candidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe search better condition)
+            if (candidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
             {
                 var nearestplayer = candidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
                 candidates.Clear();
