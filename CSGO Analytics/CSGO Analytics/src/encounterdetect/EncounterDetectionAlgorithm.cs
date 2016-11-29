@@ -483,7 +483,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         if (flash.flashedplayers.Count == 0)
                             break;
 
-                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() ); // Teamflashes are not helpful so no supportlink 
+                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam()); // Teamflashes are not helpful so no supportlink 
                         if (flashedenemies.Count() == 0)
                             break;
 
@@ -615,20 +615,31 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="tick_id"></param>
         private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id, List<Link> links)
         {
-            //For every incoming hurt event test if it was near a hurtevent with same victim but different actors from the same team -> damageassist
-            foreach (var hurtevententry in registeredHurtEvents)
+            // For every registered hurt event test ...
+            for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
             {
-                var hurtevent = hurtevententry.Key;
-                var htick_id = hurtevententry.Value;
+                var item = registeredHurtEvents.ElementAt(index);
+                var hurtevent = item.Key;
+                var htick_id = item.Value;
                 int tick_dt = Math.Abs(htick_id - tick_id);
-                if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && tick_dt * tickrate / 1000 < PLAYERHURT_DAMAGEASSIST_TIMEOUT)
-                {
-                    if (ph.actor.getTeam() == hurtevent.actor.getTeam())
-                    {
-                        links.Add(new Link(ph.actor, hurtevent.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
-                        dAssistCount++; //TODO: what if players hit an enemy alternating so that they build supportlinks between each other constantly for every hit ?
-                    }
 
+                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                {
+                    registeredHurtEvents.Remove(hurtevent); //Check timeout
+                    continue;
+                }
+
+                // if same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
+                if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
+                {
+                    links.Add(new Link(ph.actor, hurtevent.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                    dAssistCount++;
+                }
+                // if ph.actor hits an enemy while this enemy has hit somebody from p.actors team
+                if (ph.victim.Equals(hurtevent.actor) && hurtevent.victim.getTeam() == ph.actor.getTeam())
+                {
+                    links.Add(new Link(ph.actor, hurtevent.victim, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                    dAssistCount++;
                 }
             }
 
@@ -699,7 +710,6 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam())
                 {
                     candidates.Add(hurtevent.victim);
-                    //registeredHurtEvents.Remove(hurtevent);
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time

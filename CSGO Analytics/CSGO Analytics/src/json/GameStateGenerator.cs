@@ -232,7 +232,7 @@ namespace CSGO_Analytics.src.json.parser
 
             #endregion
 
-            #region Player events
+            #region Playerevents
 
             parser.WeaponFired += (object sender, WeaponFiredEventArgs we) =>
             {
@@ -422,6 +422,41 @@ namespace CSGO_Analytics.src.json.parser
             };
             #endregion
 
+            #region Serverevents
+
+            parser.PlayerDisconnect += (sender, e) =>
+            {
+                if(hasMatchStarted)
+                    Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " disconnected");
+                //tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
+            };
+
+            parser.PlayerBind += (sender, e) =>
+            {
+                if (hasMatchStarted)
+                    Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " is binded");
+                //tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
+            };
+            #endregion
+
+            #region Futureevents
+            /*
+            //Extraevents maybe useful
+            parser.RoundFinal += (object sender, RoundFinalEventArgs e) => {
+
+            };
+            parser.RoundMVP += (object sender, RoundMVPEventArgs e) => {
+
+            };
+            parser.RoundOfficiallyEnd += (object sender, RoundOfficiallyEndedEventArgs e) => {
+
+            };
+            parser.LastRoundHalf += (object sender, LastRoundHalfEventArgs e) => {
+
+            };
+            */
+            #endregion
+
             #region Tickevent / Ticklogic
             //Assemble a tick object with the above gameevents
             parser.TickDone += (sender, e) =>
@@ -479,43 +514,7 @@ namespace CSGO_Analytics.src.json.parser
             }
             #endregion
 
-            #region Serverevents
 
-            //
-            // Rare. Not tested yet. TODO:
-            //
-            parser.PlayerDisconnect += (sender, e) =>
-            {
-                Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " disconnected");
-                tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
-            };
-
-            // Use this to identify if a new player has joined or similar
-            parser.PlayerBind += (sender, e) =>
-            {
-                Console.WriteLine("Player: "+e.Player.Name +" ID: " + e.Player.EntityID + " is binded");
-                tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
-            };
-            #endregion
-
-
-            #region Futureevents
-            /*
-            //Extraevents maybe useful
-            parser.RoundFinal += (object sender, RoundFinalEventArgs e) => {
-
-            };
-            parser.RoundMVP += (object sender, RoundMVPEventArgs e) => {
-
-            };
-            parser.RoundOfficiallyEnd += (object sender, RoundOfficiallyEndedEventArgs e) => {
-
-            };
-            parser.LastRoundHalf += (object sender, LastRoundHalfEventArgs e) => {
-
-            };
-            */
-            #endregion
 
         }
 
