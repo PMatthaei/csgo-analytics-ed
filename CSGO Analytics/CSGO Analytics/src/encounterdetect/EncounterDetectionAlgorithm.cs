@@ -81,7 +81,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Matrix to save player visibility between each other
         /// </summary>
-        private bool[][] spotted_table;
+        private bool[] spotted_table;
 
 
 
@@ -167,6 +167,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         updatePosition(id, updatedPlayer.position.getAsArray());
                         updateFacing(id, updatedPlayer.facing.getAsArray());
                         updateDistance(id);
+                        updateSpotted(id, updatedPlayer.isSpotted);
 
                         if (updatedPlayer.isSpotted) stCount++;
 
@@ -209,7 +210,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     predecessors.Clear();
 
-                    // Check encounter timeouts every tick TODO: verify this is working
+                    // Check encounter timeouts every tick
                     for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
                         Encounter e = open_encounters[i];
@@ -286,15 +287,13 @@ namespace CSGO_Analytics.src.encounterdetect
                 bool registered = false;
                 foreach (var c in e.cs) //Really iterate over components? -> yes because we need c.players
                 {
-
-                    // Test if c and comp have at least two players from different teams in common -> Intersection of lists
+                    // Test if c and comp have at least two players from different teams in common -> Intersection of player lists
                     var intersectPlayers = c.players.Intersect(comp.players).ToList();
 
                     if (intersectPlayers.Count < 2)
                         continue;
 
                     var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
-
                     foreach (var p in intersectPlayers)
                     {
                         // Team different to one we know -> this encounter e is a predecessor of the component comp
@@ -364,6 +363,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
+            searchSightCombatLinks(tick, links);
             // TODO: Dead players are still present in data and build links
             //searchDistancebasedCombatLinks(tick, links);
 
@@ -386,6 +386,27 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
 
+
+        /// <summary>
+        /// Search all potential combatlinks based on sight (DOTA2 version: player is in attackrange)
+        /// </summary>
+        /// <param name="tick"></param>
+        /// <param name="links"></param>
+        private void searchSightCombatLinks(Tick tick, List<Link> links)
+        {
+            foreach (var uplayer in players)
+            {
+                var uplayer_id = getTableID(uplayer);
+                if (spotted_table[uplayer_id]) //if the player is spotted
+                { 
+                    var potential_spotter = searchSpotterCandidates(uplayer);
+                    if (potential_spotter == null) // This should not happend as these events are most likely to be true
+                        continue;
+                    sfCount++;
+                    links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
+                }
+            }
+        }
 
 
         /// <summary>
@@ -583,6 +604,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     //If a player from the opposing team of the smoke thrower saw into the smoke
                     if (MathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 20, counterplayerpos, counterplayerYaw))
                     {
+                        //Console.WriteLine("Player " +counterplayer.playername + " saw into the smoke");
                         // Check if he could have seen a player from the thrower team
                         foreach (var teammate in players.Where(teammate => teammate.getTeam() == nadeevent.actor.getTeam()))
                         {
@@ -591,6 +613,8 @@ namespace CSGO_Analytics.src.encounterdetect
                             // Test if the player who looked in the smoke can see a player from the oppposing( thrower) team
                             if (MathLibrary.isInFOV(counterplayerpos, counterplayerYaw, teammatepos))
                             {
+                                //Console.WriteLine("He saw " + teammate.playername + " behind the smoke -> "+nadeevent.actor.playername +" gets an assist" );
+
                                 // The actor supported a teammate -> Supportlink
                                 Link link = new Link(nadeevent.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
                                 supportlinks.Add(link);
@@ -682,7 +706,7 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-        private List<Player> candidates = new List<Player>();
+        private List<Player> vcandidates = new List<Player>();
         /// <summary>
         /// Searches the player that has most probable Hurt another player with the given weapon fire event
         /// This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor.
@@ -709,7 +733,25 @@ namespace CSGO_Analytics.src.encounterdetect
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam())
                 {
-                    candidates.Add(hurtevent.victim);
+                    /*var hvicitm_id = getTableID(hurtevent.victim);
+                    var hvicitmpos = new Vector(position_table[hvicitm_id]);
+
+                    var wfactor_id = getTableID(wf.actor);
+                    var wfactorpos = new Vector(position_table[wfactor_id]);
+                    var wfactorYaw = facing_table[wfactor_id][0];
+
+                    // Test if an enemy can see our actor
+                    if (MathLibrary.isInFOV(wfactorpos, wfactorYaw, hvicitmpos))
+                    {
+                        candidates.Add(hurtevent.victim);
+                        //Order by closest player to determine which is the probablest candidate                    }
+                        candidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, hurtevent.victim.position));
+                        break;
+                    }*/
+
+                    vcandidates.Add(hurtevent.victim);
+                    //Order by closest player to determine which is the probablest candidate                    }
+                    vcandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, hurtevent.victim.position));
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
@@ -720,25 +762,24 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
-            if (candidates.Count == 0)
+            if (vcandidates.Count == 0)
             {
                 return null;
             }
-            if (candidates.Count == 1)
+            if (vcandidates.Count == 1)
             {
-                var player = candidates[0];
-                candidates.Clear();
+                var player = vcandidates[0];
+                vcandidates.Clear();
                 return player;
             }
-            //Console.WriteLine("Candidates found: " + candidates.Count);
-            //Console.ReadLine();
-            var victim = candidates[0]; //TODO: search probablest attacker!
-            candidates.Clear();
+
+            var victim = vcandidates[0];
+            vcandidates.Clear();
             return victim;
         }
 
 
-
+        private List<Player> scandidates = new List<Player>();
         /// <summary>
         /// Searches players who have spotted a certain player
         /// </summary>
@@ -758,23 +799,23 @@ namespace CSGO_Analytics.src.encounterdetect
                 // Test if an enemy can see our actor
                 if (MathLibrary.isInFOV(counterplayerpos, counterplayerYaw, actorpos))
                 {
-                    candidates.Add(counterplayer);
+                    scandidates.Add(counterplayer);
                 }
             }
 
-            if (candidates.Count == 0)
+            if (scandidates.Count == 0)
                 return null;
 
-            if (candidates.Count == 1)
+            if (scandidates.Count == 1)
             {
-                var player = candidates[0];
-                candidates.Clear();
+                var player = scandidates[0];
+                scandidates.Clear();
                 return player;
             }
-            if (candidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
+            if (scandidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
             {
-                var nearestplayer = candidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
-                candidates.Clear();
+                var nearestplayer = scandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
+                scandidates.Clear();
                 return nearestplayer;
             }
             return null;
@@ -808,11 +849,8 @@ namespace CSGO_Analytics.src.encounterdetect
                 distance_table[i] = new float[playeramount]; // distance between each player
             }
 
-            spotted_table = new bool[playeramount / 2 + 1][]; // +1 because we need one extra row to determine who spotted who
-            for (int i = 0; i < spotted_table.Length; i++)
-            {
-                spotted_table[i] = new bool[playeramount / 2 + 1]; // spotted(true/false) between each player
-            }
+            spotted_table = new bool[playeramount]; // Table holding bool for every player which tells us if he is spotted in that tick
+
         }
 
 
@@ -843,9 +881,9 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-        private void updateSpotted(int acid, int recid, bool spotted, bool actor, bool reciever)
+        private void updateSpotted(int acid, bool spotted)
         {
-            spotted_table[acid][recid] = spotted;
+            spotted_table[acid] = spotted;
         }
 
 

@@ -287,7 +287,7 @@ namespace CSGO_Analytics.src.views
                         }
                     }
                 }));
-                Thread.Sleep(passedTime);
+                Thread.Sleep(passedTime+500);
 
                 last_tickid = tick.tick_id;
 
