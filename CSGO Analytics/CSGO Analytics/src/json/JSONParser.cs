@@ -279,7 +279,8 @@ namespace CSGO_Analytics.src.json.parser
                 position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
-                isSpotted = p.IsSpotted
+                isSpotted = p.IsSpotted,
+                HP = p.HP  
             };
         }
 

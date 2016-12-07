@@ -55,7 +55,13 @@ namespace CSGO_Analytics.src.data.gameevents
         public int penetrated { get; set; }
         public Player assister { get; set; }
 
-        // buildLink() should be inherited by PlayerHurt
+        public override Player[] getPlayers()
+        {
+            if (assister != null)
+                return new Player[] { actor, victim, assister };
+            else
+                return base.getPlayers();
+        }
 
     }
 }

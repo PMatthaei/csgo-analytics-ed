@@ -26,6 +26,8 @@ namespace CSGO_Analytics.src.data.gameobjects
         public string team { get; set; }
         public Vector position { get; set; }
         public Facing facing { get; set; }
+
+        public int HP { get; set; }
         public bool isSpotted { get; set; }
 
         /// <summary>
@@ -102,7 +104,6 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     class PlayerDetailed : Player
     {
-        public int HP { get; set; }
         public int armor { get; set; }
         public bool hasHelmet { get; set; }
         public bool hasDefuser { get; set; }

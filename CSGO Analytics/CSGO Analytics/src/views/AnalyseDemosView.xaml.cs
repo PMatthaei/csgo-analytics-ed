@@ -287,7 +287,7 @@ namespace CSGO_Analytics.src.views
                         }
                     }
                 }));
-                Thread.Sleep(passedTime+500);
+                Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
 
@@ -456,13 +456,32 @@ namespace CSGO_Analytics.src.views
         private void updatePlayer(Player p)
         {
             PlayerShape ps = playershapes[enDetect.getTableID(p)];
+            if (p.HP <= 0)
+                ps.Active = false;
+            if (p.HP > 0)
+                ps.Active = true;
+
             if (!ps.Active)
             {
                 ps.Fill = new SolidColorBrush(deadcolor);
                 ps.Stroke = new SolidColorBrush(deadcolor);
                 return;
+            } else if(ps.Active)  {
+                Color color;
+                if (p.getTeam() == Team.T)
+                {
+                    color = Color.FromArgb(255, 255, 0, 0);
+                }
+                else
+                {
+                    color = Color.FromArgb(255, 0, 0, 255);
+                }
+
+                ps.Fill = new SolidColorBrush(color);
+                ps.Stroke = new SolidColorBrush(color);
             }
-            else if (p.isSpotted)
+
+            if (p.isSpotted)
             {
                 if (p.getTeam() == Team.T)
                     ps.Fill = new SolidColorBrush(Color.FromArgb(255, 225, 160, 160));
