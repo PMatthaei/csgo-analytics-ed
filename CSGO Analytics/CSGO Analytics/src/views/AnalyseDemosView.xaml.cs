@@ -146,7 +146,8 @@ namespace CSGO_Analytics.src.views
 
         private MapMetaData LoadMapData()
         {
-            string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
+        //string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
+            string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
             return new MapMetaDataPropertyReader(path).metadata;
         }
 
@@ -168,7 +169,8 @@ namespace CSGO_Analytics.src.views
         {
 
             canvas.ClipToBounds = true;
-            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
+            //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
+            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
             map_width = bi.Width; // Save original size to apply scaling
             map_height = bi.Height;
             mapPanel.Background = new ImageBrush(bi);

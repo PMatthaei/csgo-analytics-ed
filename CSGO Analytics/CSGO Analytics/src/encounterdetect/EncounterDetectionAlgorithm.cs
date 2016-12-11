@@ -748,13 +748,14 @@ namespace CSGO_Analytics.src.encounterdetect
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
                 {
-                    /*var hvicitm_id = getTableID(hurtevent.victim);
-                    var hvicitmpos = new Vector(position_table[hvicitm_id]);
+                    // Fetch latest data from table because here might be older events which are not up to date
+                    var hvictim_id = getTableID(hurtevent.victim);
+                    var hvictimpos = new Vector(position_table[hvictim_id]);
 
                     var wfactor_id = getTableID(wf.actor);
                     var wfactorpos = new Vector(position_table[wfactor_id]);
                     var wfactorYaw = facing_table[wfactor_id][0];
-
+                    /*
                     // Test if an enemy can see our actor
                     if (MathLibrary.isInFOV(wfactorpos, wfactorYaw, hvicitmpos))
                     {
@@ -765,8 +766,9 @@ namespace CSGO_Analytics.src.encounterdetect
                     }*/
 
                     vcandidates.Add(hurtevent.victim);
-                    //Order by closest player to determine which is the probablest candidate                    }
-                    vcandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, hurtevent.victim.position));
+                    //Order by closest or by clostest aimend player to determine which is the probablest candidate
+                    vcandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
+                    vcandidates.OrderBy(candidate => MathLibrary.getLineOfSightOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time

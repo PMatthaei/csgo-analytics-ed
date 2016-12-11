@@ -68,6 +68,20 @@ namespace CSGO_Analytics.src.math
             return Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2) + Math.Pow(p1.z - p2.z, 2));
         }
 
+        public static double getLineOfSightOffset(Vector actorV, float actorYaw, Vector recieverV)
+        {
+            double dx = recieverV.x - actorV.x;
+            double dy = recieverV.y - actorV.y;
+
+            var aimX = (float)(actorV.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw
+            var aimY = (float)(actorV.y + Math.Sin(toRadian(-actorYaw)));
+
+            var aimdx = aimX - actorV.x;
+            var aimdy = aimY - actorV.y;
+
+            double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
+            return toDegree(theta);
+        }
         /// <summary>
         /// Test if a vector is facing another one -> 
         /// </summary>
