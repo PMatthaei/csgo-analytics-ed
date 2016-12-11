@@ -45,6 +45,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// All players - communicated by the meta-data - which are participating in this match.
         /// </summary>
+        private List<Player> livingplayers;
         private Player[] players;
 
         /// <summary>
@@ -90,9 +91,10 @@ namespace CSGO_Analytics.src.encounterdetect
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
+            this.livingplayers = players.ToList();
 
             int ownid = 0;
-            foreach (var player in players) // Map all CS Entity IDs to our own table-ids
+            foreach (var player in livingplayers) // Map all CS Entity IDs to our own table-ids
             {
                 mappedPlayerIDs.Add(player.player_id, ownid);
                 ownid++;
@@ -162,15 +164,22 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
                     {
-                        int id = getTableID(updatedPlayer);
+                        if (!updatedPlayer.isDead()) {
+                            if (!livingplayers.Contains(updatedPlayer))
+                                livingplayers.Add(updatedPlayer);
 
-                        updatePosition(id, updatedPlayer.position.getAsArray());
-                        updateFacing(id, updatedPlayer.facing.getAsArray());
-                        updateDistance(id);
-                        updateSpotted(id, updatedPlayer.isSpotted);
+                            int id = getTableID(updatedPlayer);
+                            updatePosition(id, updatedPlayer.position.getAsArray());
+                            updateFacing(id, updatedPlayer.facing.getAsArray());
+                            updateDistance(id);
+                            updateSpotted(id, updatedPlayer.isSpotted);
+
+                        } else
+                        {
+                            livingplayers.Remove(updatedPlayer);
+                        }
 
                         if (updatedPlayer.isSpotted) stCount++;
-
                     }
 
 
@@ -394,7 +403,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchSightCombatLinks(Tick tick, List<Link> links)
         {
-            foreach (var uplayer in players)
+            foreach (var uplayer in livingplayers)
             {
                 var uplayer_id = getTableID(uplayer);
                 if (spotted_table[uplayer_id]) //if the player is spotted
@@ -416,12 +425,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchDistancebasedCombatLinks(Tick tick, List<Link> links)
         {
-            foreach (var player in tick.getUpdatedPlayers())
+            foreach (var player in tick.getUpdatedPlayers().Where(player => !player.isDead()))
             {
                 for (int i = 0; i < distance_table[getTableID(player)].Length; i++)
                 {
-                    var actor = players[getTableID(player)];
-                    var reciever = players[i];
+                    var actor = livingplayers[getTableID(player)];
+                    var reciever = livingplayers[i];
                     var distance = distance_table[getTableID(player)][i];
 
                     if (distance < ATTACKRANGE)
@@ -504,7 +513,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         if (flash.flashedplayers.Count == 0)
                             break;
 
-                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam()); // Teamflashes are not helpful so no supportlink 
+                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead()); // Teamflashes are not helpful so no supportlink 
                         if (flashedenemies.Count() == 0)
                             break;
 
@@ -517,7 +526,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                             links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT));
 
-                            foreach (var teammate in players.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
+                            foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
                             {
                                 var teammate_id = getTableID(teammate);
                                 var teammatepos = new Vector(position_table[teammate_id]);
@@ -595,7 +604,7 @@ namespace CSGO_Analytics.src.encounterdetect
             var smokenades = activeNades.Where(nade => nade.gameevent == "smoke_exploded");
             foreach (var nadeevent in smokenades)
             {
-                foreach (var counterplayer in players.Where(player => player.getTeam() != nadeevent.actor.getTeam()))
+                foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != nadeevent.actor.getTeam()))
                 {
                     var counterplayer_id = getTableID(counterplayer);
                     var counterplayerpos = new Vector(position_table[counterplayer_id]);
@@ -606,7 +615,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         //Console.WriteLine("Player " +counterplayer.playername + " saw into the smoke");
                         // Check if he could have seen a player from the thrower team
-                        foreach (var teammate in players.Where(teammate => teammate.getTeam() == nadeevent.actor.getTeam()))
+                        foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == nadeevent.actor.getTeam()))
                         {
                             var teammate_id = getTableID(teammate);
                             var teammatepos = new Vector(position_table[teammate_id]);
@@ -683,7 +692,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     continue;
                 }
 
-                if (ph.actor.Equals(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
+                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && !weaponfireevent.actor.isDead()) // We found a weaponfire event that matches the new playerhurt event
                 {
                     Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
@@ -731,7 +740,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 // Watch out for teamdamage. No wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam())
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && !hurtevent.victim.isDead())
                 {
                     /*var hvicitm_id = getTableID(hurtevent.victim);
                     var hvicitmpos = new Vector(position_table[hvicitm_id]);
@@ -787,10 +796,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <returns></returns>
         private Player searchSpotterCandidates(Player actor)
         {
+            if (actor.isDead()) return null;
+
             var actor_id = getTableID(actor);
             var actorpos = new Vector(position_table[actor_id]);
 
-            foreach (var counterplayer in players.Where(counterplayer => counterplayer.getTeam() != actor.getTeam()))
+            foreach (var counterplayer in livingplayers.Where(counterplayer => counterplayer.getTeam() != actor.getTeam()))
             {
                 var counterplayer_id = getTableID(counterplayer);
                 var counterplayerpos = new Vector(position_table[counterplayer_id]);
@@ -899,7 +910,6 @@ namespace CSGO_Analytics.src.encounterdetect
             if (mappedPlayerIDs.TryGetValue(player.player_id, out id))
             {
                 return id;
-
             }
             else
             {
@@ -922,7 +932,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             int changedKey = -99; //Deprecated
             int value = -99;
-            for (int i = 0; i < players.Count() - 1; i++)
+            for (int i = 0; i <players.Count() - 1; i++)
             {
                 if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
                 {

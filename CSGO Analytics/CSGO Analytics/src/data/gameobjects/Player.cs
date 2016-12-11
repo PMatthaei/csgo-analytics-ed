@@ -55,6 +55,14 @@ namespace CSGO_Analytics.src.data.gameobjects
             return false;
         }
 
+        public bool isDead()
+        {
+            if (HP == 0)
+                return true;
+            else
+                return false;
+        }
+
         public override bool Equals(object obj) //Why does a true overriden Equals kill the json serialisation?!?
         {
             Player p = obj as Player;
@@ -112,14 +120,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         public bool isWalking { get; set; }
         public bool isScoped { get; set; }
         public double velocity { get; set; }
-
-        public bool isDead()
-        {
-            if (HP == 0)
-                return true;
-            else
-                return false;
-        }
     }
 
     class PlayerDetailedWithItems : PlayerDetailed
