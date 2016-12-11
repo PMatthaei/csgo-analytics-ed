@@ -457,7 +457,7 @@ namespace CSGO_Analytics.src.json.parser
             */
             #endregion
 
-            // TickDone at last!! Otherwise kills following events 
+            // TickDone at last!! Otherwise it kills events following this region
             #region Tickevent / Ticklogic
             //Assemble a tick object with the above gameevents
             parser.TickDone += (sender, e) =>

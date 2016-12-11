@@ -45,8 +45,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// All players - communicated by the meta-data - which are participating in this match.
         /// </summary>
-        private List<Player> livingplayers;
         private Player[] players;
+
+        /// <summary>
+        /// All living players with the latest data.(position health etc)
+        /// </summary>
+        private List<Player> livingplayers;
 
         /// <summary>
         /// All data we have from this match.
@@ -164,7 +168,8 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
                     {
-                        if (!updatedPlayer.isDead()) {
+                        if (!updatedPlayer.isDead())
+                        {
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
 
@@ -174,7 +179,8 @@ namespace CSGO_Analytics.src.encounterdetect
                             updateDistance(id);
                             updateSpotted(id, updatedPlayer.isSpotted);
 
-                        } else
+                        }
+                        else
                         {
                             livingplayers.Remove(updatedPlayer);
                         }
@@ -291,10 +297,10 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
             List<Encounter> predecessors = new List<Encounter>();
-            foreach (var e in open_encounters.Where(e => e.tick_id - comp.tick_id <= TAU))
+            foreach (var encounter in open_encounters.Where(e => e.tick_id - comp.tick_id <= TAU))
             {
                 bool registered = false;
-                foreach (var c in e.cs) //Really iterate over components? -> yes because we need c.players
+                foreach (var c in encounter.cs) //Really iterate over components? -> yes because we need c.players
                 {
                     // Test if c and comp have at least two players from different teams in common -> Intersection of player lists
                     var intersectPlayers = c.players.Intersect(comp.players).ToList();
@@ -308,8 +314,8 @@ namespace CSGO_Analytics.src.encounterdetect
                         // Team different to one we know -> this encounter e is a predecessor of the component comp
                         if (knownteam != Team.None && knownteam != p.getTeam())
                         {
-                            predecessors.Add(e);
-                            registered = true; // Stop multiple adding of e
+                            predecessors.Add(encounter);
+                            registered = true; // Stop multiple adding of encounter
                             break;
 
                         }
@@ -373,7 +379,6 @@ namespace CSGO_Analytics.src.encounterdetect
             List<Link> links = new List<Link>();
 
             searchSightCombatLinks(tick, links);
-            // TODO: Dead players are still present in data and build links
             //searchDistancebasedCombatLinks(tick, links);
 
             searchEventbasedCombatLinks(tick, links);
@@ -409,12 +414,13 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (spotted_table[uplayer_id]) //if the player is spotted
                 { 
                     var potential_spotter = searchSpotterCandidates(uplayer);
-                    if (potential_spotter == null) // This should not happend as these events are most likely to be true
+                    if (potential_spotter == null) // This should not happend because spotted table is correct and somebody must see the player
                         continue;
                     sfCount++;
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
                 }
             }
+
         }
 
 
@@ -611,7 +617,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     var counterplayerYaw = facing_table[counterplayer_id][0];
 
                     //If a player from the opposing team of the smoke thrower saw into the smoke
-                    if (MathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 20, counterplayerpos, counterplayerYaw))
+                    if (MathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 250, counterplayerpos, counterplayerYaw))
                     {
                         //Console.WriteLine("Player " +counterplayer.playername + " saw into the smoke");
                         // Check if he could have seen a player from the thrower team
@@ -661,7 +667,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     registeredHurtEvents.Remove(hurtevent); //Check timeout
                     continue;
                 }
-
+                //TODO: dead players
                 // if same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
                 if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
                 {
@@ -692,7 +698,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     continue;
                 }
 
-                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && !weaponfireevent.actor.isDead()) // We found a weaponfire event that matches the new playerhurt event
+                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor) ) // We found a weaponfire event that matches the new playerhurt event
                 {
                     Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
@@ -740,7 +746,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 // Watch out for teamdamage. No wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && !hurtevent.victim.isDead())
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
                 {
                     /*var hvicitm_id = getTableID(hurtevent.victim);
                     var hvicitmpos = new Vector(position_table[hvicitm_id]);
@@ -932,7 +938,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             int changedKey = -99; //Deprecated
             int value = -99;
-            for (int i = 0; i <players.Count() - 1; i++)
+            for (int i = 0; i < players.Count() - 1; i++)
             {
                 if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
                 {
