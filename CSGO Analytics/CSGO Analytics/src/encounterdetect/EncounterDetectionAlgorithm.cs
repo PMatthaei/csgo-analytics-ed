@@ -98,7 +98,7 @@ namespace CSGO_Analytics.src.encounterdetect
             this.livingplayers = players.ToList();
 
             int ownid = 0;
-            foreach (var player in livingplayers) // Map all CS Entity IDs to our own table-ids
+            foreach (var player in players) // Map all CS Entity IDs to our own table-ids
             {
                 mappedPlayerIDs.Add(player.player_id, ownid);
                 ownid++;
@@ -136,6 +136,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int sCount = 0;
         int wfCount = 0;
         int wfeCount = 0;
+        int fCount = 0;
         int mCount = 0;
         int nCount = 0;
         int uCount = 0;
@@ -149,7 +150,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int assistCount = 0;
         int smokeAssistCount = 0;
         int dAssistCount = 0;
-        int fCount = 0;
+        int fsCount = 0;
 
         private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
@@ -157,7 +158,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public MatchReplay run()
         {
-
+            //buildSightgraph(match);
             MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -168,7 +169,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
                     {
-                        if (!updatedPlayer.isDead())
+                        if (!updatedPlayer.isDead()) // TODO: find better solution
                         {
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
@@ -237,13 +238,20 @@ namespace CSGO_Analytics.src.encounterdetect
                     }
                     // NEXT TICK
 
-                } //NO TICKS LEFT
+                } //NO TICKS LEFT -> Round has ended
+
+                // Clear all Events and Queues at end of the round to prevent them from being carried into the next round
+                activeNades.Clear();
+                registeredHurtEvents.Clear();
+                pendingWeaponFireEvents.Clear();
+                scandidates.Clear();
+                vcandidates.Clear();
             }
 
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
 
-            // Clear data
+            // Clear match data
             this.match = null;
 
             //We are done. -> move open encounters to closed encounters
@@ -263,18 +271,19 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
             Console.WriteLine("\nSpotted-Events occured: " + sCount);
-            Console.WriteLine("Spotters found: " + sfCount);
             Console.WriteLine("\nPlayer is spotted in: " + stCount + " ticks(compare with UpdatedPlayer-Entries)");
+            Console.WriteLine("Spotters found: " + sfCount);
             Console.WriteLine("Spotted-Events found by Algorithm with Spotrange 500: ");
             Console.WriteLine("UpdatedPlayer spotted someone: " + usCount);
             Console.WriteLine("UpdatedPlayer was spotted: " + ussCount);
-            Console.WriteLine("Spotdifferences(only one can see the other): " + ussCount); //TODO: nie im selben tick gegenseitig spotten
+            Console.WriteLine("Spotdifferences(only one can see the other): " + ussCount); //TODO: nie im selben tick gegenseitig spotten -> bei playerspotted event in eventsearch
 
             Console.WriteLine("\nAssist-Supportlinks: " + assistCount);
             Console.WriteLine("DamageAssist-Supportlinks: " + dAssistCount);
             Console.WriteLine("Nade-Supportlinks: ");
             Console.WriteLine("Smoke Supportlinks: " + smokeAssistCount);
-            Console.WriteLine("Flash Supportlinks: " + fCount);
+            Console.WriteLine("Flashes exploded: " + fCount);
+            Console.WriteLine("Flash Supportlinks: " + fsCount);
 
 
             Console.WriteLine("\n\n  Encounters found: " + closed_encounters.Count);
@@ -282,6 +291,37 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
 
             return replay;
+        }
+
+
+
+        int ipCount = 0;
+        public List<Vector> fetchPositions()
+        {
+            var ps = new List<Vector>();
+            foreach(var round in match.rounds)
+            {
+                foreach(var tick in round.ticks)
+                {
+                    foreach(var gevent in tick.tickevents)
+                    {
+                        // Add Positions interpolated on Hit-Vectors
+                        if (gevent.gameevent == "player_hurt" || gevent.gameevent == "player_death")
+                        {
+                            var start = gevent.getPositions()[0];
+                            var end = gevent.getPositions()[1];
+                            var ipos = EDMathLibrary.interpolatePositions(start, end, 100);
+                            ps.AddRange(ipos);
+                            ipCount+= ipos.Count;
+                        }
+    
+                        ps.AddRange(gevent.getPositions());
+                    }
+                }
+            }
+            Console.WriteLine("Added " + ipCount + " interpolated Positions");
+            Console.WriteLine("\n Registered Positions for Sightgraph: " + ps.Count);
+            return ps;
         }
 
 
@@ -383,8 +423,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
             searchEventbasedCombatLinks(tick, links);
 
-            // Test for supportlinks created by nades(except flashbang) as these cant be read from events directly
-            links.AddRange(searchSupportlinks());
+            // Test for supportlinks created by timed nades as these cant be read from events directly THIS HAS TO STAND AT LAST!!!
+            searchNadeSupportlinks(links);
 
             CombatComponent combcomp = null;
             if (links.Count != 0)
@@ -417,6 +457,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     if (potential_spotter == null) // This should not happend because spotted table is correct and somebody must see the player
                         continue;
                     sfCount++;
+                    //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
                 }
             }
@@ -431,7 +472,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchDistancebasedCombatLinks(Tick tick, List<Link> links)
         {
-            foreach (var player in tick.getUpdatedPlayers().Where(player => !player.isDead()))
+            foreach (var player in tick.getUpdatedPlayers().Where(player => !player.isDead())) //Updated players contains newest data of players
             {
                 for (int i = 0; i < distance_table[getTableID(player)].Length; i++)
                 {
@@ -462,6 +503,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchEventbasedCombatLinks(Tick tick, List<Link> links)
         {
+            // Events contain players with newest data to this tick
             foreach (var g in tick.tickevents)
             { // Read all gameevents in that tick and build links of them for the component
                 switch (g.gameevent)
@@ -515,36 +557,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     //
                     case "flash_exploded":
                         FlashNade flash = (FlashNade)g;
-                        // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
-                        if (flash.flashedplayers.Count == 0)
-                            break;
-
-                        var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead()); // Teamflashes are not helpful so no supportlink 
-                        if (flashedenemies.Count() == 0)
-                            break;
-
-                        foreach (var flashedEnemyplayer in flashedenemies) // Every player not in the team of the flasher(sort out all teamflashes)
-                        {
-
-                            var flashedenemyplayer_id = getTableID(flashedEnemyplayer);
-                            var flashedpos = new Vector(position_table[flashedenemyplayer_id]);
-                            var flashedYaw = facing_table[flashedenemyplayer_id][0];
-
-                            links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT));
-
-                            foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
-                            {
-                                var teammate_id = getTableID(teammate);
-                                var teammatepos = new Vector(position_table[teammate_id]);
-                                // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
-                                if (MathLibrary.isInFOV(flashedpos, flashedYaw, teammatepos))
-                                {
-                                    Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
-                                    links.Add(flashsupportlink);
-                                    fCount++;
-                                }
-                            }
-                        }
+                        activeNades.Add(flash);
+                        fCount++;
 
                         break;
                     case "firenade_exploded":
@@ -602,10 +616,66 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-        private List<Link> searchSupportlinks()
+        private void searchNadeSupportlinks(List<Link> links )
         {
-            var supportlinks = new List<Link>();
+            searchSmoke(links);
 
+            //TODO: test with another demo - no links in this demo mabye to rare? + find better solution with flashnadeevents and their queuing
+            foreach (var f in activeNades.Where(nade => nade.gameevent == "flash_exploded")) //Update players flashtime and check for links
+            {
+                FlashNade flash = (FlashNade)f;
+                for (int i = flash.flashedplayers.Count - 1; i >= 0; i--)
+                {
+                    var player = flash.flashedplayers[i];
+                    if (player.flashedduration > 0)
+                    {
+                        player.flashedduration -= tickrate * 1000; // TODO: Might not be right because ticks are missing
+                        searchSupportFlashes(links, flash);
+                    } //TODO: flash does not get deleted from active nades
+                }
+
+            }
+            // Test covered areas TODO:
+            // Test weapon drop assists TODO:
+        }
+
+        private void searchSupportFlashes(List<Link> links, FlashNade flash)
+        {
+            if (flash.flashedplayers.Count == 0)
+                return;
+            // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
+            var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead()); // Teamflashes are not helpful so no supportlink 
+            if (flashedenemies.Count() == 0)
+                return;
+
+            foreach (var flashedEnemyplayer in flashedenemies) // Every player not in the team of the flasher(sort out all teamflashes)
+            {
+                var duration = flashedEnemyplayer.flashedduration; // Time stating how long this player is flashed from the time of explosion
+                var flashedenemyplayer_id = getTableID(flashedEnemyplayer);
+                var flashedpos = new Vector(position_table[flashedenemyplayer_id]);
+                var flashedYaw = facing_table[flashedenemyplayer_id][0];
+
+                links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT));
+
+                foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
+                {
+                    var teammate_id = getTableID(teammate);
+                    var teammatepos = new Vector(position_table[teammate_id]);
+                    // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
+                    if (EDMathLibrary.isInFOV(flashedpos, flashedYaw, teammatepos))
+                    {
+                        // TODO: Teammatedata might not be up to date  + !!! Time is not considered how long player is flashed
+                        Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
+                        links.Add(flashsupportlink);
+                        fsCount++;
+                    }
+                }
+            }
+        }
+
+
+        private void searchSmoke(List<Link> supportlinks)
+        {
             // Find Supportlinks resulting from smoke nades
             var smokenades = activeNades.Where(nade => nade.gameevent == "smoke_exploded");
             foreach (var nadeevent in smokenades)
@@ -617,7 +687,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     var counterplayerYaw = facing_table[counterplayer_id][0];
 
                     //If a player from the opposing team of the smoke thrower saw into the smoke
-                    if (MathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 250, counterplayerpos, counterplayerYaw))
+                    if (EDMathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 250, counterplayerpos, counterplayerYaw))
                     {
                         //Console.WriteLine("Player " +counterplayer.playername + " saw into the smoke");
                         // Check if he could have seen a player from the thrower team
@@ -626,10 +696,10 @@ namespace CSGO_Analytics.src.encounterdetect
                             var teammate_id = getTableID(teammate);
                             var teammatepos = new Vector(position_table[teammate_id]);
                             // Test if the player who looked in the smoke can see a player from the oppposing( thrower) team
-                            if (MathLibrary.isInFOV(counterplayerpos, counterplayerYaw, teammatepos))
+                            if (EDMathLibrary.isInFOV(counterplayerpos, counterplayerYaw, teammatepos))
                             {
                                 //Console.WriteLine("He saw " + teammate.playername + " behind the smoke -> "+nadeevent.actor.playername +" gets an assist" );
-
+                                //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player
                                 // The actor supported a teammate -> Supportlink
                                 Link link = new Link(nadeevent.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
                                 supportlinks.Add(link);
@@ -639,10 +709,6 @@ namespace CSGO_Analytics.src.encounterdetect
                     }
                 }
             }
-
-            // Test covered areas TODO:
-            // Test weapon drop assists TODO:
-            return supportlinks;
         }
 
 
@@ -667,7 +733,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     registeredHurtEvents.Remove(hurtevent); //Check timeout
                     continue;
                 }
-                //TODO: dead players
+                //TODO: is the queue correctly working!!! no events gets deleted too early or too late
                 // if same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
                 if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
                 {
@@ -767,8 +833,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     vcandidates.Add(hurtevent.victim);
                     //Order by closest or by clostest aimend player to determine which is the probablest candidate
-                    vcandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
-                    vcandidates.OrderBy(candidate => MathLibrary.getLineOfSightOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
+                    vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
+                    vcandidates.OrderBy(candidate => EDMathLibrary.getLineOfSightOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
@@ -809,14 +875,14 @@ namespace CSGO_Analytics.src.encounterdetect
             var actor_id = getTableID(actor);
             var actorpos = new Vector(position_table[actor_id]);
 
-            foreach (var counterplayer in livingplayers.Where(counterplayer => counterplayer.getTeam() != actor.getTeam()))
+            foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != actor.getTeam()))
             {
                 var counterplayer_id = getTableID(counterplayer);
                 var counterplayerpos = new Vector(position_table[counterplayer_id]);
                 var counterplayerYaw = facing_table[counterplayer_id][0];
 
                 // Test if an enemy can see our actor
-                if (MathLibrary.isInFOV(counterplayerpos, counterplayerYaw, actorpos))
+                if (EDMathLibrary.isInFOV(counterplayerpos, counterplayerYaw, actorpos))
                 {
                     scandidates.Add(counterplayer);
                 }
@@ -833,7 +899,7 @@ namespace CSGO_Analytics.src.encounterdetect
             }
             if (scandidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
             {
-                var nearestplayer = scandidates.OrderBy(candidate => MathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
+                var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
                 scandidates.Clear();
                 return nearestplayer;
             }
@@ -896,7 +962,7 @@ namespace CSGO_Analytics.src.encounterdetect
             for (int i = 0; i < distance_table[entityid].Length; i++)
             {
                 if (entityid != i)
-                    distance_table[entityid][i] = (float)MathLibrary.getEuclidDistance2D(new Vector(position_table[entityid]), new Vector(position_table[i]));
+                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new Vector(position_table[entityid]), new Vector(position_table[i]));
             }
         }
 

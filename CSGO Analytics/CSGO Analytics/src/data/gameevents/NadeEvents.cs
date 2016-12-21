@@ -86,5 +86,18 @@ namespace CSGO_Analytics.src.data.gameevents
     class FlashNade : NadeEvents
     {
         public IList<PlayerFlashed> flashedplayers { get; set; }
+
+        /// <summary>
+        /// Returns true when the last flashed player from the opposing team is not flashed (time == 0) anymore
+        /// </summary>
+        /// <returns></returns>
+        public bool hasFinished()
+        {
+            foreach (var p in flashedplayers.Where(player => player.getTeam() != actor.getTeam() && !player.isDead()))
+            if (p.flashedduration > 0)
+                    return true;
+            Console.WriteLine("Flash finished");
+            return true;
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.data.gameevents
 {
@@ -16,6 +17,11 @@ namespace CSGO_Analytics.src.data.gameevents
         public override Player[] getPlayers()
         {
             return new Player[] { actor };
+        }
+
+        public override Vector[] getPositions()
+        {
+            return new Vector[] { actor.position };
         }
     }
 }

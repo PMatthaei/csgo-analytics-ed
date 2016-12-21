@@ -77,7 +77,7 @@
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\MatchReplay.cs" />
-    <Compile Include="src\math\MathLibrary.cs" />
+    <Compile Include="src\math\EDMathLibrary.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\json\GameStateGenerator.cs" />
     <Compile Include="src\json\Gamestate.cs" />

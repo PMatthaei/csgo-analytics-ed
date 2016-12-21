@@ -130,7 +130,7 @@ namespace CSGO_Analytics.src.views
 
                 InitializeMapGraphic();
 
-                MathLibrary.initalizeConstants(LoadMapData());
+                EDMathLibrary.initalizeConstants(LoadMapData());
 
                 InitializeEncounterDetection();
             }
@@ -146,8 +146,8 @@ namespace CSGO_Analytics.src.views
 
         private MapMetaData LoadMapData()
         {
-        //string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
-            string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
+        string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
+            //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + ".txt";
             return new MapMetaDataPropertyReader(path).metadata;
         }
 
@@ -169,8 +169,8 @@ namespace CSGO_Analytics.src.views
         {
 
             canvas.ClipToBounds = true;
-            //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
-            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
+            BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
+            //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\maps\" + mapname + "_radar.jpg", UriKind.Relative));
             map_width = bi.Width; // Save original size to apply scaling
             map_height = bi.Height;
             mapPanel.Background = new ImageBrush(bi);
@@ -230,6 +230,8 @@ namespace CSGO_Analytics.src.views
             if (matchreplay == null)
                 return;
             int last_tickid = 0;
+
+
             foreach (var tuple in matchreplay.getReplayData())
             {
                 Tick tick = tuple.Item1;
@@ -252,8 +254,15 @@ namespace CSGO_Analytics.src.views
                     }
 
                     // Update UI: timers, labels etc
-                    updateUI(tick);
+                    //updateUI(tick);
 
+                    foreach (var gevent in tick.tickevents)
+                    {
+                        foreach (var pos in gevent.getPositions())
+                            drawPos(pos);
+                            
+                    }
+                    /*
                     // Update map with all active components, player etc 
                     foreach (var p in tick.getUpdatedPlayers())
                     {
@@ -287,12 +296,12 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }
+                    }*/
                 }));
-                Thread.Sleep(passedTime);
+                //Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
-
+                
             }
         }
 
@@ -329,7 +338,7 @@ namespace CSGO_Analytics.src.views
 
         private void drawNade(NadeEvents n)
         {
-            math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
+            math.Vector nadepos = EDMathLibrary.CSPositionToUIPosition(n.position);
             NadeShape ns = new NadeShape();
             ns.X = nadepos.x;
             ns.Y = nadepos.y;
@@ -358,7 +367,7 @@ namespace CSGO_Analytics.src.views
 
         private void updateNades(NadeEvents n)
         {
-            math.Vector nadepos = MathLibrary.CSPositionToUIPosition(n.position);
+            math.Vector nadepos = EDMathLibrary.CSPositionToUIPosition(n.position);
 
             foreach (var ns in activeNades)
             {
@@ -428,12 +437,27 @@ namespace CSGO_Analytics.src.views
                 }
             }
         }
+        private void drawPos(math.Vector position)
+        {
+            var ps = new Ellipse();
+            var vector = EDMathLibrary.CSPositionToUIPosition(position);
+            ps.Margin = new Thickness(vector.x, vector.y,0,0);
+            ps.Width = 1;
+            ps.Height = 1;
+            Color color = Color.FromArgb(255, 255, 0, 0);
+
+            ps.Fill = new SolidColorBrush(color);
+            ps.Stroke = new SolidColorBrush(color);
+            ps.StrokeThickness = 0.5;
+
+            mapPanel.Children.Add(ps);
+        }
 
         private void drawPlayer(Player p)
         {
             var ps = new PlayerShape();
-            ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
-            var vector = MathLibrary.CSPositionToUIPosition(p.position);
+            ps.Yaw = EDMathLibrary.toRadian(-p.facing.yaw);
+            var vector = EDMathLibrary.CSPositionToUIPosition(p.position);
             ps.X = vector.x;
             ps.Y = vector.y;
             ps.Radius = 4;
@@ -499,10 +523,10 @@ namespace CSGO_Analytics.src.views
                     ps.Fill = new SolidColorBrush(Color.FromArgb(255, 0, 0, 255));
             }
 
-                var vector = MathLibrary.CSPositionToUIPosition(p.position);
+                var vector = EDMathLibrary.CSPositionToUIPosition(p.position);
             ps.X = vector.x;
             ps.Y = vector.y;
-            ps.Yaw = MathLibrary.toRadian(-p.facing.yaw);
+            ps.Yaw = EDMathLibrary.toRadian(-p.facing.yaw);
 
         }
 

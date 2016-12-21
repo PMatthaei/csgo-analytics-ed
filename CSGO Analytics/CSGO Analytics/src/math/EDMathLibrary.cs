@@ -9,7 +9,7 @@ using CSGO_Analytics.src.utils;
 
 namespace CSGO_Analytics.src.math
 {
-    class MathLibrary
+    class EDMathLibrary
     {
         private const float FOVVertical = 90;
         /// <summary>
@@ -46,6 +46,28 @@ namespace CSGO_Analytics.src.math
             return new Vector((float)x, (float)y, p.z);
         }
 
+        /// <summary>
+        /// Returns a list of interpolated points between start and end in given steps
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="steps"></param>
+        /// <returns></returns>
+        public static List<Vector> interpolatePositions(Vector start, Vector end, int steps)
+        {
+            var ps = new List<Vector>();
+            var dx = start.x - end.x;
+            var dy = start.y - end.y;
+            float currentdx = 0;
+            float currentdy = 0;
+            while (currentdy < dy && currentdx < dx)
+            {
+                currentdx = currentdx + dx / steps;
+                currentdy = currentdy + dy / steps;
+                ps.Add(new Vector(start.x + currentdx, start.y + currentdy, 0));
+            }
+            return ps;
+        }
         /// <summary>
         /// Returns euclid distance between point p1 and p2
         /// </summary>

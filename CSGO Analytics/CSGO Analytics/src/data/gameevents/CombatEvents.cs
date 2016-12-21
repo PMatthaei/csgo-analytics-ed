@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Dynamic;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
+using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.data.gameevents
 {
@@ -46,6 +47,11 @@ namespace CSGO_Analytics.src.data.gameevents
         {
             return new Player[] { actor, victim };
         }
+
+        public override Vector[] getPositions()
+        {
+            return new Vector[] { actor.position, victim.position };
+        }
     }
 
     class PlayerKilled : PlayerHurt
@@ -63,5 +69,12 @@ namespace CSGO_Analytics.src.data.gameevents
                 return base.getPlayers();
         }
 
+        public override Vector[] getPositions()
+        {
+            if(assister != null)
+                return new Vector[] { actor.position, assister.position, victim.position };
+            else
+                return new Vector[] { actor.position, victim.position };
+        }
     }
 }
