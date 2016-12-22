@@ -165,12 +165,16 @@ namespace CSGO_Analytics.src.encounterdetect
 
             foreach (var round in match.rounds)
             {
+                Console.WriteLine("New Round: ");
+
                 foreach (var tick in round.ticks) // Read all ticks
                 {
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
                     {
                         if (!updatedPlayer.isDead()) // TODO: find better solution
                         {
+                            if (updatedPlayer.isSpotted) stCount++;
+
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
 
@@ -186,7 +190,6 @@ namespace CSGO_Analytics.src.encounterdetect
                             livingplayers.Remove(updatedPlayer);
                         }
 
-                        if (updatedPlayer.isSpotted) stCount++;
                     }
 
 
@@ -242,8 +245,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 // Clear all Events and Queues at end of the round to prevent them from being carried into the next round
                 activeNades.Clear();
-                registeredHurtEvents.Clear();
-                pendingWeaponFireEvents.Clear();
+                registeredHEQueue.Clear();
+                pendingWFEQueue.Clear();
                 scandidates.Clear();
                 vcandidates.Clear();
             }
@@ -299,11 +302,11 @@ namespace CSGO_Analytics.src.encounterdetect
         public List<Vector> fetchPositions()
         {
             var ps = new List<Vector>();
-            foreach(var round in match.rounds)
+            foreach (var round in match.rounds)
             {
-                foreach(var tick in round.ticks)
+                foreach (var tick in round.ticks)
                 {
-                    foreach(var gevent in tick.tickevents)
+                    foreach (var gevent in tick.tickevents)
                     {
                         // Add Positions interpolated on Hit-Vectors
                         if (gevent.gameevent == "player_hurt" || gevent.gameevent == "player_death")
@@ -312,9 +315,9 @@ namespace CSGO_Analytics.src.encounterdetect
                             var end = gevent.getPositions()[1];
                             var ipos = EDMathLibrary.interpolatePositions(start, end, 100);
                             ps.AddRange(ipos);
-                            ipCount+= ipos.Count;
+                            ipCount += ipos.Count;
                         }
-    
+
                         ps.AddRange(gevent.getPositions());
                     }
                 }
@@ -393,24 +396,37 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Queue of all hurtevents that where fired. Use these to search for a coressponding weaponfire event.
+        /// Queue of all hurtevents(HE) that where fired. Use these to search for a coressponding weaponfire event.
         /// Value is the tick_id as int where the event happend
         /// </summary>
-        private Dictionary<PlayerHurt, int> registeredHurtEvents = new Dictionary<PlayerHurt, int>();
+        private Dictionary<PlayerHurt, int> registeredHEQueue = new Dictionary<PlayerHurt, int>();
 
 
         /// <summary>
-        /// Weaponfire events that are waiting for their check.
+        /// Weaponfire events(WFE) that are waiting for their check.
         /// </summary>
-        private Dictionary<WeaponFire, int> pendingWeaponFireEvents = new Dictionary<WeaponFire, int>();
+        private Dictionary<WeaponFire, int> pendingWFEQueue = new Dictionary<WeaponFire, int>();
 
         /// <summary>
         /// Active nades such as smoke and fire nades which have not ended and need to be tested every tick they are effective
         /// </summary>
-        private List<NadeEvents> activeNades = new List<NadeEvents>();
+        private Dictionary<NadeEvents, int> activeNades = new Dictionary<NadeEvents, int>();
 
         /// <summary>
-        /// Feeds the component with a link resulting of the given gameevent.
+        /// Current victimcandidates
+        /// </summary>
+        private List<Player> vcandidates = new List<Player>();
+
+        /// <summary>
+        /// Current Spotter Candidates
+        /// </summary>
+        private List<Player> scandidates = new List<Player>();
+
+
+
+
+        /// <summary>
+        /// Feeds the component with a links resulting from the procedure handling this tick
         /// </summary>
         /// <param name="component"></param>
         /// <param name="g"></param>
@@ -424,7 +440,7 @@ namespace CSGO_Analytics.src.encounterdetect
             searchEventbasedCombatLinks(tick, links);
 
             // Test for supportlinks created by timed nades as these cant be read from events directly THIS HAS TO STAND AT LAST!!!
-            searchNadeSupportlinks(links);
+            searchNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
             if (links.Count != 0)
@@ -442,7 +458,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Search all potential combatlinks based on sight (DOTA2 version: player is in attackrange)
+        /// Search all potential combatlinks based on sight (equivalent to DOTA2 version: player is in attackrange)
         /// </summary>
         /// <param name="tick"></param>
         /// <param name="links"></param>
@@ -452,12 +468,12 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 var uplayer_id = getTableID(uplayer);
                 if (spotted_table[uplayer_id]) //if the player is spotted
-                { 
+                {
                     var potential_spotter = searchSpotterCandidates(uplayer);
                     if (potential_spotter == null) // This should not happend because spotted table is correct and somebody must see the player
                         continue;
                     sfCount++;
-                    //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player
+                    //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player. is it though?
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
                 }
             }
@@ -480,7 +496,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     var reciever = livingplayers[i];
                     var distance = distance_table[getTableID(player)][i];
 
-                    if (distance < ATTACKRANGE)
+                    if (distance < ATTACKRANGE) // TODO: Search better ranges -> extra paper?
                     {
                         if (actor.getTeam() != reciever.getTeam())
                             links.Add(new Link(actor, reciever, LinkType.COMBATLINK, Direction.DEFAULT));
@@ -509,7 +525,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 switch (g.gameevent)
                 {
                     //
-                    //  Combatlinks
+                    //  Combatlink-Relevant Events
                     //
                     case "player_hurt":
                         PlayerHurt ph = (PlayerHurt)g;
@@ -550,28 +566,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         sfCount++;
                         links.Add(new Link(potential_spotter, ps.actor, LinkType.COMBATLINK, Direction.DEFAULT));
 
-                        break;
-
-                    //    
-                    //  Supportlinks TODO: move this to somewhere else maybe getSupportlinks
-                    //
-                    case "flash_exploded":
-                        FlashNade flash = (FlashNade)g;
-                        activeNades.Add(flash);
-                        fCount++;
-
-                        break;
-                    case "firenade_exploded":
-                    case "smoke_exploded":
-                        NadeEvents timedNadeStart = (NadeEvents)g;
-                        activeNades.Add(timedNadeStart);
-                        break;
-                    case "smoke_ended":
-                    case "firenade_ended":
-                        NadeEvents timedNadeEnd = (NadeEvents)g;
-                        activeNades.Remove(timedNadeEnd);
-                        break;
-                    default:
                         break;
                 }
 
@@ -616,82 +610,130 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-        private void searchNadeSupportlinks(List<Link> links )
+        private void searchNadeSupportlinks(Tick tick, List<Link> links)
         {
+            //Register new nades for this tick
+            foreach (var g in tick.tickevents)
+            {
+                switch (g.gameevent)
+                {
+                    //    
+                    //  Supportlink-Relevant Events
+                    //
+                    case "flash_exploded":
+                        FlashNade flash = (FlashNade)g;
+                        if (flash.flashedplayers.Count == 0)
+                            continue; // The nade flashed noone
+                        activeNades.Add(flash, tick.tick_id);
+                        fCount++;
+
+                        break;
+                    case "firenade_exploded":
+                    case "smoke_exploded":
+                        NadeEvents timedNadeStart = (NadeEvents)g;
+                        activeNades.Add(timedNadeStart, tick.tick_id);
+                        break;
+                    case "smoke_ended":
+                    case "firenade_ended":
+                        NadeEvents timedNadeEnd = (NadeEvents)g;
+                        activeNades.Remove(timedNadeEnd);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            updateFlashes(tick); //Flashes dont get an endedevent so we have to determine when their effect has ended
+            searchSupportFlashes(links);
+
             searchSmoke(links);
 
-            //TODO: test with another demo - no links in this demo mabye to rare? + find better solution with flashnadeevents and their queuing
-            foreach (var f in activeNades.Where(nade => nade.gameevent == "flash_exploded")) //Update players flashtime and check for links
-            {
-                FlashNade flash = (FlashNade)f;
-                for (int i = flash.flashedplayers.Count - 1; i >= 0; i--)
-                {
-                    var player = flash.flashedplayers[i];
-                    if (player.flashedduration > 0)
-                    {
-                        player.flashedduration -= tickrate * 1000; // TODO: Might not be right because ticks are missing
-                        searchSupportFlashes(links, flash);
-                    } //TODO: flash does not get deleted from active nades
-                }
 
-            }
             // Test covered areas TODO:
             // Test weapon drop assists TODO:
         }
 
-        private void searchSupportFlashes(List<Link> links, FlashNade flash)
+        private void updateFlashes(Tick tick)
         {
-            if (flash.flashedplayers.Count == 0)
-                return;
-            // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
-            var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead()); // Teamflashes are not helpful so no supportlink 
-            if (flashedenemies.Count() == 0)
-                return;
-
-            foreach (var flashedEnemyplayer in flashedenemies) // Every player not in the team of the flasher(sort out all teamflashes)
+            foreach (var flashitem in activeNades.Where(item => item.Key.gameevent == "flash_exploded").ToList()) // Make Copy to enable deleting while iterating
             {
-                var duration = flashedEnemyplayer.flashedduration; // Time stating how long this player is flashed from the time of explosion
-                var flashedenemyplayer_id = getTableID(flashedEnemyplayer);
-                var flashedpos = new Vector(position_table[flashedenemyplayer_id]);
-                var flashedYaw = facing_table[flashedenemyplayer_id][0];
-
-                links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT));
-
-                foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
+                int finishedcount = 0;
+                FlashNade flash = (FlashNade)flashitem.Key;
+                int ftick = flashitem.Value;
+                int tickdt = ftick - tick.tick_id;
+                foreach (var player in flash.flashedplayers)
                 {
-                    var teammate_id = getTableID(teammate);
-                    var teammatepos = new Vector(position_table[teammate_id]);
-                    // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
-                    if (EDMathLibrary.isInFOV(flashedpos, flashedYaw, teammatepos))
+                    if (player.flashedduration > 0)
                     {
-                        // TODO: Teammatedata might not be up to date  + !!! Time is not considered how long player is flashed
-                        Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
-                        links.Add(flashsupportlink);
-                        fsCount++;
+                        player.flashedduration -= tickdt * tickrate * 1000; 
+                    }
+                    else
+                    {
+                        finishedcount++;
+                    }
+                }
+                if (finishedcount == flash.flashedplayers.Count)
+                    activeNades.Remove(flash);
+
+            }
+        }
+
+        private void searchSupportFlashes(List<Link> links)
+        {
+            foreach (var f in activeNades.Where(item => item.Key.gameevent == "flash_exploded")) //Update players flashtime and check for links
+            {
+                FlashNade flash = (FlashNade)f.Key;
+
+                // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
+                var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead() && player.flashedduration >= 0); // Teamflashes are not helpful so no supportlink 
+                if (flashedenemies.Count() == 0)
+                    return;
+
+                foreach (var flashedEnemyplayer in flashedenemies) // Every player not in the team of the flasher(sort out all teamflashes)
+                {
+                    var flashedenemyplayer_id = getTableID(flashedEnemyplayer);
+                    var flashedpos = new Vector(position_table[flashedenemyplayer_id]);
+                    var flashedYaw = facing_table[flashedenemyplayer_id][0];
+
+                    //links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT)); //TODO: Is a sucessful flash a combatlink?
+
+                    foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
+                    {
+                        var teammate_id = getTableID(teammate);
+                        var teammatepos = new Vector(position_table[teammate_id]);
+                        // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
+                        if (EDMathLibrary.isInFOV(flashedpos, flashedYaw, teammatepos))
+                        {
+                            // TODO: Teammatedata might not be up to date  + !!! Time is not considered how long player is flashed
+                            Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
+                            links.Add(flashsupportlink);
+                            fsCount++;
+                        }
                     }
                 }
             }
+
         }
 
 
         private void searchSmoke(List<Link> supportlinks)
         {
-            // Find Supportlinks resulting from smoke nades
-            var smokenades = activeNades.Where(nade => nade.gameevent == "smoke_exploded");
-            foreach (var nadeevent in smokenades)
+
+            var smokenades = activeNades.Where(item => item.Key.gameevent == "smoke_exploded");
+            foreach (var smokeitem in smokenades)
             {
-                foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != nadeevent.actor.getTeam()))
+                foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != smokeitem.Key.actor.getTeam()))
                 {
                     var counterplayer_id = getTableID(counterplayer);
                     var counterplayerpos = new Vector(position_table[counterplayer_id]);
                     var counterplayerYaw = facing_table[counterplayer_id][0];
 
                     //If a player from the opposing team of the smoke thrower saw into the smoke
-                    if (EDMathLibrary.vectorClipsSphere2D(nadeevent.position.x, nadeevent.position.y, 250, counterplayerpos, counterplayerYaw))
+                    if (EDMathLibrary.vectorClipsSphere2D(smokeitem.Key.position.x, smokeitem.Key.position.y, 250, counterplayerpos, counterplayerYaw))
                     {
                         //Console.WriteLine("Player " +counterplayer.playername + " saw into the smoke");
                         // Check if he could have seen a player from the thrower team
-                        foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == nadeevent.actor.getTeam()))
+                        foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == smokeitem.Key.actor.getTeam()))
                         {
                             var teammate_id = getTableID(teammate);
                             var teammatepos = new Vector(position_table[teammate_id]);
@@ -701,7 +743,7 @@ namespace CSGO_Analytics.src.encounterdetect
                                 //Console.WriteLine("He saw " + teammate.playername + " behind the smoke -> "+nadeevent.actor.playername +" gets an assist" );
                                 //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player
                                 // The actor supported a teammate -> Supportlink
-                                Link link = new Link(nadeevent.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
+                                Link link = new Link(smokeitem.Key.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
                                 supportlinks.Add(link);
                                 smokeAssistCount++;
                             }
@@ -721,16 +763,16 @@ namespace CSGO_Analytics.src.encounterdetect
         private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id, List<Link> links)
         {
             // For every registered hurt event test ...
-            for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
+            for (int index = registeredHEQueue.Count - 1; index >= 0; index--)
             {
-                var item = registeredHurtEvents.ElementAt(index);
+                var item = registeredHEQueue.ElementAt(index);
                 var hurtevent = item.Key;
                 var htick_id = item.Value;
                 int tick_dt = Math.Abs(htick_id - tick_id);
 
                 if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
                 {
-                    registeredHurtEvents.Remove(hurtevent); //Check timeout
+                    registeredHEQueue.Remove(hurtevent); //Check timeout
                     continue;
                 }
                 //TODO: is the queue correctly working!!! no events gets deleted too early or too late
@@ -748,11 +790,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
-            registeredHurtEvents.Add(ph, tick_id);
+            registeredHEQueue.Add(ph, tick_id);
 
-            for (int index = pendingWeaponFireEvents.Count - 1; index >= 0; index--) //TODO: with where statement?
+            for (int index = pendingWFEQueue.Count - 1; index >= 0; index--) //TODO: with where statement?
             {
-                var item = pendingWeaponFireEvents.ElementAt(index);
+                var item = pendingWFEQueue.ElementAt(index);
                 var weaponfireevent = item.Key;
                 var wftick_id = item.Value;
 
@@ -760,11 +802,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (tick_dt * tickrate / 1000 > 4)
                 {
                     //If more than 4 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
-                    pendingWeaponFireEvents.Remove(weaponfireevent);
+                    pendingWFEQueue.Remove(weaponfireevent);
                     continue;
                 }
 
-                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor) ) // We found a weaponfire event that matches the new playerhurt event
+                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
                 {
                     Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
@@ -781,13 +823,13 @@ namespace CSGO_Analytics.src.encounterdetect
                         if (inserted) //This should be useless if components and their tick_ids are unique
                             break;
                     }
-                    pendingWeaponFireEvents.Remove(weaponfireevent); // Delete the weaponfire event from the queue
+                    pendingWFEQueue.Remove(weaponfireevent); // Delete the weaponfire event from the queue
                 }
 
             }
         }
 
-        private List<Player> vcandidates = new List<Player>();
+
         /// <summary>
         /// Searches the player that has most probable Hurt another player with the given weapon fire event
         /// This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor.
@@ -798,16 +840,16 @@ namespace CSGO_Analytics.src.encounterdetect
         private Player searchVictimCandidate(WeaponFire wf, int tick_id)
         {
 
-            for (int index = registeredHurtEvents.Count - 1; index >= 0; index--)
+            for (int index = registeredHEQueue.Count - 1; index >= 0; index--)
             {
-                var item = registeredHurtEvents.ElementAt(index);
+                var item = registeredHEQueue.ElementAt(index);
                 var hurtevent = item.Key;
                 var htick_id = item.Value;
 
                 int tick_dt = Math.Abs(htick_id - tick_id);
                 if (tick_dt * tickrate / 1000 > WEAPONFIRE_VICTIMSEARCH_TIMEOUT) // 20 second timeout for hurt events
                 {
-                    registeredHurtEvents.Remove(hurtevent);
+                    registeredHEQueue.Remove(hurtevent);
                     continue;
                 }
                 // Watch out for teamdamage. No wrong combatlinks !!
@@ -839,7 +881,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
                 {
-                    pendingWeaponFireEvents.Add(wf, tick_id);
+                    pendingWFEQueue.Add(wf, tick_id);
                     break;
 
                 }
@@ -862,7 +904,6 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
-        private List<Player> scandidates = new List<Player>();
         /// <summary>
         /// Searches players who have spotted a certain player
         /// </summary>
