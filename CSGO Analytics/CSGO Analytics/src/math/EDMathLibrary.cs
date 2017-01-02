@@ -53,21 +53,25 @@ namespace CSGO_Analytics.src.math
         /// <param name="end"></param>
         /// <param name="steps"></param>
         /// <returns></returns>
-        public static List<Vector> interpolatePositions(Vector start, Vector end, int steps)
+        public static List<Vector> interpolatePositions(Vector start, Vector end, float steps)
         {
             var ps = new List<Vector>();
-            var dx = start.x - end.x;
-            var dy = start.y - end.y;
+            float dx = start.x - end.x;
+            float dy = start.y - end.y;
             float currentdx = 0;
             float currentdy = 0;
-            while (currentdy < dy && currentdx < dx)
+            int count = 0;
+            while (count < steps)
             {
-                currentdx = currentdx + dx / steps;
-                currentdy = currentdy + dy / steps;
+                currentdx = currentdx + -dx / steps;
+                currentdy = currentdy + -dy / steps;
                 ps.Add(new Vector(start.x + currentdx, start.y + currentdy, 0));
+                count++;
             }
             return ps;
         }
+
+
         /// <summary>
         /// Returns euclid distance between point p1 and p2
         /// </summary>
@@ -90,6 +94,13 @@ namespace CSGO_Analytics.src.math
             return Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2) + Math.Pow(p1.z - p2.z, 2));
         }
 
+        /// <summary>
+        /// Returns the offset of a the actor looking straight at reciever -> 5° means he looking 5° away from directly looking at him.
+        /// </summary>
+        /// <param name="actorV"></param>
+        /// <param name="actorYaw"></param>
+        /// <param name="recieverV"></param>
+        /// <returns></returns>
         public static double getLineOfSightOffset(Vector actorV, float actorYaw, Vector recieverV)
         {
             double dx = recieverV.x - actorV.x;
@@ -104,6 +115,7 @@ namespace CSGO_Analytics.src.math
             double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
             return toDegree(theta);
         }
+
         /// <summary>
         /// Test if a vector is facing another one -> 
         /// </summary>

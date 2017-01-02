@@ -37,6 +37,8 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float ATTACKRANGE = 500.0f;
         private const float SUPPORTRANGE = 300.0f;
 
+        private const float CLUSTERINGRANGE = 30.0f;
+
         /// <summary>
         /// Tickrate of the demo this algorithm runs on. 
         /// </summary>
@@ -59,7 +61,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.(Watch out for mysterious id changes while the match runs!!)
+        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.(Watch out for id changes caused by disconnects/reconnects!!)
         /// </summary>
         private Dictionary<int, int> mappedPlayerIDs = new Dictionary<int, int>();
 
@@ -151,6 +153,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int smokeAssistCount = 0;
         int dAssistCount = 0;
         int fsCount = 0;
+        int noSpotter = 0;
 
         private List<Encounter> predecessors = new List<Encounter>();
         /// <summary>
@@ -159,26 +162,26 @@ namespace CSGO_Analytics.src.encounterdetect
         public MatchReplay run()
         {
             //buildSightgraph(match);
+            //fetchPositions();
             MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             foreach (var round in match.rounds)
             {
-                Console.WriteLine("New Round: ");
-
-                foreach (var tick in round.ticks) // Read all ticks
+                foreach (var tick in round.ticks)
                 {
-                    foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables
+                    foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
-                        if (!updatedPlayer.isDead()) // TODO: find better solution
+                        int id = getTableID(updatedPlayer);
+
+                        if (!updatedPlayer.isDead()) // TODO: find better solution and is this working(newest data of alive players in this list?) or fetch it through tables?
                         {
                             if (updatedPlayer.isSpotted) stCount++;
 
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
 
-                            int id = getTableID(updatedPlayer);
                             updatePosition(id, updatedPlayer.position.getAsArray());
                             updateFacing(id, updatedPlayer.facing.getAsArray());
                             updateDistance(id);
@@ -187,6 +190,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         }
                         else
                         {
+                            updateSpotted(id, false);
                             livingplayers.Remove(updatedPlayer);
                         }
 
@@ -275,6 +279,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             Console.WriteLine("\nSpotted-Events occured: " + sCount);
             Console.WriteLine("\nPlayer is spotted in: " + stCount + " ticks(compare with UpdatedPlayer-Entries)");
+            Console.WriteLine("No Spotters found: " + noSpotter);
             Console.WriteLine("Spotters found: " + sfCount);
             Console.WriteLine("Spotted-Events found by Algorithm with Spotrange 500: ");
             Console.WriteLine("UpdatedPlayer spotted someone: " + usCount);
@@ -299,6 +304,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         int ipCount = 0;
+        /// <summary>
+        /// Collect all positions of this replay necessary to build a approximate representation of the map
+        /// </summary>
+        /// <returns></returns>
         public List<Vector> fetchPositions()
         {
             var ps = new List<Vector>();
@@ -308,25 +317,39 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     foreach (var gevent in tick.tickevents)
                     {
-                        // Add Positions interpolated on Hit-Vectors
-                        if (gevent.gameevent == "player_hurt" || gevent.gameevent == "player_death")
+                        string weapon = "";
+                        // Add Positions interpolated on Hit-Vectors - every point on the route of a hitvector is viable
+                        switch (gevent.gameevent)
                         {
-                            var start = gevent.getPositions()[0];
+                            case "player_hurt":
+                                PlayerHurt ph = (PlayerHurt)gevent;
+                                weapon = ph.weapon.name;
+                                break;
+                            case "player_death":
+                                PlayerKilled pk = (PlayerKilled)gevent;
+                                weapon = pk.weapon.name;
+                                break;
+                        }
+                        //Exclude some nades because they do not deliver correct positions
+                        if (weapon != WeaponType.HE.ToString() && weapon != WeaponType.Incendiary.ToString() && weapon != "")
+                        {
+                            var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");
                             var end = gevent.getPositions()[1];
-                            var ipos = EDMathLibrary.interpolatePositions(start, end, 100);
-                            ps.AddRange(ipos);
+                            var ipos = EDMathLibrary.interpolatePositions(start, end, 20);
+                            AddNecessaryRange(ipos, ps);
                             ipCount += ipos.Count;
                         }
-
-                        ps.AddRange(gevent.getPositions());
+                        AddNecessaryRange(gevent.getPositions().ToList(), ps);
                     }
                 }
             }
+
+
             Console.WriteLine("Added " + ipCount + " interpolated Positions");
-            Console.WriteLine("\n Registered Positions for Sightgraph: " + ps.Count);
+            Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
+
             return ps;
         }
-
 
 
 
@@ -407,18 +430,21 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private Dictionary<WeaponFire, int> pendingWFEQueue = new Dictionary<WeaponFire, int>();
 
+
         /// <summary>
         /// Active nades such as smoke and fire nades which have not ended and need to be tested every tick they are effective
         /// </summary>
         private Dictionary<NadeEvents, int> activeNades = new Dictionary<NadeEvents, int>();
+
 
         /// <summary>
         /// Current victimcandidates
         /// </summary>
         private List<Player> vcandidates = new List<Player>();
 
+
         /// <summary>
-        /// Current Spotter Candidates
+        /// Current spottercandidates
         /// </summary>
         private List<Player> scandidates = new List<Player>();
 
@@ -434,13 +460,13 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
-            searchSightCombatLinks(tick, links);
-            //searchDistancebasedCombatLinks(tick, links);
+            searchEventbasedSightCombatLinks(tick, links);
 
-            searchEventbasedCombatLinks(tick, links);
+            //searchDistancebasedCombatLinks(tick, links);
+            searchEventbasedLinks(tick, links);
 
             // Test for supportlinks created by timed nades as these cant be read from events directly THIS HAS TO STAND AT LAST!!!
-            searchNadeSupportlinks(tick, links);
+            searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
             if (links.Count != 0)
@@ -458,11 +484,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Search all potential combatlinks based on sight (equivalent to DOTA2 version: player is in attackrange)
+        /// Search all potential combatlinks based on sight using a spotted variable from the replay data(equivalent to DOTA2 version: player is in attackrange)
         /// </summary>
         /// <param name="tick"></param>
         /// <param name="links"></param>
-        private void searchSightCombatLinks(Tick tick, List<Link> links)
+        private void searchEventbasedSightCombatLinks(Tick tick, List<Link> links)
         {
             foreach (var uplayer in livingplayers)
             {
@@ -470,8 +496,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (spotted_table[uplayer_id]) //if the player is spotted
                 {
                     var potential_spotter = searchSpotterCandidates(uplayer);
-                    if (potential_spotter == null) // This should not happend because spotted table is correct and somebody must see the player
-                        continue;
+                    if (potential_spotter == null)// This should not happend because spotted table is correct and somebody must see the player TODO:!!
+                    {
+                        noSpotter++; continue;
+                    }
+
                     sfCount++;
                     //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player. is it though?
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
@@ -481,12 +510,54 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
+
+        private void searchSightbasedCombatLinks(Tick tick, List<Link> links)
+        {
+            //
+            // Combatlink Detection based on sight without player_spotted Event:
+            //
+
+            // Check for each team if a player can see a player of the other team
+            foreach (var player in players.Where(player => player.getTeam() != Team.CT))
+            {
+                var player_id = getTableID(player);
+                var playerpos = new Vector(position_table[player_id]);
+                var playerYaw = facing_table[player_id][0];
+
+                foreach (var counterplayer in players.Where(counterplayer => counterplayer.getTeam() != Team.T))
+                {
+                    var counterplayer_id = getTableID(counterplayer);
+                    var counterplayerpos = new Vector(position_table[counterplayer_id]);
+                    var counterplayerYaw = facing_table[counterplayer_id][0];
+
+                    bool playerCanSeeCounter = EDMathLibrary.isInFOV(playerpos, playerYaw, counterplayerpos); // Has the updated player spotted someone
+                    bool CounterCanSeePlayer = EDMathLibrary.isInFOV(counterplayerpos, counterplayerYaw, playerpos); // Has someone spotted the player
+
+                    //TODO: occlusion not handled
+                    if (playerCanSeeCounter)
+                    {
+                        var link = new Link(player, counterplayer, LinkType.COMBATLINK, Direction.DEFAULT);
+                        links.Add(link);
+                        usCount++;
+                    }
+                    if (CounterCanSeePlayer)
+                    {
+                        var link = new Link(counterplayer, player, LinkType.COMBATLINK, Direction.DEFAULT);
+                        links.Add(link);
+                        ussCount++;
+                    }
+                    //if (playerCanSeeCounter != CounterCanSeePlayer) dsCount++; // never happens because spotting each other in the same tick is rare
+                }
+            }
+
+        }
+
         /// <summary>
         /// Algorithm searching links simply on euclid distance
         /// </summary>
         /// <param name="tick"></param>
         /// <param name="links"></param>
-        private void searchDistancebasedCombatLinks(Tick tick, List<Link> links)
+        private void searchDistancebasedLinks(Tick tick, List<Link> links)
         {
             foreach (var player in tick.getUpdatedPlayers().Where(player => !player.isDead())) //Updated players contains newest data of players
             {
@@ -517,7 +588,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="tick"></param>
         /// <param name="links"></param>
-        private void searchEventbasedCombatLinks(Tick tick, List<Link> links)
+        private void searchEventbasedLinks(Tick tick, List<Link> links)
         {
             // Events contain players with newest data to this tick
             foreach (var g in tick.tickevents)
@@ -531,7 +602,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         PlayerHurt ph = (PlayerHurt)g;
                         links.Add(new Link(ph.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT));
 
-                        handleIncomingHurtEvent(ph, tick.tick_id, links);
+                        handleIncomingHurtEvent(ph, tick.tick_id, links); // CAN PRODUCE SUPPORTLINKS!
 
                         break;
                     case "player_killed":
@@ -568,49 +639,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         break;
                 }
-
-
-
-                //
-                // Combatlink Detection based on sight without player_spotted Event:
-                //
-
-                // Check for each team if a player can see a player of the other team
-                /*foreach (var player in players.Where(player => player.getTeam() != Team.CT))
-                {
-                    var player_id = getTableID(player);
-                    var playerpos = new Vector(position_table[player_id]);
-                    var playerYaw = facing_table[player_id][0];
-
-                    foreach (var counterplayer in players.Where(counterplayer => counterplayer.getTeam() != Team.T))
-                    {
-                        var counterplayer_id = getTableID(counterplayer);
-                        var counterplayerpos = new Vector(position_table[counterplayer_id]);
-                        var counterplayerYaw = facing_table[counterplayer_id][0];
-
-                        bool playerCanSeeCounter = MathLibrary.isInFOV(playerpos, playerYaw, counterplayerpos); // Has the updated player spotted someone
-                        bool CounterCanSeePlayer = MathLibrary.isInFOV(counterplayerpos, counterplayerYaw, playerpos); // Has someone spotted the player
-
-                        if (playerCanSeeCounter)
-                        {
-                            var link = new Link(player, counterplayer, LinkType.COMBATLINK, Direction.DEFAULT);
-                            links.Add(link);
-                            usCount++;
-                        }
-                        if (CounterCanSeePlayer)
-                        {
-                            var link = new Link(counterplayer, player, LinkType.COMBATLINK, Direction.DEFAULT);
-                            links.Add(link);
-                            ussCount++;
-                        }
-                        //if (playerCanSeeCounter != CounterCanSeePlayer) dsCount++; // never happens because spotting each other in the same tick is rare
-                    }
-                }*/
-
             }
         }
 
-        private void searchNadeSupportlinks(Tick tick, List<Link> links)
+        private void searchEventbasedNadeSupportlinks(Tick tick, List<Link> links)
         {
             //Register new nades for this tick
             foreach (var g in tick.tickevents)
@@ -643,16 +675,20 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
-            updateFlashes(tick); //Flashes dont get an endedevent so we have to determine when their effect has ended
+            updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended
             searchSupportFlashes(links);
 
             searchSmoke(links);
 
-
+            // Decoy and fire nades TODO:
             // Test covered areas TODO:
             // Test weapon drop assists TODO:
         }
 
+        /// <summary>
+        /// Updates all active flashes. If within a flash is no player which has flashtime(time this player is flashed - flashduration in data) left. The flash has ended.
+        /// </summary>
+        /// <param name="tick"></param>
         private void updateFlashes(Tick tick)
         {
             foreach (var flashitem in activeNades.Where(item => item.Key.gameevent == "flash_exploded").ToList()) // Make Copy to enable deleting while iterating
@@ -663,9 +699,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 int tickdt = ftick - tick.tick_id;
                 foreach (var player in flash.flashedplayers)
                 {
-                    if (player.flashedduration > 0)
+                    if (player.flashedduration >= 0)
                     {
-                        player.flashedduration -= tickdt * tickrate * 1000; 
+                        player.flashedduration -= tickdt * tickrate * 1000;
                     }
                     else
                     {
@@ -674,7 +710,6 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 if (finishedcount == flash.flashedplayers.Count)
                     activeNades.Remove(flash);
-
             }
         }
 
@@ -684,8 +719,8 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 FlashNade flash = (FlashNade)f.Key;
 
-                // Each flashed player as long as it is not a teammate of the actor is tested for sight at a teammember of the flasher ( has he prevented sight on one of his teammates) 
-                var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead() && player.flashedduration >= 0); // Teamflashes are not helpful so no supportlink 
+                // Each STILL! flashed player - as long as it is not a teammate of the actor - is tested for sight on a teammember of the flasher (has flasher prevented sight on one of his teammates) 
+                var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead() && player.flashedduration >= 0);
                 if (flashedenemies.Count() == 0)
                     return;
 
@@ -776,6 +811,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     continue;
                 }
                 //TODO: is the queue correctly working!!! no events gets deleted too early or too late
+                //TODO: shooting but not hitting is no handled -> a player is shooting at somebody to help a teammember but he has not hit yet
                 // if same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
                 if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
                 {
@@ -874,8 +910,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     }*/
 
                     vcandidates.Add(hurtevent.victim);
-                    //Order by closest or by clostest aimend player to determine which is the probablest candidate
-                    vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
+                    // Order by closest or by clostest aimend player to determine which is the probablest candidate
+                    //vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
                     vcandidates.OrderBy(candidate => EDMathLibrary.getLineOfSightOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                     break;
                 }
@@ -1063,7 +1099,28 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 throw new Exception("No suitable ID found in map.");
             }
+        }
 
+        /// <summary>
+        /// adds only elements of ls if they are not closer than the clusterrange to the master list
+        /// </summary>
+        /// <param name="ls"></param>
+        /// <param name="master"></param>
+        private void AddNecessaryRange(List<Vector> ls, List<Vector> master)
+        {
+            foreach (var p in ls)
+            {
+                bool add = true;
+                foreach (var m in master)
+                {
+                    if (EDMathLibrary.getEuclidDistance2D(p, m) < CLUSTERINGRANGE)
+                    {
+                        add = false;
+                        break;
+                    }
+                }
+                if (add) master.Add(p);
+            }
         }
     }
 }

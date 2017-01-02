@@ -360,9 +360,9 @@ namespace CSGO_Analytics.src.json.parser
 
             CS.Weapon jwp = new CS.Weapon
             {
-                //owner = assemblePlayerDetailed(wp.Owner),
+                //owner = assemblePlayerDetailed(wp.Owner), //TODO: fill weaponcategorie and type
                 name = wp.Weapon.ToString(),
-                ammo_in_magazine = wp.AmmoInMagazine
+                ammo_in_magazine = wp.AmmoInMagazine,
             };
 
             return jwp;

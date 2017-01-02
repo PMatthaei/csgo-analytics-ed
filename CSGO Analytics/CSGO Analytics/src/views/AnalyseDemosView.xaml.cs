@@ -66,7 +66,7 @@ namespace CSGO_Analytics.src.views
         //
 
         /// <summary>
-        /// Panel where all players and links are being drawn on
+        /// Panel where all players and links are being drawn on with the corresponding map as background
         /// </summary>
         private Canvas mapPanel = new Canvas();
 
@@ -89,6 +89,9 @@ namespace CSGO_Analytics.src.views
         /// Circles representing active nades(smoke=grey, fire=orange, henade=red, flash=white, decoy=outline only)
         /// </summary>
         private List<NadeShape> activeNades = new List<NadeShape>();
+
+
+        private List<math.Vector> pos = new List<math.Vector>();
 
 
 
@@ -199,6 +202,7 @@ namespace CSGO_Analytics.src.views
 
         public void InitializeEncounterDetection()
         {
+            this.pos = this.enDetect.fetchPositions();
 
             this.matchreplay = this.enDetect.run(); // Run the algorithm
 
@@ -208,20 +212,6 @@ namespace CSGO_Analytics.src.views
                 drawPlayer(p);
             }
 
-        }
-
-        private void Button_play(object sender, RoutedEventArgs e)
-        {
-            if (updateThread == null)
-                updateThread = new Thread(new ThreadStart(playMatch));
-
-            updateThread.Start();
-        }
-
-        private void Button_stop(object sender, RoutedEventArgs e)
-        {
-            if (updateThread != null) ;
-            //TODO: pause and resume
         }
 
         private void playMatch()
@@ -256,11 +246,9 @@ namespace CSGO_Analytics.src.views
                     // Update UI: timers, labels etc
                     //updateUI(tick);
 
-                    foreach (var gevent in tick.tickevents)
+                    foreach (var p in pos)
                     {
-                        foreach (var pos in gevent.getPositions())
-                            drawPos(pos);
-                            
+                            drawPos(p);
                     }
                     /*
                     // Update map with all active components, player etc 
@@ -305,6 +293,16 @@ namespace CSGO_Analytics.src.views
             }
         }
 
+
+
+
+        //
+        //
+        // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
+        //
+        //
+        #region Drawing and Updating graphics and UI
+
         private void updateUI(Tick tick)
         {
             time_slider.Value = tick.tick_id;
@@ -315,26 +313,6 @@ namespace CSGO_Analytics.src.views
             DateTime startdate = new DateTime(1970, 1, 1) + time;
             time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;
         }
-
-        private bool hasActiveLinkShape(Link link)
-        {
-            foreach (var l in links)
-            {
-                if (l.actor.Equals(link.getActor()) || l.actor.Equals(link.getReciever()) && l.reciever.Equals(link.getActor()) || l.reciever.Equals(link.getReciever()))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
-
-        //
-        //
-        // ENCOUNTER DETECTION VISUALISATION: Draw players, links and line of sight as well as other events of the game
-        //
-        //
 
         private void drawNade(NadeEvents n)
         {
@@ -437,6 +415,7 @@ namespace CSGO_Analytics.src.views
                 }
             }
         }
+
         private void drawPos(math.Vector position)
         {
             var ps = new Ellipse();
@@ -529,7 +508,15 @@ namespace CSGO_Analytics.src.views
             ps.Yaw = EDMathLibrary.toRadian(-p.facing.yaw);
 
         }
+        #endregion
 
+
+
+
+        //
+        // UI Functionality - Screenshots, Render Match as AVI etc
+        //
+        #region Functionality
         private bool screenshotcooldown = false;
         private void captureScreenshot()
         {
@@ -572,17 +559,37 @@ namespace CSGO_Analytics.src.views
 
 
         }
+        #endregion
+
+
+
+
         //
         //
         // EVENTS
         //
         //
 
+        #region Events
         //
         //
         // MAP FUNCTIONS: Drag and Zoom the map
         //
         //
+
+        private void Button_play(object sender, RoutedEventArgs e)
+        {
+            if (updateThread == null)
+                updateThread = new Thread(new ThreadStart(playMatch));
+
+            updateThread.Start();
+        }
+
+        private void Button_stop(object sender, RoutedEventArgs e)
+        {
+            if (updateThread != null) ;
+            //TODO: pause and resume
+        }
 
         private void Canvas_OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -669,7 +676,7 @@ namespace CSGO_Analytics.src.views
                 captureScreenshot();
             }
         }
-
+        #endregion
 
 
 
@@ -678,7 +685,7 @@ namespace CSGO_Analytics.src.views
         // HELPING FUNCTIONS
         //
         //
-
+        #region Helpers
         public static string GetTimestamp()
         {
             long ticks = DateTime.UtcNow.Ticks - DateTime.Parse("01/01/1970 00:00:00").Ticks;
@@ -686,5 +693,18 @@ namespace CSGO_Analytics.src.views
             return ticks.ToString();
 
         }
+
+        private bool hasActiveLinkShape(Link link)
+        {
+            foreach (var l in links)
+            {
+                if (l.actor.Equals(link.getActor()) || l.actor.Equals(link.getReciever()) && l.reciever.Equals(link.getActor()) || l.reciever.Equals(link.getReciever()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        #endregion
     }
 }
