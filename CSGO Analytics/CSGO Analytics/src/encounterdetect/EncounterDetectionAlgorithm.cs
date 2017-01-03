@@ -37,7 +37,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float ATTACKRANGE = 500.0f;
         private const float SUPPORTRANGE = 300.0f;
 
-        private const float CLUSTERINGRANGE = 30.0f;
+        private const float CLUSTERINGRANGE = 20.0f;
 
         /// <summary>
         /// Tickrate of the demo this algorithm runs on. 
@@ -248,11 +248,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 } //NO TICKS LEFT -> Round has ended
 
                 // Clear all Events and Queues at end of the round to prevent them from being carried into the next round
-                activeNades.Clear();
-                registeredHEQueue.Clear();
-                pendingWFEQueue.Clear();
-                scandidates.Clear();
-                vcandidates.Clear();
+                clearQueues();
             }
 
             watch.Stop();
@@ -301,7 +297,23 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
+        public void buildHurtClusters()
+        {
+            var starts = new List<Vector>();
+            var ends = new List<Vector>();
 
+            foreach (var round in match.rounds)
+            {
+                foreach (var tick in round.ticks)
+                {
+                    foreach (var gevent in tick.tickevents)
+                    {
+                        var start = gevent.getPositions()[0]; //Change!!
+                        var end = gevent.getPositions()[1];
+                    }
+                }
+            }
+        }
 
         int ipCount = 0;
         /// <summary>
@@ -330,10 +342,10 @@ namespace CSGO_Analytics.src.encounterdetect
                                 weapon = pk.weapon.name;
                                 break;
                         }
-                        //Exclude some nades because they do not deliver correct positions
+                        //Exclude some nades because they do not deliver correct positions(nades can explode around corners and after a certain time -> hitvector is falsified)
                         if (weapon != WeaponType.HE.ToString() && weapon != WeaponType.Incendiary.ToString() && weapon != "")
                         {
-                            var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");
+                            var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");?
                             var end = gevent.getPositions()[1];
                             var ipos = EDMathLibrary.interpolatePositions(start, end, 20);
                             AddNecessaryRange(ipos, ps);
@@ -461,11 +473,11 @@ namespace CSGO_Analytics.src.encounterdetect
             List<Link> links = new List<Link>();
 
             searchEventbasedSightCombatLinks(tick, links);
+            //searchSightbasedCombatLinks(tick, links);
 
-            //searchDistancebasedCombatLinks(tick, links);
+            //searchDistancebasedtLinks(tick, links);
             searchEventbasedLinks(tick, links);
 
-            // Test for supportlinks created by timed nades as these cant be read from events directly THIS HAS TO STAND AT LAST!!!
             searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
@@ -500,8 +512,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         noSpotter++; continue;
                     }
-
-                    sfCount++;
+                    
                     //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player. is it though?
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
                 }
@@ -600,6 +611,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     //
                     case "player_hurt":
                         PlayerHurt ph = (PlayerHurt)g;
+                        if (ph.actor.getTeam() == ph.victim.getTeam()) continue; // No Team damage
                         links.Add(new Link(ph.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT));
 
                         handleIncomingHurtEvent(ph, tick.tick_id, links); // CAN PRODUCE SUPPORTLINKS!
@@ -607,6 +619,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         break;
                     case "player_killed":
                         PlayerKilled pk = (PlayerKilled)g;
+                        if (pk.actor.getTeam() == pk.victim.getTeam()) continue; // No Team kills
                         links.Add(new Link(pk.actor, pk.victim, LinkType.COMBATLINK, Direction.DEFAULT));
 
                         if (pk.assister != null)
@@ -621,7 +634,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         WeaponFire wf = (WeaponFire)g;
                         var potential_victim = searchVictimCandidate(wf, tick.tick_id);
 
-                        // No candidate found. Either wait for a incoming playerhurt event or there was not nearly victim
+                        // No candidate found. Either wait for a incoming playerhurt event or there was no suitable victim
                         if (potential_victim == null)
                             break;
                         wfCount++;
@@ -632,7 +645,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         PlayerSpotted ps = (PlayerSpotted)g;
                         var potential_spotter = searchSpotterCandidates(ps.actor);
                         sCount++;
-                        if (potential_spotter == null) // This should not happend as these events are most likely to be true
+                        if (potential_spotter == null)
                             break;
                         sfCount++;
                         links.Add(new Link(potential_spotter, ps.actor, LinkType.COMBATLINK, Direction.DEFAULT));
@@ -644,7 +657,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private void searchEventbasedNadeSupportlinks(Tick tick, List<Link> links)
         {
-            //Register new nades for this tick
+            //Update active nades with the new tick
             foreach (var g in tick.tickevents)
             {
                 switch (g.gameevent)
@@ -713,6 +726,10 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
+        /// <summary>
+        /// Searches Supportlinks built by flashbang events
+        /// </summary>
+        /// <param name="links"></param>
         private void searchSupportFlashes(List<Link> links)
         {
             foreach (var f in activeNades.Where(item => item.Key.gameevent == "flash_exploded")) //Update players flashtime and check for links
@@ -750,7 +767,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
-
+        /// <summary>
+        /// Searches supportlinks built by smokegrenades
+        /// </summary>
+        /// <param name="supportlinks"></param>
         private void searchSmoke(List<Link> supportlinks)
         {
 
@@ -867,8 +887,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Searches the player that has most probable Hurt another player with the given weapon fire event
-        /// This just takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor.
+        /// Searches the player that has most probable attacked another player with the given weapon fire event
+        /// This method takes weaponfire events into account which came after a playerhurt event of the weaponfire event actor.
         /// And in most cases a player fires and misses therefore theres a long time between when he might hit the seen opponent because he hides. But still he saw and shot at him. These events are lost here
         /// </summary>
         /// <param name="wf"></param>
@@ -926,15 +946,17 @@ namespace CSGO_Analytics.src.encounterdetect
             if (vcandidates.Count == 0)
             {
                 return null;
-            }
+            } else
             if (vcandidates.Count == 1)
             {
                 var player = vcandidates[0];
+                if (player.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
                 vcandidates.Clear();
                 return player;
             }
-
+            // Choose the first in the list as we ordered it by Offset (see above)
             var victim = vcandidates[0];
+            if (victim.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
             vcandidates.Clear();
             return victim;
         }
@@ -942,6 +964,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         /// <summary>
         /// Searches players who have spotted a certain player
+        /// TODO: verify that this method is working
         /// </summary>
         /// <param name="actor"></param>
         /// <returns></returns>
@@ -962,6 +985,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (EDMathLibrary.isInFOV(counterplayerpos, counterplayerYaw, actorpos))
                 {
                     scandidates.Add(counterplayer);
+                    scandidates.OrderBy(candidate => EDMathLibrary.getLineOfSightOffset(counterplayerpos, counterplayerYaw, actorpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                 }
             }
 
@@ -971,12 +995,16 @@ namespace CSGO_Analytics.src.encounterdetect
             if (scandidates.Count == 1)
             {
                 var player = scandidates[0];
+                if (player.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
                 scandidates.Clear();
                 return player;
             }
             if (scandidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
             {
-                var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
+                //var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
+                var nearestplayer = scandidates[0];
+                if (nearestplayer.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
+
                 scandidates.Clear();
                 return nearestplayer;
             }
@@ -991,6 +1019,7 @@ namespace CSGO_Analytics.src.encounterdetect
         // INITALIZATION AND UPDATE METHODS FOR TABLES
         //
         //
+        #region Init and Update Tables
         private void initTables(int playeramount)
         {
             position_table = new float[playeramount][];
@@ -1047,14 +1076,14 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             spotted_table[acid] = spotted;
         }
-
+        #endregion
 
         //
         //
         // HELPING METHODS
         //
         //
-
+        #region Helping Methods and ID Handling
         public int getTableID(Player player) // Problem with ID Mapping: Player disconnect or else changes ID of this player
         {
             int id;
@@ -1065,8 +1094,10 @@ namespace CSGO_Analytics.src.encounterdetect
             else
             {
                 Console.WriteLine("Could not map unkown csid: " + player.player_id + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
+            #if Debug
                 foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+            #endif
                 handleChangedID(player);
                 return getTableID(player);
             }
@@ -1122,5 +1153,17 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (add) master.Add(p);
             }
         }
+
+
+        private void clearQueues()
+        {
+            activeNades.Clear();
+            registeredHEQueue.Clear();
+            pendingWFEQueue.Clear();
+            scandidates.Clear();
+            vcandidates.Clear();
+        }
+#endregion
+
     }
 }

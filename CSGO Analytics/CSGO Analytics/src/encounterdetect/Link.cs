@@ -26,6 +26,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public Link(Player actor, Player reciever, LinkType type, Direction dir)
         {
+            if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
+                throw new Exception("Cannot create Supportlink between different teams");
+            if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
+                throw new Exception("Cannot create Combatlink in the same team");
+
             players = new Player[2];
             players[0] = actor;
             players[1] = reciever;

@@ -138,7 +138,7 @@ namespace CSGO_Analytics.src.math
         }
 
         /// <summary>
-        /// Checks if reciever is within the field of view (FOVVertical) of the actor
+        /// Checks if reciever is within the field of view (FOV-Vertical) of the actor
         /// </summary>
         /// <param name="posP1"></param>
         /// <param name="angleV"></param>
@@ -157,8 +157,8 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.y;
 
             double theta = ScalarProductAngle(new Vector(aimdx, aimdy, 0), new Vector((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-             if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
-            //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 ) // No max sight distance to restrict FOV
+             //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
+            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 ) // No max sight distance to restrict FOV
                     return true;
             return false;
         }
@@ -204,6 +204,35 @@ namespace CSGO_Analytics.src.math
                 return false;
         }
 
+        /// <summary>
+        /// Tests if a point lies within a rectangle area.
+        /// </summary>
+        /// <param name="rectx"></param>
+        /// <param name="recty"></param>
+        /// <param name="rectwidth"></param>
+        /// <param name="rectheight"></param>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public static bool RectContainsPoint(float rectx, float recty, float rectwidth, float rectheight, Vector p)
+        {
+            if (p.x < rectx || p.y < recty) return false;
+
+            if (p.x <= rectx + rectwidth && p.y <= recty + rectheight) return true;
+            else return false;
+        }
+
+        /// <summary>
+        /// Test if a point lies within a circle
+        /// </summary>
+        /// <param name="cx"></param>
+        /// <param name="cy"></param>
+        /// <param name="r"></param>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public static bool CircleContainsPoint(float cx, float cy, float r, Vector p)
+        {
+            return getEuclidDistance2D(new Vector(cx, cy, 0), p) <= r;
+        }
 
         /// <summary>
         /// Tests if a vector clips a sphere in 3D(Smoke grenade)

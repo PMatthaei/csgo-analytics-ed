@@ -227,6 +227,9 @@ namespace CSGO_Analytics.src.views
                 Tick tick = tuple.Item1;
                 CombatComponent comp = tuple.Item2;
 
+                //Tick tick = tuple.Key;
+                //CombatComponent comp = tuple.Value;
+
                 if (last_tickid == 0)
                     last_tickid = tick.tick_id;
                 int dt = tick.tick_id - last_tickid;
@@ -244,13 +247,15 @@ namespace CSGO_Analytics.src.views
                     }
 
                     // Update UI: timers, labels etc
-                    //updateUI(tick);
+                    updateUI(tick);
 
-                    foreach (var p in pos)
+
+
+                    /*foreach (var p in pos)
                     {
-                            drawPos(p);
-                    }
-                    /*
+                        drawPos(p);
+                    }*/
+                    
                     // Update map with all active components, player etc 
                     foreach (var p in tick.getUpdatedPlayers())
                     {
@@ -284,9 +289,9 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }*/
+                    }
                 }));
-                //Thread.Sleep(passedTime);
+                Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
                 
@@ -418,11 +423,11 @@ namespace CSGO_Analytics.src.views
 
         private void drawPos(math.Vector position)
         {
-            var ps = new Ellipse();
+            var ps = new Rectangle();
             var vector = EDMathLibrary.CSPositionToUIPosition(position);
             ps.Margin = new Thickness(vector.x, vector.y,0,0);
-            ps.Width = 1;
-            ps.Height = 1;
+            ps.Width = 7;
+            ps.Height = 7;
             Color color = Color.FromArgb(255, 255, 0, 0);
 
             ps.Fill = new SolidColorBrush(color);
