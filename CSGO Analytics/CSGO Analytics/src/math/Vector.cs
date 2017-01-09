@@ -69,5 +69,10 @@ namespace CSGO_Analytics.src.math
         {
             return new float[] { x, y, z };
         }
+
+        public override string ToString()
+        {
+            return "x: " +x + " y: "+y +" z: "+z;
+        }
     }
 }

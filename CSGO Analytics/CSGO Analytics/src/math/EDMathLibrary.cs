@@ -95,13 +95,13 @@ namespace CSGO_Analytics.src.math
         }
 
         /// <summary>
-        /// Returns the offset of a the actor looking straight at reciever -> 5° means he looking 5° away from directly looking at him.
+        /// Returns the offset of a the actor looking straight at reciever (line of sight) -> 5° means he looking 5° away from directly looking at him.
         /// </summary>
         /// <param name="actorV"></param>
         /// <param name="actorYaw"></param>
         /// <param name="recieverV"></param>
         /// <returns></returns>
-        public static double getLineOfSightOffset(Vector actorV, float actorYaw, Vector recieverV)
+        public static double getLoSOffset(Vector actorV, float actorYaw, Vector recieverV)
         {
             double dx = recieverV.x - actorV.x;
             double dy = recieverV.y - actorV.y;
@@ -213,11 +213,11 @@ namespace CSGO_Analytics.src.math
         /// <param name="rectheight"></param>
         /// <param name="p"></param>
         /// <returns></returns>
-        public static bool RectContainsPoint(float rectx, float recty, float rectwidth, float rectheight, Vector p)
+        public static bool RectContainsPoint(Rectangle r, Vector p)
         {
-            if (p.x < rectx || p.y < recty) return false;
+            if (p.x < r.x || p.y < r.y) return false;
 
-            if (p.x <= rectx + rectwidth && p.y <= recty + rectheight) return true;
+            if (p.x <= r.x + r.width && p.y <= r.y + r.height) return true;
             else return false;
         }
 

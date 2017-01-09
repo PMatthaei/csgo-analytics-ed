@@ -61,7 +61,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.(Watch out for id changes caused by disconnects/reconnects!!)
+        /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
+        /// (Watch out for id changes caused by disconnects/reconnects!!)
         /// </summary>
         private Dictionary<int, int> mappedPlayerIDs = new Dictionary<int, int>();
 
@@ -181,6 +182,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
+
 
                             updatePosition(id, updatedPlayer.position.getAsArray());
                             updateFacing(id, updatedPlayer.facing.getAsArray());
@@ -655,6 +657,83 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
+
+        /// <summary>
+        /// When a hurtevent is registered we want to test if some of our pending weaponfire events match this playerhurt event.
+        /// If so we have to insert the link that arises into the right Combatcomponent.
+        /// </summary>
+        /// <param name="ph"></param>
+        /// <param name="tick_id"></param>
+        private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id, List<Link> links)
+        {
+            // For every registered hurt event test ...
+            for (int index = registeredHEQueue.Count - 1; index >= 0; index--)
+            {
+                var item = registeredHEQueue.ElementAt(index);
+                var hurtevent = item.Key;
+                var htick_id = item.Value;
+                int tick_dt = Math.Abs(htick_id - tick_id);
+
+                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                {
+                    registeredHEQueue.Remove(hurtevent); // Check timeout
+                    continue;
+                }
+                //TODO: is the queue correctly working!!! no events gets deleted too early or too late
+                //TODO: shooting but not hitting is no handled -> a player is shooting at somebody to help a teammember but he has not hit yet
+                // If same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
+                if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
+                {
+                    links.Add(new Link(ph.actor, hurtevent.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                    dAssistCount++;
+                }
+                // If ph.actor hits an enemy while this enemy has hit somebody from p.actors team
+                if (ph.victim.Equals(hurtevent.actor) && hurtevent.victim.getTeam() == ph.actor.getTeam())
+                {
+                    links.Add(new Link(ph.actor, hurtevent.victim, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                    dAssistCount++;
+                }
+            }
+
+            registeredHEQueue.Add(ph, tick_id);
+
+            for (int index = pendingWFEQueue.Count - 1; index >= 0; index--)
+            {
+                var item = pendingWFEQueue.ElementAt(index);
+                var weaponfireevent = item.Key;
+                var wftick_id = item.Value;
+
+                int tick_dt = Math.Abs(wftick_id - tick_id);
+                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                {
+                    //If more than x seconds are between a shoot and a hit -> event is irrelevant now and can be removed
+                    pendingWFEQueue.Remove(weaponfireevent);
+                    continue;
+                }
+
+                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
+                {
+                    Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
+
+                    foreach (var en in open_encounters) // Search the component this link has to be inserted 
+                    {
+                        bool inserted = false;
+                        foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
+                        {
+                            iCount++;
+                            comp.links.Add(insertLink);
+                            inserted = true;
+                            break;
+                        }
+                        if (inserted) //This should be useless if components and their tick_ids are unique
+                            break;
+                    }
+                    pendingWFEQueue.Remove(weaponfireevent); // Delete the weaponfire event from the queue
+                }
+
+            }
+        }
+
         private void searchEventbasedNadeSupportlinks(Tick tick, List<Link> links)
         {
             //Update active nades with the new tick
@@ -688,10 +767,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
+            //todo: TEST FLASHES!!!
             updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended
             searchSupportFlashes(links);
 
-            searchSmoke(links);
+            searchSupportSmokes(links);
 
             // Decoy and fire nades TODO:
             // Test covered areas TODO:
@@ -771,7 +851,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Searches supportlinks built by smokegrenades
         /// </summary>
         /// <param name="supportlinks"></param>
-        private void searchSmoke(List<Link> supportlinks)
+        private void searchSupportSmokes(List<Link> supportlinks)
         {
 
             var smokenades = activeNades.Where(item => item.Key.gameevent == "smoke_exploded");
@@ -809,82 +889,6 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
 
-        /// <summary>
-        /// When a hurtevent is registered we want to test if some of our pending weaponfire events match this playerhurt event.
-        /// If so we have to insert the link that arises into the right Combatcomponent.
-        /// </summary>
-        /// <param name="ph"></param>
-        /// <param name="tick_id"></param>
-        private void handleIncomingHurtEvent(PlayerHurt ph, int tick_id, List<Link> links)
-        {
-            // For every registered hurt event test ...
-            for (int index = registeredHEQueue.Count - 1; index >= 0; index--)
-            {
-                var item = registeredHEQueue.ElementAt(index);
-                var hurtevent = item.Key;
-                var htick_id = item.Value;
-                int tick_dt = Math.Abs(htick_id - tick_id);
-
-                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
-                {
-                    registeredHEQueue.Remove(hurtevent); //Check timeout
-                    continue;
-                }
-                //TODO: is the queue correctly working!!! no events gets deleted too early or too late
-                //TODO: shooting but not hitting is no handled -> a player is shooting at somebody to help a teammember but he has not hit yet
-                // if same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
-                if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
-                {
-                    links.Add(new Link(ph.actor, hurtevent.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
-                    dAssistCount++;
-                }
-                // if ph.actor hits an enemy while this enemy has hit somebody from p.actors team
-                if (ph.victim.Equals(hurtevent.actor) && hurtevent.victim.getTeam() == ph.actor.getTeam())
-                {
-                    links.Add(new Link(ph.actor, hurtevent.victim, LinkType.SUPPORTLINK, Direction.DEFAULT));
-                    dAssistCount++;
-                }
-            }
-
-            registeredHEQueue.Add(ph, tick_id);
-
-            for (int index = pendingWFEQueue.Count - 1; index >= 0; index--) //TODO: with where statement?
-            {
-                var item = pendingWFEQueue.ElementAt(index);
-                var weaponfireevent = item.Key;
-                var wftick_id = item.Value;
-
-                int tick_dt = Math.Abs(wftick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > 4)
-                {
-                    //If more than 4 seconds are between a shoot and a hit -> event is irrelevant now and can be removed
-                    pendingWFEQueue.Remove(weaponfireevent);
-                    continue;
-                }
-
-                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
-                {
-                    Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
-
-                    foreach (var en in open_encounters) // Search the component this link has to be inserted 
-                    {
-                        bool inserted = false;
-                        foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
-                        {
-                            iCount++;
-                            comp.links.Add(insertLink);
-                            inserted = true;
-                            break;
-                        }
-                        if (inserted) //This should be useless if components and their tick_ids are unique
-                            break;
-                    }
-                    pendingWFEQueue.Remove(weaponfireevent); // Delete the weaponfire event from the queue
-                }
-
-            }
-        }
-
 
         /// <summary>
         /// Searches the player that has most probable attacked another player with the given weapon fire event
@@ -908,7 +912,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     registeredHEQueue.Remove(hurtevent);
                     continue;
                 }
-                // Watch out for teamdamage. No wrong combatlinks !!
+                // Watch out for teamdamage -> create wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
                 {
@@ -930,9 +934,9 @@ namespace CSGO_Analytics.src.encounterdetect
                     }*/
 
                     vcandidates.Add(hurtevent.victim);
-                    // Order by closest or by clostest aimend player to determine which is the probablest candidate
+                    // Order by closest or by closest los player to determine which is the probablest candidate
                     //vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
-                    vcandidates.OrderBy(candidate => EDMathLibrary.getLineOfSightOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
+                    vcandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(wfactorpos, wfactorYaw, hvictimpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                     break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
@@ -954,6 +958,8 @@ namespace CSGO_Analytics.src.encounterdetect
                 vcandidates.Clear();
                 return player;
             }
+            if (vcandidates.Count > 1)
+                Console.WriteLine("More than one candidate");
             // Choose the first in the list as we ordered it by Offset (see above)
             var victim = vcandidates[0];
             if (victim.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
@@ -985,7 +991,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (EDMathLibrary.isInFOV(counterplayerpos, counterplayerYaw, actorpos))
                 {
                     scandidates.Add(counterplayer);
-                    scandidates.OrderBy(candidate => EDMathLibrary.getLineOfSightOffset(counterplayerpos, counterplayerYaw, actorpos)); //  Offset = Angle between lineofsight of actor and position of candidate
+                    scandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(counterplayerpos, counterplayerYaw, actorpos)); //  Offset = Angle between lineofsight of actor and position of candidate
                 }
             }
 
@@ -999,8 +1005,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 scandidates.Clear();
                 return player;
             }
-            if (scandidates.Count > 1) // The one with the shortest distance to the actor is the spotter (maybe test better condition)
+            if (scandidates.Count > 1) 
             {
+                // The one with the shortest distance or the smallest los offset to the actor is the spotter
                 //var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
                 var nearestplayer = scandidates[0];
                 if (nearestplayer.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
@@ -1080,7 +1087,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         //
         //
-        // HELPING METHODS
+        // HELPING METHODS AND ID HANDLING
         //
         //
         #region Helping Methods and ID Handling
@@ -1094,10 +1101,10 @@ namespace CSGO_Analytics.src.encounterdetect
             else
             {
                 Console.WriteLine("Could not map unkown csid: " + player.player_id + ", on Analytics-ID. Maybe a random CS-ID change occured? -> Key needs update");
-            #if Debug
+#if Debug
                 foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
-            #endif
+#endif
                 handleChangedID(player);
                 return getTableID(player);
             }
@@ -1122,6 +1129,10 @@ namespace CSGO_Analytics.src.encounterdetect
                     value = i; // Our value is always the position in the initalisation playerarray
                     players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
                     mappedPlayerIDs.Add(p.player_id, value);
+#if Debug
+                foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
+                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+#endif
                     return;
                 }
             }

@@ -202,7 +202,7 @@ namespace CSGO_Analytics.src.views
 
         public void InitializeEncounterDetection()
         {
-            this.pos = this.enDetect.fetchPositions();
+            //this.pos = this.enDetect.fetchPositions();
 
             this.matchreplay = this.enDetect.run(); // Run the algorithm
 
@@ -247,17 +247,24 @@ namespace CSGO_Analytics.src.views
                     }
 
                     // Update UI: timers, labels etc
-                    updateUI(tick);
+                    //updateUI(tick);
 
 
 
-                    /*foreach (var p in pos)
+                    foreach (var e in tick.tickevents)
                     {
-                        drawPos(p);
-                    }*/
-                    
+                        if(e.gameevent == "player_hurt" || e.gameevent == "player_death")
+                        {
+                            Color color = Color.FromArgb(255, 255, 0, 0);
+
+                            drawPos(e.getPositions()[0], Color.FromArgb(255, 255, 0, 0));
+                            drawPos(e.getPositions()[1], Color.FromArgb(255, 0, 255, 0));
+                        }
+
+                    }
+
                     // Update map with all active components, player etc 
-                    foreach (var p in tick.getUpdatedPlayers())
+                    /*foreach (var p in tick.getUpdatedPlayers())
                     {
                         updatePlayer(p);
                     }
@@ -289,9 +296,9 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }
+                    }*/
                 }));
-                Thread.Sleep(passedTime);
+                //Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
                 
@@ -421,14 +428,13 @@ namespace CSGO_Analytics.src.views
             }
         }
 
-        private void drawPos(math.Vector position)
+        private void drawPos(math.Vector position, Color color)
         {
-            var ps = new Rectangle();
+            var ps = new System.Windows.Shapes.Rectangle();
             var vector = EDMathLibrary.CSPositionToUIPosition(position);
             ps.Margin = new Thickness(vector.x, vector.y,0,0);
             ps.Width = 7;
             ps.Height = 7;
-            Color color = Color.FromArgb(255, 255, 0, 0);
 
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
