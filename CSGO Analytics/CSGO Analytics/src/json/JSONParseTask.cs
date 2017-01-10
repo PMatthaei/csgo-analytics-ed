@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace CSGO_Analytics.src.json.parser
 {
     /// <summary>
-    /// Class holding every data to parse as well as information about how to parse
+    /// Class holding every data on how and where to parse.
     /// </summary>
     public class ParseTask
     {

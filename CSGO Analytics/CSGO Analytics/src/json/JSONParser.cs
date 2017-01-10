@@ -42,10 +42,12 @@ namespace CSGO_Analytics.src.json.parser
             outputStream.Write(JsonConvert.SerializeObject(gs, settings));
         }
 
-        public Gamestate deserializeGamestate(string gamestatestring)
+
+        public Gamestate deserializeGamestateString(string gamestatestring)
         {
             return Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(gamestatestring, settings);
         }
+
 
         /// <summary>
         /// Dumps gamestate in a string
@@ -185,11 +187,11 @@ namespace CSGO_Analytics.src.json.parser
 
         #region Subevents
 
-        public List<CSGO_Analytics.src.data.gameobjects.Player> assemblePlayers(DemoInfoModded.Player[] ps)
+        public List<CS.Player> assemblePlayers(DemoInfoModded.Player[] ps)
         {
             if (ps == null)
                 return null;
-            List<CSGO_Analytics.src.data.gameobjects.Player> players = new List<CSGO_Analytics.src.data.gameobjects.Player>();
+            List<CS.Player> players = new List<CS.Player>();
             foreach (var player in ps)
                 players.Add(assemblePlayer(player));
 
@@ -217,8 +219,8 @@ namespace CSGO_Analytics.src.json.parser
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
-                
             };
+
             return player;
         }
 
@@ -270,9 +272,9 @@ namespace CSGO_Analytics.src.json.parser
         }*/
 
 
-        public CSGO_Analytics.src.data.gameobjects.Player assemblePlayer(DemoInfoModded.Player p)
+        public CS.Player assemblePlayer(DemoInfoModded.Player p)
         {
-            return new CSGO_Analytics.src.data.gameobjects.Player
+            return new CS.Player
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -315,7 +317,7 @@ namespace CSGO_Analytics.src.json.parser
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = p.Velocity.Absolute //Length of Movementvector -> Velocity
+                velocity = p.Velocity.Absolute // Velocity -> Length of Movementvector 
             };
         }
 
@@ -334,7 +336,7 @@ namespace CSGO_Analytics.src.json.parser
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = p.Velocity.Absolute, //Length of Movementvector -> Velocity
+                velocity = p.Velocity.Absolute, // Velocity -> Length of Movementvector 
                 items = assembleWeapons(p.Weapons)
             };
 

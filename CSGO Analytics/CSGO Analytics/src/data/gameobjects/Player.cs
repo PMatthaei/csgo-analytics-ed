@@ -94,22 +94,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
     }
 
-    public class Facing
-    {
-        public float yaw { get; set; }
-        public float pitch { get; set; }
-
-        internal Facing Copy()
-        {
-            return new Facing() { yaw = yaw, pitch = pitch };
-        }
-
-        internal float[] getAsArray()
-        {
-            return new float[] { yaw, pitch };
-        }
-    }
-
     class PlayerDetailed : Player
     {
         public int armor { get; set; }
@@ -141,4 +125,19 @@ namespace CSGO_Analytics.src.data.gameobjects
         public float flashedduration { get; set; }
     }
 
+    public class Facing
+    {
+        public float yaw { get; set; }
+        public float pitch { get; set; }
+
+        internal Facing Copy()
+        {
+            return new Facing() { yaw = yaw, pitch = pitch };
+        }
+
+        internal float[] getAsArray()
+        {
+            return new float[] { yaw, pitch };
+        }
+    }
 }

@@ -20,7 +20,20 @@ namespace CSGO_Analytics.src.math
             y = ny;
             z = nz;
         }
+        public float getY()
+        {
+            return y;
+        }
 
+        public float getXZ()
+        {
+            return z;
+        }
+
+        public float getX()
+        {
+            return x;
+        }
         /// <summary>
         /// Initalizes a vector with an array of floats: x = arr[0], y = arr[1], z = arr[2]
         /// </summary>

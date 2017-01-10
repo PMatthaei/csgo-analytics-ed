@@ -234,25 +234,25 @@ namespace CSGO_Analytics.src.math
             return getEuclidDistance2D(new Vector(cx, cy, 0), p) <= r;
         }
 
-        /// <summary>
-        /// Tests if a vector clips a sphere in 3D(Smoke grenade)
-        /// </summary>
-        /// <param name="sphere"></param>
-        /// <param name="actorV"></param>
-        /// <param name="actorYaw"></param>
-        /// <returns></returns>
-        public static bool vectorClipsSphere3D()
-        {
-            return false;
-        }
+
 
 
         //
         //
-        // BASICS
+        // COMPLEX HULL OF POINTS
         //
         //
-        public static double ScalarProductAngle(Vector v1, Vector v2)
+        
+    
+
+
+
+    //
+    //
+    // BASICS
+    //
+    //
+    public static double ScalarProductAngle(Vector v1, Vector v2)
         {
             return Math.Acos((v1.x * v2.x + v1.y * v2.y + v1.z * v2.z) / (v1.Absolute() * v2.Absolute()));
         }

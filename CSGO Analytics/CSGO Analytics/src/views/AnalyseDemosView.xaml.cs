@@ -91,8 +91,6 @@ namespace CSGO_Analytics.src.views
         private List<NadeShape> activeNades = new List<NadeShape>();
 
 
-        private List<math.Vector> pos = new List<math.Vector>();
-
 
 
 
@@ -202,7 +200,6 @@ namespace CSGO_Analytics.src.views
 
         public void InitializeEncounterDetection()
         {
-            //this.pos = this.enDetect.fetchPositions();
 
             this.matchreplay = this.enDetect.run(); // Run the algorithm
 
@@ -236,6 +233,7 @@ namespace CSGO_Analytics.src.views
 
                 int passedTime = (int)(dt * tickrate);// + 2000;
 
+
                 //Run UI changes in a Non-UI-Blocking thread. Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                 Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
                 {
@@ -251,7 +249,8 @@ namespace CSGO_Analytics.src.views
 
 
 
-                    foreach (var e in tick.tickevents)
+
+                    /*foreach (var e in tick.tickevents)
                     {
                         if(e.gameevent == "player_hurt" || e.gameevent == "player_death")
                         {
@@ -261,7 +260,7 @@ namespace CSGO_Analytics.src.views
                             drawPos(e.getPositions()[1], Color.FromArgb(255, 0, 255, 0));
                         }
 
-                    }
+                    }*/
 
                     // Update map with all active components, player etc 
                     /*foreach (var p in tick.getUpdatedPlayers())

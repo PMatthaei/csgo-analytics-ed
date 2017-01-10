@@ -34,6 +34,9 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
         private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;
 
+        private const float FIRE_ATTRACTION_RANGE = 200;
+        private const float DECOY_ATTRACTION_RANGE = 200;
+
         private const float ATTACKRANGE = 500.0f;
         private const float SUPPORTRANGE = 300.0f;
 
@@ -358,11 +361,11 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
 
-
             Console.WriteLine("Added " + ipCount + " interpolated Positions");
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
             return ps;
+            
         }
 
 
@@ -715,7 +718,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
-                    foreach (var en in open_encounters) // Search the component this link has to be inserted 
+                    foreach (var en in open_encounters) // Search the component this link has to be sorted in 
                     {
                         bool inserted = false;
                         foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
@@ -753,12 +756,14 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         break;
                     case "firenade_exploded":
+                    case "decoy_exploded":
                     case "smoke_exploded":
                         NadeEvents timedNadeStart = (NadeEvents)g;
                         activeNades.Add(timedNadeStart, tick.tick_id);
                         break;
                     case "smoke_ended":
                     case "firenade_ended":
+                    case "decoy_ended":
                         NadeEvents timedNadeEnd = (NadeEvents)g;
                         activeNades.Remove(timedNadeEnd);
                         break;
@@ -769,14 +774,40 @@ namespace CSGO_Analytics.src.encounterdetect
 
             //todo: TEST FLASHES!!!
             updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended
-            searchSupportFlashes(links);
 
+            searchSupportFlashes(links);
             searchSupportSmokes(links);
+            searchSupportDecoys(links);
+            searchSupportFires(links);
 
             // Decoy and fire nades TODO:
             // Test covered areas TODO:
             // Test weapon drop assists TODO:
         }
+
+        #region NICE TO HAVE
+        private List<Player> registeredNearFire = new List<Player>();
+        private List<Player> registeredNearDecoy = new List<Player>();
+
+        private void searchSupportFires(List<Link> links)
+        {
+            foreach (var fireitem in activeNades.Where(item => item.Key.gameevent == "fire_exploded"))
+            {
+                // Every player coming closer than a certain range gets registered for potentiel supportlink activities
+                var fireevent = fireitem.Key;
+                registeredNearFire.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(fireevent.position, player.position) < FIRE_ATTRACTION_RANGE));
+            }
+        }
+
+        private void searchSupportDecoys(List<Link> links)
+        {
+            foreach (var decoyitem in activeNades.Where(item => item.Key.gameevent == "decoy_exploded"))
+            {
+                var decoyevent = decoyitem.Key;
+                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE));
+            }
+        }
+        #endregion
 
         /// <summary>
         /// Updates all active flashes. If within a flash is no player which has flashtime(time this player is flashed - flashduration in data) left. The flash has ended.
@@ -793,13 +824,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 foreach (var player in flash.flashedplayers)
                 {
                     if (player.flashedduration >= 0)
-                    {
-                        player.flashedduration -= tickdt * tickrate * 1000;
-                    }
+                        player.flashedduration -= tickdt * tickrate * 1000; // Count down time
                     else
-                    {
                         finishedcount++;
-                    }
                 }
                 if (finishedcount == flash.flashedplayers.Count)
                     activeNades.Remove(flash);
@@ -816,7 +843,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 FlashNade flash = (FlashNade)f.Key;
 
-                // Each STILL! flashed player - as long as it is not a teammate of the actor - is tested for sight on a teammember of the flasher (has flasher prevented sight on one of his teammates) 
+                // Each (STILL!) flashed player - as long as it is not a teammate of the actor - is tested for sight on a teammember of the flasher (has flasher prevented sight on one of his teammates) 
                 var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && !player.isDead() && player.flashedduration >= 0);
                 if (flashedenemies.Count() == 0)
                     return;
@@ -853,9 +880,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="supportlinks"></param>
         private void searchSupportSmokes(List<Link> supportlinks)
         {
-
-            var smokenades = activeNades.Where(item => item.Key.gameevent == "smoke_exploded");
-            foreach (var smokeitem in smokenades)
+            foreach (var smokeitem in activeNades.Where(item => item.Key.gameevent == "smoke_exploded"))
             {
                 foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != smokeitem.Key.actor.getTeam()))
                 {
