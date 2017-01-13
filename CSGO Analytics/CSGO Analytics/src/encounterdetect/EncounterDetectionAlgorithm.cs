@@ -12,17 +12,9 @@ using CSGO_Analytics.src.data.gameevents;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
-    public enum AlgorithmMode
-    {
-        EUCLID_COMBATLINKS,
-        FOV_COMBATLINKS,
-        SIGHT_COMBATLINKS,
-    };
 
     public class EncounterDetectionAlgorithm
     {
-        public AlgorithmMode mode = AlgorithmMode.EUCLID_COMBATLINKS;
-
         //
         // VARIABLES AND CONSTANTS
         //
@@ -30,12 +22,15 @@ namespace CSGO_Analytics.src.encounterdetect
         // Timeouts in sec.
         private const float TAU = 20;
         private const float ENCOUNTER_TIMEOUT = 20;
-        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 20;
+        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 20; // Time after which a Hurt Event has no relevance to a weaponfire event
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
         private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;
 
         private const float FIRE_ATTRACTION_RANGE = 200;
+        private const float FIRE_SUPPORTRANGE = 200;
         private const float DECOY_ATTRACTION_RANGE = 200;
+        private const float DECOY_ATTRACTION_ANGLE = 10;
+        private const float DECOY_SUPPORTRANGE = 200;
 
         private const float ATTACKRANGE = 500.0f;
         private const float SUPPORTRANGE = 300.0f;
@@ -165,8 +160,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public MatchReplay run()
         {
-            //buildSightgraph(match);
-            //fetchPositions();
+
             MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -185,7 +179,6 @@ namespace CSGO_Analytics.src.encounterdetect
 
                             if (!livingplayers.Contains(updatedPlayer))
                                 livingplayers.Add(updatedPlayer);
-
 
                             updatePosition(id, updatedPlayer.position.getAsArray());
                             updateFacing(id, updatedPlayer.facing.getAsArray());
@@ -253,7 +246,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 } //NO TICKS LEFT -> Round has ended
 
                 // Clear all Events and Queues at end of the round to prevent them from being carried into the next round
-                clearQueues();
+                clearRoundData();
             }
 
             watch.Stop();
@@ -302,23 +295,7 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
-        public void buildHurtClusters()
-        {
-            var starts = new List<Vector>();
-            var ends = new List<Vector>();
 
-            foreach (var round in match.rounds)
-            {
-                foreach (var tick in round.ticks)
-                {
-                    foreach (var gevent in tick.tickevents)
-                    {
-                        var start = gevent.getPositions()[0]; //Change!!
-                        var end = gevent.getPositions()[1];
-                    }
-                }
-            }
-        }
 
         int ipCount = 0;
         /// <summary>
@@ -374,19 +351,19 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Searches all predecessor encounters of an component. or in other words:
         /// tests if a component is a successor of another encounters component
         /// </summary>
-        /// <param name="comp"></param>
+        /// <param name="newcomp"></param>
         /// <returns></returns>
-        private List<Encounter> searchPredecessors(CombatComponent comp)
+        private List<Encounter> searchPredecessors(CombatComponent newcomp)
         {
 
             List<Encounter> predecessors = new List<Encounter>();
-            foreach (var encounter in open_encounters.Where(e => e.tick_id - comp.tick_id <= TAU))
+            foreach (var encounter in open_encounters.Where(e => e.tick_id - newcomp.tick_id <= TAU))
             {
                 bool registered = false;
-                foreach (var c in encounter.cs) //Really iterate over components? -> yes because we need c.players
+                foreach (var comp in encounter.cs) //Really iterate over components? -> yes because we need c.players
                 {
                     // Test if c and comp have at least two players from different teams in common -> Intersection of player lists
-                    var intersectPlayers = c.players.Intersect(comp.players).ToList();
+                    var intersectPlayers = comp.players.Intersect(newcomp.players).ToList();
 
                     if (intersectPlayers.Count < 2)
                         continue;
@@ -421,13 +398,13 @@ namespace CSGO_Analytics.src.encounterdetect
             List<CombatComponent> cs = new List<CombatComponent>();
             foreach (var e in predecessors)
             {
-                cs.AddRange(e.cs); // Watch for OutOfMemory here if too many predecessors add up!! 
+                cs.AddRange(e.cs); // Watch for OutOfMemoryExceptions here if too many predecessors add up!! 
             }
-            var css = cs.OrderBy(x => x.tick_id).ToList();
-            int encounter_tick_id = cs.OrderBy(x => x.tick_id).ElementAt(0).tick_id;
-            var merged_encounter = new Encounter(encounter_tick_id, css);
+            var cs_sorted = cs.OrderBy(x => x.tick_id).ToList();
+            int encounter_tick_id = cs_sorted.ElementAt(0).tick_id;
+            var merged_encounter = new Encounter(encounter_tick_id, cs_sorted);
             merged_encounter.cs.ForEach(comp => comp.parent = merged_encounter); // Set new parent encounter for all components
-            return new Encounter(encounter_tick_id, css);
+            return merged_encounter;
         }
 
 
@@ -486,7 +463,7 @@ namespace CSGO_Analytics.src.encounterdetect
             searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
-            if (links.Count != 0)
+            if (links.Count != 0) //If links have been found
             {
                 combcomp = new CombatComponent(tick.tick_id);
                 combcomp.links = links;
@@ -534,13 +511,13 @@ namespace CSGO_Analytics.src.encounterdetect
             //
 
             // Check for each team if a player can see a player of the other team
-            foreach (var player in players.Where(player => player.getTeam() != Team.CT))
+            foreach (var player in players.Where(player => player.getTeam() == Team.CT))
             {
                 var player_id = getTableID(player);
                 var playerpos = new Vector(position_table[player_id]);
                 var playerYaw = facing_table[player_id][0];
 
-                foreach (var counterplayer in players.Where(counterplayer => counterplayer.getTeam() != Team.T))
+                foreach (var counterplayer in players.Where(counterplayer => counterplayer.getTeam() == Team.T))
                 {
                     var counterplayer_id = getTableID(counterplayer);
                     var counterplayerpos = new Vector(position_table[counterplayer_id]);
@@ -562,7 +539,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         links.Add(link);
                         ussCount++;
                     }
-                    //if (playerCanSeeCounter != CounterCanSeePlayer) dsCount++; // never happens because spotting each other in the same tick is rare
                 }
             }
 
@@ -682,8 +658,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     registeredHEQueue.Remove(hurtevent); // Check timeout
                     continue;
                 }
-                //TODO: is the queue correctly working!!! no events gets deleted too early or too late
-                //TODO: shooting but not hitting is no handled -> a player is shooting at somebody to help a teammember but he has not hit yet
+
                 // If same victim but different actors from the same team-> damageassist -> multiple teammates attack one enemy
                 if (ph.victim.Equals(hurtevent.victim) && !ph.actor.Equals(hurtevent.actor) && ph.actor.getTeam() == hurtevent.actor.getTeam())
                 {
@@ -700,6 +675,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             registeredHEQueue.Add(ph, tick_id);
 
+            // Now check all pending weapon fire events if the incoming player hurt event helps them to find a victim
             for (int index = pendingWFEQueue.Count - 1; index >= 0; index--)
             {
                 var item = pendingWFEQueue.ElementAt(index);
@@ -707,10 +683,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 var wftick_id = item.Value;
 
                 int tick_dt = Math.Abs(wftick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                if (tick_dt * tickrate / 1000 > PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT)
                 {
-                    //If more than x seconds are between a shoot and a hit -> event is irrelevant now and can be removed
-                    pendingWFEQueue.Remove(weaponfireevent);
+                    pendingWFEQueue.Remove(weaponfireevent); //Check timeouts
                     continue;
                 }
 
@@ -718,7 +693,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     Link insertLink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT); //TODO: only 15 or* 41 links found...seems a bit small
 
-                    foreach (var en in open_encounters) // Search the component this link has to be sorted in 
+                    foreach (var en in open_encounters) // Search the component in which this link has to be sorted in 
                     {
                         bool inserted = false;
                         foreach (var comp in en.cs.Where(comp => comp.tick_id == wftick_id))
@@ -739,7 +714,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private void searchEventbasedNadeSupportlinks(Tick tick, List<Link> links)
         {
-            //Update active nades with the new tick
+            // Update active nades list with the new tick
             foreach (var g in tick.tickevents)
             {
                 switch (g.gameevent)
@@ -766,45 +741,53 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "decoy_ended":
                         NadeEvents timedNadeEnd = (NadeEvents)g;
                         activeNades.Remove(timedNadeEnd);
+                        
                         break;
                     default:
                         break;
                 }
             }
 
-            //todo: TEST FLASHES!!!
-            updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended
+            //todo: TEST FLASHES!!! no occurencies of links in some demos -> just bad nades?
+            updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended _> we update their effecttime
 
             searchSupportFlashes(links);
             searchSupportSmokes(links);
             searchSupportDecoys(links);
             searchSupportFires(links);
-
-            // Decoy and fire nades TODO:
-            // Test covered areas TODO:
-            // Test weapon drop assists TODO:
         }
 
-        #region NICE TO HAVE
+    
+        #region Decoys and Firenades - NICE TO HAVE!
+
+
         private List<Player> registeredNearFire = new List<Player>();
+
         private List<Player> registeredNearDecoy = new List<Player>();
+
+
 
         private void searchSupportFires(List<Link> links)
         {
             foreach (var fireitem in activeNades.Where(item => item.Key.gameevent == "fire_exploded"))
             {
-                // Every player coming closer than a certain range gets registered for potentiel supportlink activities
+                // Every player coming closer than a certain range gets registered for potential supportlink activities
                 var fireevent = fireitem.Key;
-                registeredNearFire.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(fireevent.position, player.position) < FIRE_ATTRACTION_RANGE));
+                registeredNearFire.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(fireevent.position, player.position) < FIRE_ATTRACTION_RANGE && fireevent.actor.getTeam() != player.getTeam()));
             }
         }
+
+
 
         private void searchSupportDecoys(List<Link> links)
         {
             foreach (var decoyitem in activeNades.Where(item => item.Key.gameevent == "decoy_exploded"))
             {
                 var decoyevent = decoyitem.Key;
-                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE));
+                // Register all enemy players that walked near the grenade -> maybe they thought its a real player
+                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE && decoyevent.actor.getTeam() != player.getTeam()) );
+                // Register all enemy players that looked at the grenade in a certain angle -> maybe they thought its a real player
+                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getLoSOffset(player.position, player.facing.yaw, decoyitem.Key.position) < DECOY_ATTRACTION_ANGLE && decoyevent.actor.getTeam() != player.getTeam()));
             }
         }
         #endregion
@@ -854,7 +837,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     var flashedpos = new Vector(position_table[flashedenemyplayer_id]);
                     var flashedYaw = facing_table[flashedenemyplayer_id][0];
 
-                    //links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT)); //TODO: Is a sucessful flash a combatlink?
+                    links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT)); //TODO: Is a sucessful flash a combatlink?
 
                     foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
                     {
@@ -973,16 +956,15 @@ namespace CSGO_Analytics.src.encounterdetect
             }
 
             if (vcandidates.Count == 0)
-            {
                 return null;
-            } else
-            if (vcandidates.Count == 1)
+            else if (vcandidates.Count == 1)
             {
                 var player = vcandidates[0];
                 if (player.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
                 vcandidates.Clear();
                 return player;
             }
+
             if (vcandidates.Count > 1)
                 Console.WriteLine("More than one candidate");
             // Choose the first in the list as we ordered it by Offset (see above)
@@ -1190,16 +1172,37 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-
-        private void clearQueues()
+        /// <summary>
+        /// Clear all lists and queues that loose relevance at the end of the round to prevent events from carrying over to the next round
+        /// </summary>
+        private void clearRoundData()
         {
+            registeredNearDecoy.Clear();
+            registeredNearFire.Clear();
             activeNades.Clear();
             registeredHEQueue.Clear();
             pendingWFEQueue.Clear();
             scandidates.Clear();
             vcandidates.Clear();
         }
-#endregion
+        #endregion
 
+        public void buildHurtClusters()
+        {
+            var starts = new List<Vector>();
+            var ends = new List<Vector>();
+
+            foreach (var round in match.rounds)
+            {
+                foreach (var tick in round.ticks)
+                {
+                    foreach (var gevent in tick.tickevents)
+                    {
+                        var start = gevent.getPositions()[0]; //Change!!
+                        var end = gevent.getPositions()[1];
+                    }
+                }
+            }
+        }
     }
 }

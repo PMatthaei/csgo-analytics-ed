@@ -127,7 +127,7 @@ namespace CSGO_Analytics.src.json.parser
 
         public PlayerHurt assemblePlayerHurt(PlayerHurtEventArgs phe)
         {
-            PlayerHurt ph = new PlayerHurt
+            return new PlayerHurt
             {
                 gameevent = "player_hurt",
                 actor = assemblePlayerDetailed(phe.Attacker),
@@ -139,7 +139,6 @@ namespace CSGO_Analytics.src.json.parser
                 hitgroup = (int)phe.Hitgroup,
                 weapon = assembleWeapon(phe.Weapon)
             };
-            return ph;
         }
 
         public MovementEvents assemblePlayerPosition(DemoInfoModded.Player p)
@@ -155,12 +154,10 @@ namespace CSGO_Analytics.src.json.parser
 
         public NadeEvents assembleNade(NadeEventArgs e, string eventname)
         {
-            DemoInfoModded.Player[] ps = null;
 
             if (e.GetType() == typeof(FlashEventArgs)) //Exception for FlashEvents -> we need flashed players
             {
                 FlashEventArgs f = e as FlashEventArgs;
-                ps = f.FlashedPlayers;
                 return new FlashNade
                 {
                     gameevent = eventname,

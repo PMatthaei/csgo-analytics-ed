@@ -218,18 +218,16 @@ namespace CSGO_Analytics.src.views
                 return;
             int last_tickid = 0;
 
-
             foreach (var tuple in matchreplay.getReplayData())
             {
-                Tick tick = tuple.Item1;
-                CombatComponent comp = tuple.Item2;
-
-                //Tick tick = tuple.Key;
-                //CombatComponent comp = tuple.Value;
+                Tick tick = tuple.Key;
+                CombatComponent comp = tuple.Value;
 
                 if (last_tickid == 0)
                     last_tickid = tick.tick_id;
                 int dt = tick.tick_id - last_tickid;
+
+                if (dt < 0) throw new Exception("Negative time interval not possible");
 
                 int passedTime = (int)(dt * tickrate);// + 2000;
 
@@ -245,9 +243,7 @@ namespace CSGO_Analytics.src.views
                     }
 
                     // Update UI: timers, labels etc
-                    //updateUI(tick);
-
-
+                    updateUI(tick);
 
 
                     /*foreach (var e in tick.tickevents)
@@ -263,7 +259,7 @@ namespace CSGO_Analytics.src.views
                     }*/
 
                     // Update map with all active components, player etc 
-                    /*foreach (var p in tick.getUpdatedPlayers())
+                    foreach (var p in tick.getUpdatedPlayers())
                     {
                         updatePlayer(p);
                     }
@@ -295,9 +291,9 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }*/
+                    }
                 }));
-                //Thread.Sleep(passedTime);
+                Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
                 

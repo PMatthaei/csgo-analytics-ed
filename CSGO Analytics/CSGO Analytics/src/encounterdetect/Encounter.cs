@@ -45,8 +45,6 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             AddComponent(update);
             cs = cs.OrderBy(x => x.tick_id).ToList();
-
-            //TODO: reset timeout?
         }
 
         public void AddComponent(CombatComponent comp)
@@ -55,10 +53,6 @@ namespace CSGO_Analytics.src.encounterdetect
             comp.parent= this;
         }
 
-        public void orderByTick()
-        {
-            cs.OrderBy(x => x.tick_id); //TODO evtl descending?
-        }
 
         public override string ToString()
         {

@@ -10,18 +10,26 @@ namespace CSGO_Analytics.src.data.gameevents
 {
     public class Event
     {
-        public string gameevent { get; set; } // Just needed to build valid gameevent json-objects
         /// <summary>
-        /// The actor is always the person causing this event because he did something or he rises an event(f.e. he is spotted)
+        /// Identifier for events f.e. "player_hurt" "player_killed"
+        /// </summary>
+        public string gameevent { get; set; }
+
+        /// <summary>
+        /// The actor is always the person causing this event(or being updated with a event)
         /// </summary>
         public Player actor;
 
         /// <summary>
-        /// Get Players in this event
+        /// Get players in this event
         /// </summary>
         /// <returns></returns>
         public virtual Player[] getPlayers() { return new Player[] { actor }; }
 
+        /// <summary>
+        /// Get positions tracked in the event
+        /// </summary>
+        /// <returns></returns>
         public virtual Vector[] getPositions() { return new Vector[] { actor.position }; }
 
     }

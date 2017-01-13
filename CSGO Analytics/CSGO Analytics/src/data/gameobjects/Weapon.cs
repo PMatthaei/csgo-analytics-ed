@@ -94,12 +94,18 @@ namespace CSGO_Analytics.src.data.gameobjects
         public string name { get; set; }
 
         /// <summary>
-        /// Type of the weapon to distinguish it later
+        /// Type of the weapon
         /// </summary>
         public WeaponType weaponType { get; set; }
 
+        /// <summary>
+        /// Categorie of the weapon
+        /// </summary>
         public WeaponCategorie weaponCategorie { get; set; }
 
+        /// <summary>
+        /// Ammo left in the magazine. NOT! total ammo for this weapon
+        /// </summary>
         public int ammo_in_magazine { get; set; }
 
         // Weapon data

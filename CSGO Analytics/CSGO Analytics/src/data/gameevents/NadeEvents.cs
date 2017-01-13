@@ -35,37 +35,44 @@ namespace CSGO_Analytics.src.data.gameevents
                     return 5;
                 case "fire_exploded":
                     return 5;
+                case "hegrenade_exploded":
+                    return 5;
                 default:
                     return 0;
             }
         }
 
-        public bool isEndEvent(NadeEvents n)
+        /// <summary>
+        /// Tests if a given nadeevent is the ended event of this nadeevent. this just confirms the categorie not that it is indeed the corresponding event.
+        /// </summary>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public bool isEndEventOf(NadeEvents n)
         {
-            switch (gameevent)
+            switch (this.gameevent)
             {
                 case "smoke_exploded":
                     return n.gameevent == "smoke_ended";
                 case "fire_exploded":
                     return n.gameevent == "firenade_ended";
+                case "decoy_exploded":
+                    return n.gameevent == "decoy_ended";
                 default:
                     return false;
             }
         }
-         //Not working atm
+
         public override bool Equals(object obj)
         {
             NadeEvents other = obj as NadeEvents;
             if (other == null)
-            {
                 return false;
-            }
 
-            if (this.isEndEvent(other) && this.actor.Equals(other.actor) && this.nadetype == other.nadetype)
+            if (this.isEndEventOf(other) && this.actor.Equals(other.actor) && this.nadetype == other.nadetype)
             {
                 var dx = Math.Abs(other.position.x - this.position.x);
                 var dy = Math.Abs(other.position.y - this.position.y);
-                if (dx < 20 && dy < 20)
+                if (dx < 10 && dy < 10) // 10 units tolerance to confirm the nade
                     return true;
             }
             return false;

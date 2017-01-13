@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.math;
 
-namespace CSGO_Analytics.src.encounterdetect.clustering
+namespace CSGO_Analytics.src.encounterdetect.utils
+
 {
     class Cluster
     {
