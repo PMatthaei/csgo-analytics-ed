@@ -53,19 +53,22 @@ namespace CSGO_Analytics.src.math
         /// <param name="end"></param>
         /// <param name="steps"></param>
         /// <returns></returns>
-        public static List<Vector> interpolatePositions(Vector start, Vector end, float steps)
+        public static List<Vector> linear_interpolatePositions(Vector start, Vector end, float steps)
         {
             var ps = new List<Vector>();
             float dx = start.x - end.x;
             float dy = start.y - end.y;
+            float dz = start.z - end.z;
             float currentdx = 0;
             float currentdy = 0;
+            float currentdz = 0;
             int count = 0;
             while (count < steps)
             {
                 currentdx = currentdx + -dx / steps;
                 currentdy = currentdy + -dy / steps;
-                ps.Add(new Vector(start.x + currentdx, start.y + currentdy, 0));
+                currentdz = currentdz + -dz / steps;
+                ps.Add(new Vector(start.x + currentdx, start.y + currentdy, start.z+currentdz));
                 count++;
             }
             return ps;

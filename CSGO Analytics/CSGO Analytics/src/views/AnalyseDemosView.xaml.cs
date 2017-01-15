@@ -235,15 +235,37 @@ namespace CSGO_Analytics.src.views
                 //Run UI changes in a Non-UI-Blocking thread. Problems with threading as here the ui-thread will be called because shape properties are updated -> Call dispatcher :/
                 Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate
                 {
+                    for(int i = 0; i < this.enDetect.map.maplevels.Count(); i++)
+                    {
+                        Color color = Color.FromArgb(255, 0, 0, 0);
+                        switch (i)
+                        {
+                            case 0:
+                                color = Color.FromArgb(255, 255, 0, 0); break;
+                            case 1:
+                                color = Color.FromArgb(255, 0, 255, 0); break;
+                            case 2:
+                                color = Color.FromArgb(255, 0, 0, 255); break;
+                            case 3:
+                                color = Color.FromArgb(255, 255, 255, 0); break;
+                            case 4:
+                                color = Color.FromArgb(255, 0, 255, 255); break;
+                            case 5:
+                                color = Color.FromArgb(255, 255, 0, 255); break;
+                        }
+                        foreach (var p in this.enDetect.map.maplevels[i].getLevelPoints())
+                            drawPos(p, color);
+                    }
 
-                    if (links.Count != 0)
+
+                    /*if (links.Count != 0)
                     {
                         links.ForEach(l => mapPanel.Children.Remove(l)); //TODO: das muss weg. stattdessen sollen links sterben wenn sie nicht mehr gebraucht werden. wann ist das?
                         links.Clear();
-                    }
+                    }*/
 
                     // Update UI: timers, labels etc
-                    updateUI(tick);
+                    //updateUI(tick);
 
 
                     /*foreach (var e in tick.tickevents)
@@ -259,7 +281,7 @@ namespace CSGO_Analytics.src.views
                     }*/
 
                     // Update map with all active components, player etc 
-                    foreach (var p in tick.getUpdatedPlayers())
+                    /*foreach (var p in tick.getUpdatedPlayers())
                     {
                         updatePlayer(p);
                     }
@@ -291,9 +313,9 @@ namespace CSGO_Analytics.src.views
                         {
                             updateNades(n);
                         }
-                    }
+                    }*/
                 }));
-                Thread.Sleep(passedTime);
+                //Thread.Sleep(passedTime);
 
                 last_tickid = tick.tick_id;
                 

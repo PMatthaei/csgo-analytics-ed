@@ -21,6 +21,10 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     public class Player
     {
+        public const int PLAYERMODELL_HEIGHT = 72;
+        public const int PLAYERMODELL_CROUCH_HEIGHT = 54;
+        public const int PLAYERMODELL_WIDTH = 32;
+
         public string playername { get; set; }
         public int player_id { get; set; }
         public string team { get; set; }

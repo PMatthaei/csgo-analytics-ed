@@ -70,6 +70,7 @@
     <Compile Include="src\data\gameevents\MovementEvents.cs" />
     <Compile Include="src\data\gameevents\ServerEvent.cs" />
     <Compile Include="src\data\gameobjects\GameObject.cs" />
+    <Compile Include="src\data\gameobjects\Map.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
     <Compile Include="src\encounterdetect\utils\Cluster.cs" />
@@ -81,6 +82,7 @@
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
     <Compile Include="src\math\GrahamScan.cs" />
+    <Compile Include="src\math\Polygon.cs" />
     <Compile Include="src\math\Rectangle.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\data\gamestate\GameStateGenerator.cs" />

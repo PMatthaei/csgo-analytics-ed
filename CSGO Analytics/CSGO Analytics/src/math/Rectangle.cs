@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CSGO_Analytics.src.math
 {
-    class Rectangle
+    public class Rectangle
     {
         public float x { get; set; }
         public float y { get; set; }

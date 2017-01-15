@@ -57,6 +57,11 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private Match match;
 
+        /// <summary>
+        /// Simple representation of the map to do basic sight calculations for players
+        /// </summary>
+        public Map map;
+
 
         /// <summary>
         /// Map for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
@@ -162,6 +167,8 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
             MatchReplay replay = new MatchReplay();
+
+            generateMap();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -302,7 +309,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Collect all positions of this replay necessary to build a approximate representation of the map
         /// </summary>
         /// <returns></returns>
-        public List<Vector> fetchPositions()
+        private void generateMap()
         {
             var ps = new List<Vector>();
             foreach (var round in match.rounds)
@@ -329,19 +336,23 @@ namespace CSGO_Analytics.src.encounterdetect
                         {
                             var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");?
                             var end = gevent.getPositions()[1];
-                            var ipos = EDMathLibrary.interpolatePositions(start, end, 20);
-                            AddNecessaryRange(ipos, ps);
+                            var ipos = EDMathLibrary.linear_interpolatePositions(start, end, 20);
+                            //AddNecessaryRange(ipos, ps);
+                            //ps.AddRange(ipos);
                             ipCount += ipos.Count;
                         }
-                        AddNecessaryRange(gevent.getPositions().ToList(), ps);
+                        //AddNecessaryRange(gevent.getPositions().ToList(), ps);
+                        ps.AddRange(gevent.getPositions().ToList());
+
                     }
                 }
             }
 
+
             Console.WriteLine("Added " + ipCount + " interpolated Positions");
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
-            return ps;
+            this.map = new Map().createMapData(ps);
             
         }
 
