@@ -19,7 +19,7 @@ namespace CSGO_Analytics.src.encounterdetect
         // VARIABLES AND CONSTANTS
         //
 
-        // Timeouts in sec.
+        // Timeouts in seconds.
         private const float TAU = 20;
         private const float ENCOUNTER_TIMEOUT = 20;
         private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 20; // Time after which a Hurt Event has no relevance to a weaponfire event
@@ -242,7 +242,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
                         Encounter e = open_encounters[i];
-                        if (Math.Abs(e.tick_id - tick.tick_id) > ENCOUNTER_TIMEOUT)
+                        if (Math.Abs(e.tick_id - tick.tick_id) * tickrate / 1000 > ENCOUNTER_TIMEOUT)
                         {
                             open_encounters.Remove(e);
                             closed_encounters.Add(e);
@@ -353,7 +353,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
             this.map = new Map().createMapData(ps);
-            
+
         }
 
 
@@ -505,7 +505,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         noSpotter++; continue;
                     }
-                    
+
                     //TODO: these data is not necessary the latest one because the list livingplayers is not necessary updated with newest player. is it though?
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
                 }
@@ -752,7 +752,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "decoy_ended":
                         NadeEvents timedNadeEnd = (NadeEvents)g;
                         activeNades.Remove(timedNadeEnd);
-                        
+
                         break;
                     default:
                         break;
@@ -768,7 +768,7 @@ namespace CSGO_Analytics.src.encounterdetect
             searchSupportFires(links);
         }
 
-    
+
         #region Decoys and Firenades - NICE TO HAVE!
 
 
@@ -796,7 +796,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 var decoyevent = decoyitem.Key;
                 // Register all enemy players that walked near the grenade -> maybe they thought its a real player
-                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE && decoyevent.actor.getTeam() != player.getTeam()) );
+                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE && decoyevent.actor.getTeam() != player.getTeam()));
                 // Register all enemy players that looked at the grenade in a certain angle -> maybe they thought its a real player
                 registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getLoSOffset(player.position, player.facing.yaw, decoyitem.Key.position) < DECOY_ATTRACTION_ANGLE && decoyevent.actor.getTeam() != player.getTeam()));
             }
@@ -1023,7 +1023,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 scandidates.Clear();
                 return player;
             }
-            if (scandidates.Count > 1) 
+            if (scandidates.Count > 1)
             {
                 // The one with the shortest distance or the smallest los offset to the actor is the spotter
                 //var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];

@@ -47,23 +47,22 @@ namespace CSGO_Analytics.src.data.gameobjects
         public Map createMapData(List<Vector> ps)
         {
 
-            int levelamount = (int)(getZRange(ps) / LEVELHEIGHT);
+            int levelamount = (int)Math.Ceiling((getZRange(ps) / LEVELHEIGHT));
             maplevels_min_z = new float[levelamount];
             maplevels_max_z = new float[levelamount];
             maplevels = new MapLevel[levelamount];
 
             Console.WriteLine("Levels to create: " + levelamount);
-            var min_z = getZMinMax(ps)[0];
-            var max_z = getZMinMax(ps)[1];
+            var min_z = ps.Min(point => point.z);
+            var max_z = ps.Max(point => point.z);
             Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
 
             for (int i = 0; i < levelamount; i++)
             {
                 var upperbound = min_z + (i + 1) * LEVELHEIGHT;
                 var lowerbound = min_z + i * LEVELHEIGHT;
-                var levelps = ps.Where(point => point.z >= lowerbound && point.z <= upperbound);
+                var levelps = ps.Where(point => point.z >= lowerbound && point.z <= upperbound).OrderBy(point => point.z);
                 Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
-                levelps.OrderBy(point => point.z);
 
                 if (levelps.Count() == 0)
                 {
@@ -101,27 +100,12 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
 
         /// <summary>
-        /// Returns array with min and max z value for this maplevel
-        /// </summary>
-        /// <returns></returns>
-        public static float[] getZMinMax(List<Vector> ps)
-        {
-            if (ps == null)
-                throw new Exception("Please initalize with Datapoints");
-            float[] arr = new float[2];
-            arr[0] = ps.Min(point => point.z);
-            arr[1] = ps.Max(point => point.z);
-            return arr;
-        }
-
-        /// <summary>
         /// Returns Range of Z for this maplevel
         /// </summary>
         /// <returns></returns>
         public static float getZRange(List<Vector> ps)
         {
-            float[] arr = getZMinMax(ps);
-            return arr[1] - arr[0];
+            return ps.Max(point => point.z) - ps.Min(point => point.z);
         }
     }
 
@@ -132,10 +116,23 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// All points registered on this level
         /// </summary>
         private List<Vector> ps;
+        private List<Polygon> polygons;
 
         public MapLevel(List<Vector> ps)
         {
             this.ps = ps;
+            this.polygons = findPolygonsFromPoints(ps);
+        }
+
+
+        /// <summary>
+        /// Find a polygonal representation of the points to do calculates
+        /// </summary>
+        /// <param name="ps"></param>
+        /// <returns></returns>
+        private List<Polygon> findPolygonsFromPoints(List<Vector> ps)
+        {
+            throw new NotImplementedException();
         }
 
         public List<Vector> getLevelPoints()

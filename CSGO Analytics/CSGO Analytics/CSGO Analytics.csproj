@@ -39,8 +39,8 @@
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Npgsql, Version=3.1.7.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Npgsql.3.1.7\lib\net451\Npgsql.dll</HintPath>
+    <Reference Include="Npgsql, Version=3.1.9.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Npgsql.3.1.9\lib\net451\Npgsql.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -166,10 +166,36 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="src\views\maps\de_dust2_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_dust2_radar.jpg" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="src\views\maps\de_dust2.txt" />
+    <Resource Include="src\views\mapviews\de_dust2.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="src\views\mapviews\de_aztec.txt" />
+    <Resource Include="src\views\mapviews\de_aztec_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_cache.txt" />
+    <Resource Include="src\views\mapviews\de_cache_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_castle.txt" />
+    <Resource Include="src\views\mapviews\de_castle_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_cbble.txt" />
+    <Resource Include="src\views\mapviews\de_cbble_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_dust.txt" />
+    <Resource Include="src\views\mapviews\de_dust_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_inferno.txt" />
+    <Resource Include="src\views\mapviews\de_inferno_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_mirage.txt" />
+    <Resource Include="src\views\mapviews\de_mirage_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_nuke.txt" />
+    <Resource Include="src\views\mapviews\de_nuke_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_overpass.txt" />
+    <Resource Include="src\views\mapviews\de_overpass_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_santorini.txt" />
+    <Resource Include="src\views\mapviews\de_santorini_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_train.txt" />
+    <Resource Include="src\views\mapviews\de_train_radar.jpg" />
+    <Resource Include="src\views\mapviews\de_vertigo.txt" />
+    <Resource Include="src\views\mapviews\de_vertigo_radar.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
