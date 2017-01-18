@@ -87,5 +87,11 @@ namespace CSGO_Analytics.src.math
         {
             return "x: " +x + " y: "+y +" z: "+z;
         }
+
+        public override bool Equals(object obj)
+        {
+            Vector v = obj as Vector;
+            return x == v.x && y == v.y && z == v.z;
+        }
     }
 }

@@ -39,6 +39,8 @@ namespace CSGO_Analytics.src.data.gameobjects
             this.maplevels = maplevels;
         }
 
+
+
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to
         /// reconstruct a polygonal represenatation of the map with serveral levels
@@ -113,31 +115,74 @@ namespace CSGO_Analytics.src.data.gameobjects
     {
 
         /// <summary>
-        /// All points registered on this level
+        /// All polygons defining this level
         /// </summary>
-        private List<Vector> ps;
+        //private List<Vector> ps;
         private List<Polygon> polygons;
+        private Polygon polygon;
 
         public MapLevel(List<Vector> ps)
         {
-            this.ps = ps;
-            this.polygons = findPolygonsFromPoints(ps);
+            //this.ps = ps;
+            //this.polygons = findPolygonsFromPoints(ps);
+            //this.polygon = findPolygonsFromPoints2(ps);
         }
+
+
 
 
         /// <summary>
         /// Find a polygonal representation of the points to do calculates
         /// </summary>
-        /// <param name="ps"></param>
+        /// <param name="levelpoints"></param>
         /// <returns></returns>
-        private List<Polygon> findPolygonsFromPoints(List<Vector> ps)
+        private List<Polygon> findPolygonsFromPoints(List<Vector> levelpoints)
         {
-            throw new NotImplementedException();
+            int count = 0;
+            List<Triangle> triangles = new List<Triangle>();
+            foreach (var p in levelpoints) // Foreach point search 2 nearest points and build a triangle polygon
+            {
+                var nearestpoints = levelpoints.Where(other => EDMathLibrary.getEuclidDistance2D(other, p) < 50).OrderBy(other => EDMathLibrary.getEuclidDistance2D(other, p)).ToList();
+                if (nearestpoints.Count >= 2)
+                {
+                    triangles.Add(new Triangle
+                    {
+                        NODE1 = p,
+                        NODE2 = nearestpoints[0],
+                        NODE3 = nearestpoints[1]
+                    });
+                    triangles.Add(new Triangle
+                    {
+                        NODE1 = p,
+                        NODE2 = nearestpoints[0],
+                        NODE3 = nearestpoints[1]
+                    });
+                }
+                else
+                    count++;
+            }
+            Console.WriteLine(triangles.Count + " Triangles from " + levelpoints.Count + " Points");
+            Console.WriteLine(triangles.Distinct().Count() + " Distinct Triangles");
+            Console.WriteLine("Triangle with not enough neighbors: " + count);
+            count = 0;
+            var finaltriangles = mergeTriangles(triangles);
+
+            Console.WriteLine("Levelpolygons: " + finaltriangles.Count);
+            foreach (var t in finaltriangles)
+                count += t.ps.Count;
+            Console.WriteLine("Total Points: " + count);
+
+            return finaltriangles;
         }
 
-        public List<Vector> getLevelPoints()
+        private List<Polygon> mergeTriangles(List<Triangle> triangles)
         {
-            return ps;
+            return new List<Polygon>();
+        }
+
+        public List<Polygon> getLevelPolygons()
+        {
+            return polygons;
         }
     }
 }

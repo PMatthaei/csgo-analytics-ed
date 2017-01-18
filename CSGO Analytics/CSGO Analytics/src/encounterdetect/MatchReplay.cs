@@ -12,7 +12,8 @@ using CSGO_Analytics.src.data.gameevents;
 namespace CSGO_Analytics.src.encounterdetect
 {
     /// <summary>
-    /// Class to save all relevant data to replay the entire match with its encounters and events
+    /// Class to save all relevant data to replay the entire match with its encounters and events.
+    /// Tick is holding all the events to draw while component is holding all links to draw between players
     /// </summary>
     public class MatchReplay : IDisposable
     {

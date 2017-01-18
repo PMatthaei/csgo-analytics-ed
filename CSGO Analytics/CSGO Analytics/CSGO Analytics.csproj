@@ -84,6 +84,8 @@
     <Compile Include="src\math\GrahamScan.cs" />
     <Compile Include="src\math\Polygon.cs" />
     <Compile Include="src\math\Rectangle.cs" />
+    <Compile Include="src\math\SweepLineDelaunay.cs" />
+    <Compile Include="src\math\Triangle.cs" />
     <Compile Include="src\math\Vector.cs" />
     <Compile Include="src\data\gamestate\GameStateGenerator.cs" />
     <Compile Include="src\data\gamestate\Gamestate.cs" />

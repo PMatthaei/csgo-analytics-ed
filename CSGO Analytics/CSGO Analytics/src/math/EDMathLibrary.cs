@@ -12,39 +12,7 @@ namespace CSGO_Analytics.src.math
     class EDMathLibrary
     {
         private const float FOVVertical = 90;
-        /// <summary>
-        /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords. This is read by PropertieReader
-        /// </summary>
-        private static Vector map_origin;
 
-        //Size of Map in CSGO
-        private static double map_width;
-        private static double map_height;
-        // Size of Image (Bitmap)
-        private static double mappanel_width;
-        private static double mappanel_height;
-
-        public static void initalizeConstants(MapMetaData metadata) //TODO: initalize this with Data read from files about the current maps
-        {
-            map_origin = new Vector((float)metadata.mapcenter_x, (float)metadata.mapcenter_y, 0);
-            map_width = 4500;
-            map_height = 4500;
-            mappanel_width = 575;
-            mappanel_height = 575;
-        }
-
-        /// <summary>
-        /// Function getting a CS:GO Position fetched from a replay file which returns a coordinate for our UI
-        /// </summary>
-        /// <param name="p"></param>
-        /// <returns></returns>
-        public static Vector CSPositionToUIPosition(Vector p)
-        {
-            // Calculate a given demo point into a point suitable for our gui minimap: therefore we need a rotation factor, the origin of the coordinate and other data about the map. 
-            var x = Math.Abs(map_origin.x - p.x) * (Math.Min(mappanel_width, map_width) / Math.Max(mappanel_width, map_width));
-            var y = Math.Abs(map_origin.y - p.y) * (Math.Min(mappanel_height, map_height) / Math.Max(mappanel_height, map_height));
-            return new Vector((float)x, (float)y, p.z);
-        }
 
         /// <summary>
         /// Returns a list of interpolated points between start and end in given steps
