@@ -23,7 +23,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
         {
             double length = 0;
             TrajectoryLink current = start;
-            Vector oldpos = current.pos;
+            Vector3D oldpos = current.pos;
             while(current != null)
             {
                 current = current.next;
@@ -37,13 +37,13 @@ namespace CSGO_Analytics.src.encounterdetect.utils
     public class TrajectoryLink
     {
         public TrajectoryLink next;
-        public Vector pos;
+        public Vector3D pos;
         /// <summary>
         /// Id of the tick where this link was created. we need this to figure out the time it occured
         /// </summary>
         public int tick_id; 
 
-        public TrajectoryLink(TrajectoryLink next, Vector pos)
+        public TrajectoryLink(TrajectoryLink next, Vector3D pos)
         {
             this.next = next;
             this.pos = pos;

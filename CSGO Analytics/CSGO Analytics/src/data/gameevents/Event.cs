@@ -30,7 +30,7 @@ namespace CSGO_Analytics.src.data.gameevents
         /// Get positions tracked in the event
         /// </summary>
         /// <returns></returns>
-        public virtual Vector[] getPositions() { return new Vector[] { actor.position }; }
+        public virtual Vector3D[] getPositions() { return new Vector3D[] { actor.position }; }
 
     }
 }

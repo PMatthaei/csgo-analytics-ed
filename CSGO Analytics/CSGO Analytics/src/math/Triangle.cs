@@ -8,13 +8,13 @@ namespace CSGO_Analytics.src.math
 {
     public class Triangle : IEquatable<Triangle>
     {
-        public Vector NODE1;
-        public Vector NODE2;
-        public Vector NODE3;
+        public Vector3D NODE1;
+        public Vector3D NODE2;
+        public Vector3D NODE3;
 
-        public Vector[] Vertices()
+        public Vector3D[] Vertices()
         {
-            return new Vector[] { NODE1, NODE2, NODE3 };
+            return new Vector3D[] { NODE1, NODE2, NODE3 };
         }
 
         public override int GetHashCode()

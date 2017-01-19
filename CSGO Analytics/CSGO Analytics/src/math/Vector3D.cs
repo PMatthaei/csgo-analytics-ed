@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace CSGO_Analytics.src.math
 {
-    public class Vector
+    public class Vector3D
     {
         public float x { get; set; }
         public float y { get; set; }
         public float z { get; set; }
 
-        public Vector() { }
+        public Vector3D() { }
 
-        public Vector(float nx, float ny, float nz)
+        public Vector3D(float nx, float ny, float nz)
         {
             x = nx;
             y = ny;
@@ -38,16 +38,16 @@ namespace CSGO_Analytics.src.math
         /// Initalizes a vector with an array of floats: x = arr[0], y = arr[1], z = arr[2]
         /// </summary>
         /// <param name="arr"></param>
-        public Vector(float[] arr)
+        public Vector3D(float[] arr)
         {
             x = arr[0];
             y = arr[1];
             z = arr[2];
         }
 
-        public Vector Copy()
+        public Vector3D Copy()
         {
-            return new Vector(x, y, z);
+            return new Vector3D(x, y, z);
         }
 
         public double Angle2D()
@@ -64,10 +64,10 @@ namespace CSGO_Analytics.src.math
 
         }
 
-        public Vector Normalize()
+        public Vector3D Normalize()
         {
 
-            return new Vector((float)(x/Absolute()), (float)(y /Absolute()), (float)(z /Absolute()));
+            return new Vector3D((float)(x/Absolute()), (float)(y /Absolute()), (float)(z /Absolute()));
 
         }
 
@@ -83,6 +83,11 @@ namespace CSGO_Analytics.src.math
             return new float[] { x, y, z };
         }
 
+        public double[] getAsDoubleArray()
+        {
+            return new double[] { x, y };
+        }
+
         public override string ToString()
         {
             return "x: " +x + " y: "+y +" z: "+z;
@@ -90,8 +95,13 @@ namespace CSGO_Analytics.src.math
 
         public override bool Equals(object obj)
         {
-            Vector v = obj as Vector;
+            Vector3D v = obj as Vector3D;
             return x == v.x && y == v.y && z == v.z;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

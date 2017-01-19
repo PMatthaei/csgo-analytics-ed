@@ -48,9 +48,9 @@ namespace CSGO_Analytics.src.data.gameevents
             return new Player[] { actor, victim };
         }
 
-        public override Vector[] getPositions()
+        public override Vector3D[] getPositions()
         {
-            return new Vector[] { actor.position, victim.position };
+            return new Vector3D[] { actor.position, victim.position };
         }
     }
 
@@ -69,12 +69,12 @@ namespace CSGO_Analytics.src.data.gameevents
                 return base.getPlayers();
         }
 
-        public override Vector[] getPositions()
+        public override Vector3D[] getPositions()
         {
             if(assister != null)
-                return new Vector[] { actor.position, assister.position, victim.position };
+                return new Vector3D[] { actor.position, assister.position, victim.position };
             else
-                return new Vector[] { actor.position, victim.position };
+                return new Vector3D[] { actor.position, victim.position };
         }
     }
 }

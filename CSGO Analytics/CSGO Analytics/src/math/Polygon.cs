@@ -8,7 +8,7 @@ namespace CSGO_Analytics.src.math
 {
     public class Polygon
     {
-        public List<Vector> ps { get; set; }
+        public List<Vector3D> ps { get; set; }
 
         public Polygon() { }
 
@@ -33,6 +33,11 @@ namespace CSGO_Analytics.src.math
         {
             Polygon p = obj as Polygon;
             return p.ps.SequenceEqual(ps);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

@@ -45,6 +45,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -81,12 +82,11 @@
     <Compile Include="src\encounterdetect\MatchReplay.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
-    <Compile Include="src\math\GrahamScan.cs" />
+    <Compile Include="src\math\IQuadObject.cs" />
     <Compile Include="src\math\Polygon.cs" />
-    <Compile Include="src\math\Rectangle.cs" />
-    <Compile Include="src\math\SweepLineDelaunay.cs" />
+    <Compile Include="src\math\QuadTree.cs" />
     <Compile Include="src\math\Triangle.cs" />
-    <Compile Include="src\math\Vector.cs" />
+    <Compile Include="src\math\Vector3D.cs" />
     <Compile Include="src\data\gamestate\GameStateGenerator.cs" />
     <Compile Include="src\data\gamestate\Gamestate.cs" />
     <Compile Include="src\json\JSONParser.cs" />
@@ -114,7 +114,6 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\utils\MapDataPropertyReader.cs" />
     <Compile Include="src\views\AnalyseDemosModel.cs" />
     <Compile Include="src\views\AnalyseDemosView.xaml.cs">
       <DependentUpon>AnalyseDemosView.xaml</DependentUpon>

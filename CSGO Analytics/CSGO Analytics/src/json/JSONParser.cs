@@ -163,7 +163,7 @@ namespace CSGO_Analytics.src.json.parser
                     gameevent = eventname,
                     actor = assemblePlayerDetailed(e.ThrownBy),
                     nadetype = e.NadeType.ToString(),
-                    position = new CSGO_Analytics.src.math.Vector { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
+                    position = new CSGO_Analytics.src.math.Vector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
                     flashedplayers = assembleFlashedPlayers(f.FlashedPlayers)
                 };
             }
@@ -173,7 +173,7 @@ namespace CSGO_Analytics.src.json.parser
                 gameevent = eventname,
                 actor = assemblePlayerDetailed(e.ThrownBy),
                 nadetype = e.NadeType.ToString(),
-                position = new CSGO_Analytics.src.math.Vector { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
+                position = new CSGO_Analytics.src.math.Vector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
             };
         }
 
@@ -212,7 +212,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
@@ -275,7 +275,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isSpotted = p.IsSpotted,
@@ -303,7 +303,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
@@ -325,7 +325,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
                 facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,

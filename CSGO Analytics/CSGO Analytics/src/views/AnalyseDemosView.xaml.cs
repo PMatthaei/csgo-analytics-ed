@@ -23,7 +23,6 @@ using DP = DemoInfoModded;
 using Newtonsoft.Json;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
-using CSGO_Analytics.src.utils;
 using System.ComponentModel;
 
 namespace CSGO_Analytics.src.views
@@ -33,9 +32,9 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
-
-        private BackgroundWorker _initbw = new BackgroundWorker();
-
+        /// <summary>
+        /// Backgroundworker to handle the replay. Especially preventing UI-Thread Blocking!
+        /// </summary>
         private BackgroundWorker _replaybw = new BackgroundWorker();
 
         private EncounterDetectionAlgorithm EDAlgorithm;
@@ -119,42 +118,44 @@ namespace CSGO_Analytics.src.views
 
         private void InitializeAnalysetools()
         {
+            BackgroundWorker _initbw = new BackgroundWorker();
+
             _initbw.DoWork += (sender, args) =>
-            {
-                var path = "match_0.dem";
-                /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
                 {
-                    ParseTask ptask = new ParseTask
+                    var path = "match_0.dem";
+                    /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
                     {
-                        destpath = path,
-                        srcpath = path,
-                        usepretty = true,
-                        showsteps = true,
-                        specialevents = true,
-                        highdetailplayer = true,
-                        positioninterval = 8,
-                        settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                    };
-                    GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+                        ParseTask ptask = new ParseTask
+                        {
+                            destpath = path,
+                            srcpath = path,
+                            usepretty = true,
+                            showsteps = true,
+                            specialevents = true,
+                            highdetailplayer = true,
+                            positioninterval = 8,
+                            settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                        };
+                        GameStateGenerator.GenerateJSONFile(demoparser, ptask);
 
-                }*/
+                    }*/
 
-                using (var reader = new StreamReader(path.Replace(".dem", ".json")))
-                {
-                    this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                    this.EDAlgorithm = new EncounterDetectionAlgorithm(gamestate);
-                }
+                    using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                    {
+                        this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                        this.EDAlgorithm = new EncounterDetectionAlgorithm(gamestate);
+                    }
 
-                InitializeEncounterDetection();
+                    InitializeEncounterDetection();
 
-                InitializeGUIData();
+                    InitializeGUIData();
 
-                LoadMapData();
+                    LoadMapData();
 
-                InitalizeMapConstants();
+                    InitalizeMapConstants();
 
-                InitializeMapGraphic();
-            };
+                    InitializeMapGraphic();
+                };
 
             _initbw.RunWorkerCompleted += (sender, args) =>
             {
@@ -200,9 +201,7 @@ namespace CSGO_Analytics.src.views
             // Jump out of Background to update UI
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
-                canvas.ClipToBounds = true;
                 BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
-                //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
                 map_width = bi.Width; // Save original size to apply scaling
                 map_height = bi.Height;
                 mapPanel.Background = new ImageBrush(bi);
@@ -268,56 +267,10 @@ namespace CSGO_Analytics.src.views
                     //Jump out of background to update UI
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-
-                        //renderMapLevels();
-
-                        if (links.Count != 0)
-                        {
-                            links.ForEach(l => mapPanel.Children.Remove(l)); //TODO: das muss weg. stattdessen sollen links sterben wenn sie nicht mehr gebraucht werden. wann ist das?
-                            links.Clear();
-                        }
-
-                        // Update UI: timers, labels etc
-                        updateUI(tick);
-
-
-                        // Update map with all active components, player etc 
-                        foreach (var p in tick.getUpdatedPlayers())
-                        {
-                            updatePlayer(p);
-                        }
-
-
-                        if (comp != null && comp.links.Count != 0)
-                        {
-                            foreach (var link in comp.links)
-                            {
-                                if (hasActiveLinkShape(link)) // Old link -> update else draw new
-                                    updateLink(link);
-                                else
-                                    drawLink(link.getActor(), link.getReciever(), link.getLinkType());
-                            }
-                        }
-
-
-                        // Draw all event relevant graphics(nades, bombs etc)
-                        if (tick.getNadeEvents().Count != 0)
-                        {
-                            foreach (var n in tick.getNadeEvents())
-                            {
-                                drawNade(n);
-                            }
-                        }
-                        if (tick.getNadeEndEvents().Count != 0)
-                        {
-                            foreach (var n in tick.getNadeEndEvents())
-                            {
-                                updateNades(n);
-                            }
-                        }
+                        renderTick(tick, comp);
                     }));
 
-                    Thread.Sleep(passedTime);
+                    //Thread.Sleep(passedTime);
 
                     last_tickid = tick.tick_id;
                 }
@@ -332,6 +285,53 @@ namespace CSGO_Analytics.src.views
             };
         }
 
+        private void renderTick(Tick tick, CombatComponent comp)
+        {
+            if (links.Count != 0)
+            {
+                links.ForEach(l => mapPanel.Children.Remove(l)); //TODO: das muss weg. stattdessen sollen links sterben wenn sie nicht mehr gebraucht werden. wann ist das?
+                links.Clear();
+            }
+
+            // Update UI: timers, labels etc
+            updateUI(tick);
+
+            // Update map with all active components, player etc 
+            foreach (var p in tick.getUpdatedPlayers())
+            {
+                updatePlayer(p);
+            }
+
+
+            if (comp != null && comp.links.Count != 0)
+            {
+                foreach (var link in comp.links)
+                {
+                    if (hasActiveLinkShape(link)) // Old link -> update else draw new
+                        updateLink(link);
+                    else
+                        drawLink(link.getActor(), link.getReciever(), link.getLinkType());
+                }
+            }
+
+
+            // Draw all event relevant graphics(nades, bombs etc)
+            if (tick.getNadeEvents().Count != 0)
+            {
+                foreach (var n in tick.getNadeEvents())
+                {
+                    drawNade(n);
+                }
+            }
+            if (tick.getNadeEndEvents().Count != 0)
+            {
+                foreach (var n in tick.getNadeEndEvents())
+                {
+                    updateNades(n);
+                }
+            }
+        }
+
 
 
 
@@ -341,48 +341,69 @@ namespace CSGO_Analytics.src.views
         //
         //
         #region Rendering additional visuals
+        private BackgroundWorker _renderbw = new BackgroundWorker();
+
         public void renderMapLevels()
         {
-            for (int i = 0; i < this.EDAlgorithm.map.maplevels.Count(); i++)
+            Console.WriteLine("Render Map Levels");
+            _renderbw.DoWork += (sender, args) =>
             {
-                Color color = Color.FromArgb(255, 0, 0, 0);
-                switch (i)
+
+                for (int i = 0; i < this.EDAlgorithm.map.maplevels.Count(); i++)
                 {
-                    case 0:
-                        color = Color.FromArgb(255, 255, 0, 0); break;
-                    case 1:
-                        color = Color.FromArgb(255, 0, 255, 0); break;
-                    case 2:
-                        color = Color.FromArgb(255, 0, 0, 255); break;
-                    case 3:
-                        color = Color.FromArgb(255, 255, 255, 0); break;
-                    case 4:
-                        color = Color.FromArgb(255, 0, 255, 255); break;
-                    case 5:
-                        color = Color.FromArgb(255, 255, 0, 255); break;
+                    Console.WriteLine("Level: " + i);
+                    Color color = Color.FromArgb(255, 0, 0, 0);
+                    switch (i)
+                    {
+                        case 0:
+                            color = Color.FromArgb(255, 255, 0, 0); break; //rot
+                        case 1:
+                            color = Color.FromArgb(255, 0, 255, 0); break; //grün
+                        case 2:
+                            color = Color.FromArgb(255, 0, 0, 255); break; //blau
+                        case 3:
+                            color = Color.FromArgb(255, 255, 255, 0); break; //gelb
+                        case 4:
+                            color = Color.FromArgb(255, 0, 255, 255); break; //türkis
+                        case 5:
+                            color = Color.FromArgb(255, 255, 0, 255); break; //lilarosa
+                    }
+                    foreach (var p in this.EDAlgorithm.map.maplevels[0].ps)
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                        {
+                            drawPos(p, color);
+                        }));
+                    }
                 }
-                foreach (var p in this.EDAlgorithm.map.maplevels[i].getLevelPolygons())
-                    foreach (var pos in p.ps)
-                        drawPos(pos, color);
-            }
+            };
+            _renderbw.RunWorkerAsync();
+
+            _renderbw.RunWorkerCompleted += (sender, args) =>
+            {
+                if (args.Error != null)
+                    MessageBox.Show(args.Error.ToString());
+            };
         }
 
         public void renderHurtPositions(Tick tick)
         {
-
             foreach (var e in tick.tickevents)
             {
                 if (e.gameevent == "player_hurt" || e.gameevent == "player_death")
                 {
-                    Color color = Color.FromArgb(255, 255, 0, 0);
-
-                    drawPos(e.getPositions()[0], Color.FromArgb(255, 255, 0, 0));
-                    drawPos(e.getPositions()[1], Color.FromArgb(255, 0, 255, 0));
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        drawPos(e.getPositions()[0], Color.FromArgb(255, 255, 0, 0));
+                        drawPos(e.getPositions()[1], Color.FromArgb(255, 0, 255, 0));
+                    }));
                 }
-
             }
         }
         #endregion
+
+
+
 
         //
         //
@@ -404,7 +425,7 @@ namespace CSGO_Analytics.src.views
 
         private void drawNade(NadeEvents n)
         {
-            math.Vector nadepos = CSPositionToUIPosition(n.position);
+            math.Vector3D nadepos = CSPositionToUIPosition(n.position);
             NadeShape ns = new NadeShape();
             ns.X = nadepos.x;
             ns.Y = nadepos.y;
@@ -433,7 +454,7 @@ namespace CSGO_Analytics.src.views
 
         private void updateNades(NadeEvents n)
         {
-            math.Vector nadepos = CSPositionToUIPosition(n.position);
+            math.Vector3D nadepos = CSPositionToUIPosition(n.position);
 
             foreach (var ns in activeNades)
             {
@@ -504,13 +525,13 @@ namespace CSGO_Analytics.src.views
             }
         }
 
-        private void drawPos(math.Vector position, Color color)
+        private void drawPos(math.Vector3D position, Color color)
         {
-            var ps = new System.Windows.Shapes.Rectangle();
+            var ps = new System.Windows.Shapes.Ellipse();
             var vector = CSPositionToUIPosition(position);
             ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
-            ps.Width = 7;
-            ps.Height = 7;
+            ps.Width = 4;
+            ps.Height = 4;
 
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
@@ -674,10 +695,11 @@ namespace CSGO_Analytics.src.views
 
         private void Button_play(object sender, RoutedEventArgs e)
         {
-            if (paused)
+            renderMapLevels();
+            /*if (paused)
                 _busy.Set();
             else
-                playMatch();
+                playMatch();*/
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)
@@ -804,7 +826,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords. This is read by PropertieReader
         /// </summary>
-        private static EDM.Vector map_origin;
+        private static EDM.Vector3D map_origin;
 
         //Size of Map in CSGO
         private static double mapdata_width;
@@ -816,7 +838,7 @@ namespace CSGO_Analytics.src.views
         public void InitalizeMapConstants() //TODO: initalize this with Data read from files about the current maps
         {
 
-            map_origin = new EDM.Vector((float)mapmeta.mapcenter_x, (float)mapmeta.mapcenter_y, 0);
+            map_origin = new EDM.Vector3D((float)mapmeta.mapcenter_x, (float)mapmeta.mapcenter_y, 0);
             mapdata_width = 4500;
             mapdata_height = 4500;
             mappanel_width = 575;
@@ -829,12 +851,12 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public static EDM.Vector CSPositionToUIPosition(EDM.Vector p)
+        public static EDM.Vector3D CSPositionToUIPosition(EDM.Vector3D p)
         {
             // Calculate a given demo point into a point suitable for our gui minimap: therefore we need a rotation factor, the origin of the coordinate and other data about the map. 
             var x = Math.Abs(map_origin.x - p.x) * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
             var y = Math.Abs(map_origin.y - p.y) * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
-            return new EDM.Vector((float)x, (float)y, p.z);
+            return new EDM.Vector3D((float)x, (float)y, p.z);
         }
         #endregion
     }

@@ -28,7 +28,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public string playername { get; set; }
         public int player_id { get; set; }
         public string team { get; set; }
-        public Vector position { get; set; }
+        public Vector3D position { get; set; }
         public Facing facing { get; set; }
 
         public int HP { get; set; }

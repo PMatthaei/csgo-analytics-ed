@@ -9,6 +9,7 @@ using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.math;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
+using System.Collections;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -57,6 +58,11 @@ namespace CSGO_Analytics.src.encounterdetect
         private float[][] distance_table;
 
         /// <summary>
+        /// Holds every attacker victim pair of a hitevent with the attacker as key
+        /// </summary>
+        private Hashtable hit_hashtable = new Hashtable();
+
+        /// <summary>
         /// All data we have from this match.
         /// </summary>
         private Match match;
@@ -91,6 +97,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             initTables(ownid); // Initalize tables for all players(should be 10 for csgo)
 
+            generateMap();
         }
 
         public Player[] getPlayers()
@@ -146,8 +153,6 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
             MatchReplay replay = new MatchReplay();
-
-            this.map = generateMap();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -308,9 +313,9 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Collect all positions of this replay necessary to build a approximate representation of the map
         /// </summary>
         /// <returns></returns>
-        private Map generateMap()
+        private void generateMap()
         {
-            var ps = new List<Vector>(); // First we fetch all positions that can help us rebuild the map in a polygonal representation
+            var ps = new List<Vector3D>(); // First we fetch all positions that can help us rebuild the map in a polygonal representation
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var round in match.rounds)
@@ -348,7 +353,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         */
                         #endregion
                         ps.AddRange(gevent.getPositions().ToList());
-                        //AddNecessaryRange(gevent.getPositions().ToList(), ps);
                     }
                 }
             }
@@ -359,7 +363,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Added " + ipCount + " interpolated Positions");
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
-            return new Map().createMapData(ps);
+            this.map = MapCreator.createMap(ps);
 
         }
 
@@ -598,6 +602,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         handleIncomingHurtEvent(ph, tick.tick_id, links); // CAN PRODUCE SUPPORTLINKS!
 
+                        hit_hashtable[ph.actor] = ph.victim;
+
                         break;
                     case "player_killed":
                         PlayerKilled pk = (PlayerKilled)g;
@@ -609,6 +615,8 @@ namespace CSGO_Analytics.src.encounterdetect
                             links.Add(new Link(pk.assister, pk.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
                             assistCount++;
                         }
+
+                        hit_hashtable[pk.actor] = pk.victim;
 
                         break;
                     case "weapon_fire":
@@ -1037,7 +1045,7 @@ namespace CSGO_Analytics.src.encounterdetect
             for (int i = 0; i < distance_table[entityid].Length; i++)
             {
                 if (entityid != i)
-                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new Vector(position_table[entityid]), new Vector(position_table[i]));
+                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new Vector3D(position_table[entityid]), new Vector3D(position_table[i]));
             }
         }
         #endregion
@@ -1105,7 +1113,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="ls"></param>
         /// <param name="master"></param>
-        private void AddNecessaryRange(List<Vector> ls, List<Vector> master)
+        private void AddNecessaryRange(List<Vector3D> ls, List<Vector3D> master)
         {
             foreach (var p in ls)
             {
@@ -1151,8 +1159,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public void buildHurtClusters()
         {
-            var starts = new List<Vector>();
-            var ends = new List<Vector>();
+            var starts = new List<Vector3D>();
+            var ends = new List<Vector3D>();
 
             foreach (var round in match.rounds)
             {

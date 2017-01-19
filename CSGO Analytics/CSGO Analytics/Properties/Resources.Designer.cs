@@ -8,10 +8,10 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CSGO_Analytics.Properties
-{
-
-
+namespace CSGO_Analytics.Properties {
+    using System;
+    
+    
     /// <summary>
     ///   A strongly-typed resource class, for looking up localized strings, etc.
     /// </summary>
@@ -22,49 +22,564 @@ namespace CSGO_Analytics.Properties
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources
-    {
-
+    internal class Resources {
+        
         private static global::System.Resources.ResourceManager resourceMan;
-
+        
         private static global::System.Globalization.CultureInfo resourceCulture;
-
+        
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Resources()
-        {
+        internal Resources() {
         }
-
+        
         /// <summary>
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager
-        {
-            get
-            {
-                if ((resourceMan == null))
-                {
+        internal static global::System.Resources.ResourceManager ResourceManager {
+            get {
+                if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CSGO_Analytics.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
             }
         }
-
+        
         /// <summary>
         ///   Overrides the current thread's CurrentUICulture property for all
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture
-        {
-            get
-            {
+        internal static global::System.Globalization.CultureInfo Culture {
+            get {
                 return resourceCulture;
             }
-            set
-            {
+            set {
                 resourceCulture = value;
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_aztec.bsp
+        ///
+        ///&quot;de_aztec&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_aztec&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3200&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;2841&quot;
+        ///	&quot;scale&quot;		&quot;6&quot;
+        ///	&quot;rotate&quot;	&quot;0&quot;
+        ///	&quot;zoom&quot;		&quot;0&quot;
+        ///
+        ///			// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.06&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.43&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.93&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.45&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.21&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.28&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.45&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.70&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_aztec {
+            get {
+                return ResourceManager.GetString("de_aztec", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_aztec_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_aztec_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_cache.bsp
+        ///
+        ///&quot;de_cache&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_cache_radar&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2000&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;3250&quot;
+        ///	&quot;scale&quot;		&quot;5.5&quot; 
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.09775&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.473&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.887&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.585&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.325&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.26&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.345&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.79&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_cache {
+            get {
+                return ResourceManager.GetString("de_cache", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_cache_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_cache_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 
+        ///&quot;de_castle&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_castle&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3378&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;2756&quot;
+        ///	&quot;scale&quot;		&quot;5.5&quot;
+        ///	&quot;zoom&quot;		&quot;1.8&quot;
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.69&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.70&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.38&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.13&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.25&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.69&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.86&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.58&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_castle {
+            get {
+                return ResourceManager.GetString("de_castle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_castle_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_castle_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_cbble.bsp
+        ///
+        ///&quot;de_cbble&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_cbble&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3840&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;3072&quot;
+        ///	&quot;scale&quot;		&quot;6&quot;
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.22&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.73&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.63&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.10&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.17&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.78&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.65&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.64&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_cbble {
+            get {
+                return ResourceManager.GetString("de_cbble", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_cbble_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_cbble_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_dust.bsp
+        ///
+        ///&quot;de_dust&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_dust&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2850&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;4073&quot;
+        ///	&quot;scale&quot;		&quot;6&quot; 
+        ///	&quot;rotate&quot;	&quot;1&quot;
+        ///	&quot;zoom&quot;		&quot;1.3&quot;
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.47&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.92&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.47&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.10&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.80&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.55&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.53&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.74&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_dust {
+            get {
+                return ResourceManager.GetString("de_dust", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_dust_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_dust_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_dust2.bsp
+        ///
+        ///&quot;de_dust2&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_dust2&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2400&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;3383&quot;
+        ///	&quot;scale&quot;		&quot;4.4&quot; 
+        ///	&quot;rotate&quot;	&quot;1&quot;
+        ///	&quot;zoom&quot;		&quot;1.1&quot;	
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.60&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.22&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.36&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.93&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.80&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.20&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.20&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.15&quot;
+        ///}
+        ///.
+        /// </summary>
+        internal static string de_dust2 {
+            get {
+                return ResourceManager.GetString("de_dust2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_dust2_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_dust2_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_inferno.bsp
+        ///
+        ///&quot;de_inferno&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_inferno&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2087&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;3870&quot;
+        ///	&quot;scale&quot;		&quot;4.9&quot; 
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.9&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.35&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.1&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.67&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.81&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.69&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.49&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.22&quot;
+        ///}
+        ///.
+        /// </summary>
+        internal static string de_inferno {
+            get {
+                return ResourceManager.GetString("de_inferno", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_inferno_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_inferno_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &quot;de_mirage&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_mirage&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3230&quot;	// X coordinate,
+        ///	&quot;pos_y&quot;		&quot;1713&quot;	// Y coordinate,
+        ///	&quot;scale&quot;		&quot;5.00&quot; 	// and used scale used when taking the screenshot
+        ///	&quot;rotate&quot;	&quot;0&quot;	// map was rotated by 90 degress in image editor
+        ///	&quot;zoom&quot;		&quot;0&quot;	// optimal zoom factor if map is shown in full size
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.28&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.70&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.87&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.36&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.54&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.76&quot;
+        ///	&quot;bombB_x&quot;	 [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string de_mirage {
+            get {
+                return ResourceManager.GetString("de_mirage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_mirage_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_mirage_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_nuke.bsp
+        ///
+        ///&quot;de_nuke&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_nuke&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3453&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;2887&quot;
+        ///	&quot;scale&quot;		&quot;7&quot; 
+        ///
+        ///	&quot;verticalsections&quot;
+        ///	{
+        ///		&quot;default&quot; // use the primary radar image
+        ///		{
+        ///			&quot;AltitudeMax&quot; &quot;10000&quot;
+        ///			&quot;AltitudeMin&quot; &quot;-495&quot;
+        ///		}
+        ///		&quot;lower&quot; // i.e. de_nuke_lower_radar.dds
+        ///		{
+        ///			&quot;AltitudeMax&quot; &quot;-495&quot;
+        ///			&quot;AltitudeMin&quot; &quot;-10000&quot;
+        ///		}
+        ///	}
+        ///	
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.90&quot;
+        ///	&quot;CTSpa [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string de_nuke {
+            get {
+                return ResourceManager.GetString("de_nuke", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_nuke_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_nuke_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_overpass.bsp
+        ///
+        ///&quot;de_overpass&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_overpass&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-4831&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;1781&quot;
+        ///	&quot;scale&quot;		&quot;5.2&quot;
+        ///	&quot;rotate&quot;	&quot;0&quot;
+        ///	&quot;zoom&quot;		&quot;0&quot;
+        ///
+        ///		// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.49&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.2&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.66&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.93&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.55&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.23&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.7&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.31&quot;
+        ///}.
+        /// </summary>
+        internal static string de_overpass {
+            get {
+                return ResourceManager.GetString("de_overpass", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_overpass_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_overpass_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_santorini.bsp
+        ///
+        ///&quot;Santorini&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_santorini_radar&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2135&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;1400&quot;
+        ///	&quot;scale&quot;		&quot;4&quot; 
+        ///  
+        ///  // loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.318&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.08&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.643&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.92&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;.806&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.245&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.139&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.4&quot;
+        ///
+        ///}
+        ///.
+        /// </summary>
+        internal static string de_santorini {
+            get {
+                return ResourceManager.GetString("de_santorini", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_santorini_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_santorini_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_train.bsp
+        ///
+        ///&quot;de_train&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_train&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-2477&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;2392&quot;
+        ///	&quot;scale&quot;		&quot;4.7&quot; 
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.86&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.77&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.12&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.25&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.63&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.49&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.52&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.76&quot;
+        ///}
+        ///
+        ///.
+        /// </summary>
+        internal static string de_train {
+            get {
+                return ResourceManager.GetString("de_train", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_train_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_train_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // HLTV overview description file for de_vertigo.bsp
+        ///
+        ///&quot;de_vertigo&quot;
+        ///{
+        ///	&quot;material&quot;	&quot;overviews/de_vertigo_radar&quot;	// texture file
+        ///	&quot;pos_x&quot;		&quot;-3168&quot;	// upper left world coordinate
+        ///	&quot;pos_y&quot;		&quot;1762&quot;
+        ///	&quot;scale&quot;		&quot;4.0&quot; 
+        ///
+        ///	// loading screen icons and positions
+        ///	&quot;CTSpawn_x&quot;	&quot;0.71&quot;
+        ///	&quot;CTSpawn_y&quot;	&quot;0.22&quot;
+        ///	&quot;TSpawn_x&quot;	&quot;0.42&quot;
+        ///	&quot;TSpawn_y&quot;	&quot;0.22&quot;
+        ///
+        ///	&quot;bombA_x&quot;	&quot;0.69&quot;
+        ///	&quot;bombA_y&quot;	&quot;0.37&quot;
+        ///	&quot;bombB_x&quot;	&quot;0.21&quot;
+        ///	&quot;bombB_y&quot;	&quot;0.24&quot;
+        ///}
+        ///.
+        /// </summary>
+        internal static string de_vertigo {
+            get {
+                return ResourceManager.GetString("de_vertigo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap de_vertigo_radar {
+            get {
+                object obj = ResourceManager.GetObject("de_vertigo_radar", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
     }
