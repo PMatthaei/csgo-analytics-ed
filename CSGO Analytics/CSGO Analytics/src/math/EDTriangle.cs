@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace CSGO_Analytics.src.math
 {
-    public class Triangle : IEquatable<Triangle>
+    public class EDTriangle : IEquatable<EDTriangle>
     {
-        public Vector3D NODE1;
-        public Vector3D NODE2;
-        public Vector3D NODE3;
+        public EDVector3D NODE1;
+        public EDVector3D NODE2;
+        public EDVector3D NODE3;
 
-        public Vector3D[] Vertices()
+        public EDVector3D[] Vertices()
         {
-            return new Vector3D[] { NODE1, NODE2, NODE3 };
+            return new EDVector3D[] { NODE1, NODE2, NODE3 };
         }
 
         public override int GetHashCode()
@@ -22,9 +22,9 @@ namespace CSGO_Analytics.src.math
             return base.GetHashCode();
         }
 
-        public bool Equals(Triangle other)
+        public bool Equals(EDTriangle other)
         {
-            Triangle t = other;
+            EDTriangle t = other;
 
             return t.NODE1 == NODE1 || t.NODE1 == NODE2 || t.NODE1 == NODE3
                 && t.NODE2 == NODE2 || t.NODE1 == NODE2 || t.NODE2 == NODE3

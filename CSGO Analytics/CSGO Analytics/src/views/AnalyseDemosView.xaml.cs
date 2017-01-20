@@ -123,7 +123,7 @@ namespace CSGO_Analytics.src.views
             _initbw.DoWork += (sender, args) =>
                 {
                     var path = "match_0.dem";
-                    /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+                    using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
                     {
                         ParseTask ptask = new ParseTask
                         {
@@ -138,7 +138,7 @@ namespace CSGO_Analytics.src.views
                         };
                         GameStateGenerator.GenerateJSONFile(demoparser, ptask);
 
-                    }*/
+                    }
 
                     using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                     {
@@ -171,7 +171,7 @@ namespace CSGO_Analytics.src.views
         {
 
             this.mapname = gamestate.meta.mapname;
-            string path = @"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
+            string path = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
             //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
             this.mapmeta = new MapMetaDataPropertyReader(path).metadata;
             Console.WriteLine("Loaded Mapdata");
@@ -201,7 +201,7 @@ namespace CSGO_Analytics.src.views
             // Jump out of Background to update UI
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
-                BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Dev\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
+                BitmapImage bi = new BitmapImage(new Uri(@"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
                 map_width = bi.Width; // Save original size to apply scaling
                 map_height = bi.Height;
                 mapPanel.Background = new ImageBrush(bi);
@@ -368,11 +368,11 @@ namespace CSGO_Analytics.src.views
                         case 5:
                             color = Color.FromArgb(255, 255, 0, 255); break; //lilarosa
                     }
-                    foreach (var p in this.EDAlgorithm.map.maplevels[0].ps)
+                    foreach (var r in this.EDAlgorithm.map.maplevels[i].level_cells)
                     {
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                         {
-                            drawPos(p, color);
+                            drawRect(r, color);
                         }));
                     }
                 }
@@ -425,7 +425,7 @@ namespace CSGO_Analytics.src.views
 
         private void drawNade(NadeEvents n)
         {
-            math.Vector3D nadepos = CSPositionToUIPosition(n.position);
+            math.EDVector3D nadepos = CSPositionToUIPosition(n.position);
             NadeShape ns = new NadeShape();
             ns.X = nadepos.x;
             ns.Y = nadepos.y;
@@ -454,7 +454,7 @@ namespace CSGO_Analytics.src.views
 
         private void updateNades(NadeEvents n)
         {
-            math.Vector3D nadepos = CSPositionToUIPosition(n.position);
+            math.EDVector3D nadepos = CSPositionToUIPosition(n.position);
 
             foreach (var ns in activeNades)
             {
@@ -525,13 +525,28 @@ namespace CSGO_Analytics.src.views
             }
         }
 
-        private void drawPos(math.Vector3D position, Color color)
+        private void drawPos(math.EDVector3D position, Color color)
         {
             var ps = new System.Windows.Shapes.Ellipse();
             var vector = CSPositionToUIPosition(position);
             ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
             ps.Width = 4;
             ps.Height = 4;
+
+            ps.Fill = new SolidColorBrush(color);
+            ps.Stroke = new SolidColorBrush(color);
+            ps.StrokeThickness = 0.5;
+
+            mapPanel.Children.Add(ps);
+        }
+
+        private void drawRect(math.EDRect rect, Color color)
+        {
+            var ps = new System.Windows.Shapes.Rectangle();
+            var vector = CSPositionToUIPosition(new math.EDVector3D((float)rect.X, (float)rect.Y, 0));
+            ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
+            ps.Width = rect.Width;
+            ps.Height = rect.Height;
 
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
@@ -797,6 +812,7 @@ namespace CSGO_Analytics.src.views
 
 
 
+
         //
         //
         // HELPING FUNCTIONS
@@ -826,7 +842,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// Every CSGO Map has its center from where positions are calculated. We need this to produce our own coords. This is read by PropertieReader
         /// </summary>
-        private static EDM.Vector3D map_origin;
+        private static EDM.EDVector3D map_origin;
 
         //Size of Map in CSGO
         private static double mapdata_width;
@@ -838,7 +854,7 @@ namespace CSGO_Analytics.src.views
         public void InitalizeMapConstants() //TODO: initalize this with Data read from files about the current maps
         {
 
-            map_origin = new EDM.Vector3D((float)mapmeta.mapcenter_x, (float)mapmeta.mapcenter_y, 0);
+            map_origin = new EDM.EDVector3D((float)mapmeta.mapcenter_x, (float)mapmeta.mapcenter_y, 0);
             mapdata_width = 4500;
             mapdata_height = 4500;
             mappanel_width = 575;
@@ -851,12 +867,12 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public static EDM.Vector3D CSPositionToUIPosition(EDM.Vector3D p)
+        public static EDM.EDVector3D CSPositionToUIPosition(EDM.EDVector3D p)
         {
             // Calculate a given demo point into a point suitable for our gui minimap: therefore we need a rotation factor, the origin of the coordinate and other data about the map. 
             var x = Math.Abs(map_origin.x - p.x) * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
             var y = Math.Abs(map_origin.y - p.y) * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
-            return new EDM.Vector3D((float)x, (float)y, p.z);
+            return new EDM.EDVector3D((float)x, (float)y, p.z);
         }
         #endregion
     }

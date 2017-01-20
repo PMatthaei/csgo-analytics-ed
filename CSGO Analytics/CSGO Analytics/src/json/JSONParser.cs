@@ -8,8 +8,9 @@ using DemoInfoModded;
 using Newtonsoft.Json;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
-using CS = CSGO_Analytics.src.data.gameobjects;
-    
+using ED = CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.math;
+
 namespace CSGO_Analytics.src.json.parser
 {
     class JSONParser
@@ -80,9 +81,9 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        #region Gameevents
+        #region Playerevents
 
-        public PlayerKilled assemblePlayerKilled(PlayerKilledEventArgs pke)
+        internal PlayerKilled assemblePlayerKilled(PlayerKilledEventArgs pke)
         {
             return new PlayerKilled
             {
@@ -96,27 +97,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public WeaponFire assembleWeaponFire(WeaponFiredEventArgs we)
-        {
-            return new WeaponFire
-            {
-                gameevent = "weapon_fire",
-                actor = assemblePlayerDetailed(we.Shooter),
-                weapon = assembleWeapon(we.Weapon)
-            };
-        }
-
-        public WeaponFire assembleWeaponFireEmpty(WeaponFiredEmptyEventArgs we)
-        {
-            return new WeaponFire
-            {
-                gameevent = "weapon_fire_empty",
-                actor = assemblePlayerDetailed(we.Shooter),
-                weapon = assembleWeapon(we.Weapon)
-            };
-        }
-
-        public PlayerSpotted assemblePlayerSpotted(PlayerSpottedEventArgs e)
+        internal PlayerSpotted assemblePlayerSpotted(PlayerSpottedEventArgs e)
         {
             return new PlayerSpotted
             {
@@ -125,7 +106,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public PlayerHurt assemblePlayerHurt(PlayerHurtEventArgs phe)
+        internal PlayerHurt assemblePlayerHurt(PlayerHurtEventArgs phe)
         {
             return new PlayerHurt
             {
@@ -141,7 +122,7 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public MovementEvents assemblePlayerPosition(DemoInfoModded.Player p)
+        internal MovementEvents assemblePlayerPosition(DemoInfoModded.Player p)
         {
             return new MovementEvents
             {
@@ -149,10 +130,34 @@ namespace CSGO_Analytics.src.json.parser
                 actor = assemblePlayerDetailed(p)
             };
         }
+        #endregion
+
+        #region Weaponevents
+        internal WeaponFire assembleWeaponFire(WeaponFiredEventArgs we)
+        {
+            return new WeaponFire
+            {
+                gameevent = "weapon_fire",
+                actor = assemblePlayerDetailed(we.Shooter),
+                weapon = assembleWeapon(we.Weapon)
+            };
+        }
+
+        internal WeaponFire assembleWeaponFireEmpty(WeaponFiredEmptyEventArgs we)
+        {
+            return new WeaponFire
+            {
+                gameevent = "weapon_fire_empty",
+                actor = assemblePlayerDetailed(we.Shooter),
+                weapon = assembleWeapon(we.Weapon)
+            };
+        }
+
+        #endregion
 
         #region Nades
 
-        public NadeEvents assembleNade(NadeEventArgs e, string eventname)
+        internal NadeEvents assembleNade(NadeEventArgs e, string eventname)
         {
 
             if (e.GetType() == typeof(FlashEventArgs)) //Exception for FlashEvents -> we need flashed players
@@ -163,7 +168,7 @@ namespace CSGO_Analytics.src.json.parser
                     gameevent = eventname,
                     actor = assemblePlayerDetailed(e.ThrownBy),
                     nadetype = e.NadeType.ToString(),
-                    position = new CSGO_Analytics.src.math.Vector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
+                    position = new EDVector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
                     flashedplayers = assembleFlashedPlayers(f.FlashedPlayers)
                 };
             }
@@ -173,47 +178,107 @@ namespace CSGO_Analytics.src.json.parser
                 gameevent = eventname,
                 actor = assemblePlayerDetailed(e.ThrownBy),
                 nadetype = e.NadeType.ToString(),
-                position = new CSGO_Analytics.src.math.Vector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
+                position = new EDVector3D { x = e.Position.X, y = e.Position.Y, z = e.Position.Z },
             };
         }
 
 
         #endregion
 
+        #region Bombevents
+
+        internal BombEvents assembleBomb(BombEventArgs be, string gameevent)
+        {
+            return new BombEvents
+            {
+                gameevent = gameevent,
+                site = be.Site,
+                actor = assemblePlayerDetailed(be.Player)
+            };
+        }
+
+        internal BombState assembleBombState(BombDropEventArgs be, string gameevent)
+        {
+            return new BombState
+            {
+                gameevent = gameevent,
+                actor = assemblePlayerDetailed(be.Player)
+            };
+        }
+
+        internal BombState assembleBombState(BombPickUpEventArgs be, string gameevent)
+        {
+            return new BombState
+            {
+                gameevent = gameevent,
+                actor = assemblePlayerDetailed(be.Player)
+            };
+        }
+
+        internal BombEvents assembleBombDefuse(BombDefuseEventArgs bde, string gameevent)
+        {
+            return new BombEvents
+            {
+                gameevent = gameevent,
+                site = bde.Site,
+                actor = assemblePlayerDetailed(bde.Player),
+                haskit = bde.HasKit
+            };
+        }
+        #endregion
+
+        #region Serverevents
+        internal Event assemblePlayerBind(DemoInfoModded.Player player)
+        {
+            return new Event
+            {
+                gameevent = "player_bind",
+                actor = assemblePlayer(player)
+            };
+        }
+
+        internal Event assemblePlayerDisconnected(DemoInfoModded.Player player)
+        {
+            return new Event
+            {
+                gameevent = "player_disconnected",
+                actor = assemblePlayer(player)
+            };
+        }
         #endregion
 
         #region Subevents
 
-        public List<CS.Player> assemblePlayers(DemoInfoModded.Player[] ps)
+        internal List<ED.Player> assemblePlayers(DemoInfoModded.Player[] ps)
         {
             if (ps == null)
                 return null;
-            List<CS.Player> players = new List<CS.Player>();
+            List<ED.Player> players = new List<ED.Player>();
             foreach (var player in ps)
                 players.Add(assemblePlayer(player));
 
             return players;
         }
 
-        public List<CS.PlayerFlashed> assembleFlashedPlayers(DemoInfoModded.Player[] ps)
+        internal List<ED.PlayerFlashed> assembleFlashedPlayers(DemoInfoModded.Player[] ps)
         {
             if (ps == null)
                 return null;
-            List<CS.PlayerFlashed> players = new List<CS.PlayerFlashed>();
+            List<ED.PlayerFlashed> players = new List<ED.PlayerFlashed>();
             foreach (var player in ps)
                 players.Add(assembleFlashPlayer(player));
 
             return players;
         }
 
-        private CS.PlayerFlashed assembleFlashPlayer(DemoInfoModded.Player p)
+        internal ED.PlayerFlashed assembleFlashPlayer(DemoInfoModded.Player p)
         {
-            CS.PlayerFlashed player = new CS.PlayerFlashed
+            ED.PlayerFlashed player = new ED.PlayerFlashed
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                position = new EDVector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
             };
@@ -269,23 +334,23 @@ namespace CSGO_Analytics.src.json.parser
         }*/
 
 
-        public CS.Player assemblePlayer(DemoInfoModded.Player p)
+        internal ED.Player assemblePlayer(DemoInfoModded.Player p)
         {
-            return new CS.Player
+            return new ED.Player
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                position = new EDVector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isSpotted = p.IsSpotted,
-                HP = p.HP  
+                HP = p.HP
             };
         }
 
-        public CS.PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
+        internal ED.PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
         {
-            return new CS.PlayerMeta
+            return new ED.PlayerMeta
             {
                 playername = p.Name,
                 player_id = p.EntityID,
@@ -295,16 +360,21 @@ namespace CSGO_Analytics.src.json.parser
             };
         }
 
-        public CS.PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
+        internal ED.PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
         {
             if (p == null) return null;
+            EDVector3D pos;
+            pos.x = p.Position.X;
+            pos.y = p.Position.Y;
+            pos.z = p.Position.Z;
 
-            return new CS.PlayerDetailed
+            return new ED.PlayerDetailed
             {
+
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                position = pos,
+                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 isSpotted = p.IsSpotted,
@@ -319,14 +389,14 @@ namespace CSGO_Analytics.src.json.parser
         }
 
 
-        public CS.PlayerDetailedWithItems assemblePlayerDetailedWithItems(DemoInfoModded.Player p)
+        internal ED.PlayerDetailedWithItems assemblePlayerDetailedWithItems(DemoInfoModded.Player p)
         {
-            CS.PlayerDetailedWithItems playerdetailed = new CS.PlayerDetailedWithItems
+            ED.PlayerDetailedWithItems playerdetailed = new ED.PlayerDetailedWithItems
             {
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = new CSGO_Analytics.src.math.Vector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
-                facing = new CS.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                position = new EDVector3D { x = p.Position.X, y = p.Position.Y, z = p.Position.Z },
+                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 hasHelmet = p.HasHelmet,
@@ -340,24 +410,24 @@ namespace CSGO_Analytics.src.json.parser
             return playerdetailed;
         }
 
-        public List<CS.Weapon> assembleWeapons(IEnumerable<Equipment> wps)
+        internal List<ED.Weapon> assembleWeapons(IEnumerable<Equipment> wps)
         {
-            List<CS.Weapon> jwps = new List<CS.Weapon>();
+            List<ED.Weapon> jwps = new List<ED.Weapon>();
             foreach (var w in wps)
                 jwps.Add(assembleWeapon(w));
 
             return jwps;
         }
 
-        public CS.Weapon assembleWeapon(Equipment wp)
+        internal ED.Weapon assembleWeapon(Equipment wp)
         {
             if (wp == null)
             {
                 Console.WriteLine("Weapon null. Bytestream not suitable for this version of DemoInfo");
-                return new CS.Weapon();
+                return new ED.Weapon();
             }
 
-            CS.Weapon jwp = new CS.Weapon
+            ED.Weapon jwp = new ED.Weapon
             {
                 //owner = assemblePlayerDetailed(wp.Owner), //TODO: fill weaponcategorie and type
                 name = wp.Weapon.ToString(),
@@ -368,68 +438,6 @@ namespace CSGO_Analytics.src.json.parser
         }
 
         #endregion
-
-        #region Bombevents
-
-        public BombEvents assembleBomb(BombEventArgs be, string gameevent)
-        {
-            return new BombEvents
-            {
-                gameevent = gameevent,
-                site = be.Site,
-                actor = assemblePlayerDetailed(be.Player)
-            };
-        }
-
-        public BombState assembleBombState(BombDropEventArgs be, string gameevent)
-        {
-            return new BombState
-            {
-                gameevent = gameevent,
-                actor = assemblePlayerDetailed(be.Player)
-            };
-        }
-
-        public BombState assembleBombState(BombPickUpEventArgs be, string gameevent)
-        {
-            return new BombState
-            {
-                gameevent = gameevent,
-                actor = assemblePlayerDetailed(be.Player)
-            };
-        }
-
-        public BombEvents assembleBombDefuse(BombDefuseEventArgs bde, string gameevent)
-        {
-            return new BombEvents
-            {
-                gameevent = gameevent,
-                site = bde.Site,
-                actor = assemblePlayerDetailed(bde.Player),
-                haskit = bde.HasKit
-            };
-        }
-        #endregion
-
-
-
-        internal Event assemblePlayerBind(DemoInfoModded.Player player)
-        {
-            return new Event
-            {
-                gameevent = "player_bind",
-                actor = assemblePlayer(player)
-            };
-        }
-
-        internal Event assemblePlayerDisconnected(DemoInfoModded.Player player)
-        {
-            return new Event
-            {
-                gameevent = "player_disconnected",
-                actor = assemblePlayer(player)
-            };
-        }
     }
 
 

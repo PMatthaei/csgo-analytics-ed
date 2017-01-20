@@ -19,9 +19,9 @@ namespace CSGO_Analytics.src.data.gameevents
             return new Player[] { actor };
         }
 
-        public override Vector3D[] getPositions()
+        public override EDVector3D[] getPositions()
         {
-            return new Vector3D[] { actor.position };
+            return new EDVector3D[] { actor.position };
         }
     }
 }

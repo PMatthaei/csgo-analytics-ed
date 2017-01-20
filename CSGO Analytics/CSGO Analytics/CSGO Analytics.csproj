@@ -82,11 +82,12 @@
     <Compile Include="src\encounterdetect\MatchReplay.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
+    <Compile Include="src\math\EDRect.cs" />
     <Compile Include="src\math\IQuadObject.cs" />
-    <Compile Include="src\math\Polygon.cs" />
-    <Compile Include="src\math\QuadTree.cs" />
-    <Compile Include="src\math\Triangle.cs" />
-    <Compile Include="src\math\Vector3D.cs" />
+    <Compile Include="src\math\EDPolygon.cs" />
+    <Compile Include="src\math\QTree.cs" />
+    <Compile Include="src\math\EDTriangle.cs" />
+    <Compile Include="src\math\EDVector3D.cs" />
     <Compile Include="src\data\gamestate\GameStateGenerator.cs" />
     <Compile Include="src\data\gamestate\Gamestate.cs" />
     <Compile Include="src\json\JSONParser.cs" />
@@ -164,6 +165,14 @@
     <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj">
       <Project>{859f0c7d-a7d5-4209-abae-3140a70c7afb}</Project>
       <Name>demoinfo-modded</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\Tools\kd-sharp-master\KDTree\KDTree.csproj">
+      <Project>{33a00a90-c02e-474b-a8c0-3b0559873ea0}</Project>
+      <Name>KDTree</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\Tools\QuadTrees-master\QuadTrees\QuadTrees.csproj">
+      <Project>{36e9b4e0-069d-4163-bab3-2eda2ae7789f}</Project>
+      <Name>QuadTrees</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

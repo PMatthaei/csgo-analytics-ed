@@ -58,7 +58,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private float[][] distance_table;
 
         /// <summary>
-        /// Holds every attacker victim pair of a hitevent with the attacker as key
+        /// Holds every (attackerposition, victimposition) pair of a hitevent with the attackerposition as key
         /// </summary>
         private Hashtable hit_hashtable = new Hashtable();
 
@@ -110,6 +110,14 @@ namespace CSGO_Analytics.src.encounterdetect
             return closed_encounters;
         }
 
+
+
+        //
+        //
+        // MAIN ENCOUNTER DETECTION ALGORITHM
+        //
+        //
+
         /// <summary>
         /// All currently running, not timed out, encounters
         /// </summary>
@@ -119,8 +127,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Timed out encounters
         /// </summary>
         private List<Encounter> closed_encounters = new List<Encounter>();
-
-
 
 
         int pCount = 0;
@@ -173,7 +179,7 @@ namespace CSGO_Analytics.src.encounterdetect
                             }
 
                             updatePlayer(updatedPlayer);
-                            updatePosition(id, updatedPlayer.position.getAsArray()); //First update position then distance!!
+                            updatePosition(id, updatedPlayer.position.getAsArray3D()); //First update position then distance!!
                             updateDistance(id);
                         }
                         else
@@ -254,7 +260,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
             // Dump stats to console
             pCount = nCount + uCount + mCount;
-            Console.WriteLine("Component Predecessors handled: " + pCount);
+            Console.WriteLine("Hashed Hurt Events: " + hit_hashtable.Count);
+            Console.WriteLine("\nComponent Predecessors handled: " + pCount);
             Console.WriteLine("New Encounters occured: " + nCount);
             Console.WriteLine("Encounter Merges occured: " + mCount);
             Console.WriteLine("Encounter Updates occured: " + uCount);
@@ -289,7 +296,7 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
         /// <summary>
-        /// Update a players changeable attributes if he is living.
+        /// Update a players with his most recent version.
         /// </summary>
         /// <param name="updatedPlayer"></param>
         private void updatePlayer(Player updatedPlayer)
@@ -315,7 +322,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <returns></returns>
         private void generateMap()
         {
-            var ps = new List<Vector3D>(); // First we fetch all positions that can help us rebuild the map in a polygonal representation
+            var ps = new List<EDVector3D>(); // First we fetch all positions that can help us rebuild the map in a polygonal representation
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var round in match.rounds)
@@ -602,7 +609,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         handleIncomingHurtEvent(ph, tick.tick_id, links); // CAN PRODUCE SUPPORTLINKS!
 
-                        hit_hashtable[ph.actor] = ph.victim;
+                        hit_hashtable[(ph.actor.position)] = ph.victim.position;
 
                         break;
                     case "player_killed":
@@ -616,7 +623,7 @@ namespace CSGO_Analytics.src.encounterdetect
                             assistCount++;
                         }
 
-                        hit_hashtable[pk.actor] = pk.victim;
+                        hit_hashtable[pk.actor.position] = pk.victim.position;
 
                         break;
                     case "weapon_fire":
@@ -1045,7 +1052,7 @@ namespace CSGO_Analytics.src.encounterdetect
             for (int i = 0; i < distance_table[entityid].Length; i++)
             {
                 if (entityid != i)
-                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new Vector3D(position_table[entityid]), new Vector3D(position_table[i]));
+                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new EDVector3D(position_table[entityid]), new EDVector3D(position_table[i]));
             }
         }
         #endregion
@@ -1113,13 +1120,14 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="ls"></param>
         /// <param name="master"></param>
-        private void AddNecessaryRange(List<Vector3D> ls, List<Vector3D> master)
+        private void AddNecessaryRange(List<EDVector3D> ls, List<EDVector3D> master)
         {
             foreach (var p in ls)
             {
-                 bool add = true;
- 
-                Parallel.ForEach(master, (m , state) => {
+                bool add = true;
+
+                Parallel.ForEach(master, (m, state) =>
+                {
                     if (EDMathLibrary.getEuclidDistance2D(p, m) < CLUSTERINGRANGE)
                     {
                         add = false;
@@ -1159,8 +1167,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public void buildHurtClusters()
         {
-            var starts = new List<Vector3D>();
-            var ends = new List<Vector3D>();
+            var starts = new List<EDVector3D>();
+            var ends = new List<EDVector3D>();
 
             foreach (var round in match.rounds)
             {

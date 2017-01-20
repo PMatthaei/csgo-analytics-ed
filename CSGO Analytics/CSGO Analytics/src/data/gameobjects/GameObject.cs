@@ -22,7 +22,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Current position of the gameobject
         /// </summary>
-        public Vector3D position;
+        public EDVector3D position;
 
         /// <summary>
         /// Time till the object loses relevance and needs to be destroyed(nades, projectiles etc)
@@ -34,7 +34,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             return entityid;
         }
 
-        public Vector3D getPosition()
+        public EDVector3D getPosition()
         {
             return position;
         }

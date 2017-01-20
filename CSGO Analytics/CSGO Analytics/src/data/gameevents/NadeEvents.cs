@@ -15,7 +15,7 @@ namespace CSGO_Analytics.src.data.gameevents
     public class NadeEvents : Event
     {
         public string nadetype { get; set; }
-        public Vector3D position { get; set; }
+        public EDVector3D position { get; set; }
         
         public override Player[] getPlayers()
         {

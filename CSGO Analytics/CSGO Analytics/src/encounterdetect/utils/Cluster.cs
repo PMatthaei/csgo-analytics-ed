@@ -14,23 +14,23 @@ namespace CSGO_Analytics.src.encounterdetect.utils
         private const int MAX_CLUSTER_WIDTH = 30;
         private const int MAX_CLUSTER_HEIGHT = 30;
 
-        public List<Vector3D> vs;
+        public List<EDVector3D> vs;
 
         public Rect cluster;
 
         public Cluster()
         {
-            vs = new List<Vector3D>();
+            vs = new List<EDVector3D>();
             cluster = new Rect();
         }
 
-        public void AddVector(Vector3D v)
+        public void AddVector(EDVector3D v)
         {
             vs.Add(v);
             extendCluster(v);
         }
 
-        public Cluster extendCluster(Vector3D v)
+        public Cluster extendCluster(EDVector3D v)
         {
             var max_x = vs.Max(vec => vec.x);
             var max_y = vs.Max(vec => vec.y);

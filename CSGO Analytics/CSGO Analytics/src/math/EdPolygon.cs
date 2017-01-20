@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 
 namespace CSGO_Analytics.src.math
 {
-    public class Polygon
+    public class EDPolygon
     {
-        public List<Vector3D> ps { get; set; }
+        public List<EDVector3D> ps { get; set; }
 
-        public Polygon() { }
+        public EDPolygon() { }
 
-        public Polygon(Triangle t)
+        public EDPolygon(EDTriangle t)
         {
             this.ps = t.Vertices().ToList();
         }
 
-        public void mergeWithTriangle(Triangle t)
+        public void mergeWithTriangle(EDTriangle t)
         {
             this.ps.AddRange(t.Vertices());
             this.ps.Distinct();
@@ -31,7 +31,7 @@ namespace CSGO_Analytics.src.math
 
         public override bool Equals(object obj)
         {
-            Polygon p = obj as Polygon;
+            EDPolygon p = obj as EDPolygon;
             return p.ps.SequenceEqual(ps);
         }
 
