@@ -179,7 +179,7 @@ namespace CSGO_Analytics.src.encounterdetect
                             }
 
                             updatePlayer(updatedPlayer);
-                            updatePosition(id, updatedPlayer.position.getAsArray3D()); //First update position then distance!!
+                            updatePosition(id, updatedPlayer.position.getAsArray3D()); // First update position then distance!!
                             updateDistance(id);
                         }
                         else
@@ -331,34 +331,6 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     foreach (var gevent in tick.tickevents)
                     {
-                        // Activate if necessary
-                        #region Interpolated positions from hitvectors(vector from attacker to victim)
-                        /*
-                        string weapon = "";
-                        // Add Positions interpolated on Hit-Vectors - every point on the route of a hitvector is viable
-                        switch (gevent.gameevent)
-                        {
-                            case "player_hurt":
-                                PlayerHurt ph = (PlayerHurt)gevent;
-                                weapon = ph.weapon.name;
-                                break;
-                            case "player_death":
-                                PlayerKilled pk = (PlayerKilled)gevent;
-                                weapon = pk.weapon.name;
-                                break;
-                        }
-                        //Exclude some nades because they do not deliver correct positions(nades can explode around corners and after a certain time -> hitvector is falsified)
-                        if (weapon != WeaponType.HE.ToString() && weapon != WeaponType.Incendiary.ToString() && weapon != "")
-                        {
-                            var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");?
-                            var end = gevent.getPositions()[1];
-                            var ipos = EDMathLibrary.linear_interpolatePositions(start, end, 20);
-                            //AddNecessaryRange(ipos, ps);
-                            //ps.AddRange(ipos);
-                            ipCount += ipos.Count;
-                        }
-                        */
-                        #endregion
                         ps.AddRange(gevent.getPositions().ToList());
                     }
                 }
@@ -534,19 +506,21 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private void searchSightbasedCombatLinks(Tick tick, List<Link> links)
         {
-            //
-            // Combatlink Detection based on sight without player_spotted Event:
-            //
 
             // Check for each team if a player can see a player of the other team
             foreach (var player in livingplayers.Where(player => player.getTeam() == Team.CT))
             {
+                var player_maplevel = map.findPlayerLevel(player);
+
                 foreach (var counterplayer in livingplayers.Where(counterplayer => counterplayer.getTeam() == Team.T))
                 {
                     bool playerCanSeeCounter = EDMathLibrary.isInFOV(player.position, player.facing.yaw, counterplayer.position); // Has the updated player spotted someone
                     bool CounterCanSeePlayer = EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.yaw, player.position); // Has someone spotted the player
 
-                    //TODO: occlusion not handled
+                    var counterplayer_maplevel = map.findPlayerLevel(counterplayer);
+                    if(Math.Abs(counterplayer_maplevel.height- player_maplevel.height) > 1){
+
+                    }
                     if (playerCanSeeCounter)
                     {
                         var link = new Link(player, counterplayer, LinkType.COMBATLINK, Direction.DEFAULT);
@@ -1181,6 +1155,40 @@ namespace CSGO_Analytics.src.encounterdetect
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns a list of all interpolated positions between start and end of a hurtevent
+        /// </summary>
+        /// <param name="gevent"></param>
+        /// <returns></returns>
+        public List<EDVector3D> getHitvectorPositions(Event gevent)
+        {
+            List<EDVector3D> ps = new List<EDVector3D>();
+            
+            string weapon = "";
+            // Add Positions interpolated on Hit-Vectors - every point on the route of a hitvector is viable
+            switch (gevent.gameevent)
+            {
+                case "player_hurt":
+                    PlayerHurt ph = (PlayerHurt)gevent;
+                    weapon = ph.weapon.name;
+                    break;
+                case "player_death":
+                    PlayerKilled pk = (PlayerKilled)gevent;
+                    weapon = pk.weapon.name;
+                    break;
+            }
+            //Exclude some nades because they do not deliver correct positions(nades can explode around corners and after a certain time -> hitvector is falsified)
+            if (weapon != WeaponType.HE.ToString() && weapon != WeaponType.Incendiary.ToString() && weapon != "")
+            {
+                var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");?
+                var end = gevent.getPositions()[1];
+                var ipos = EDMathLibrary.linear_interpolatePositions(start, end, 20);
+                ps.AddRange(ipos);
+                ipCount += ipos.Count;
+            }
+            return ps;
         }
     }
 }

@@ -123,7 +123,7 @@ namespace CSGO_Analytics.src.views
             _initbw.DoWork += (sender, args) =>
                 {
                     var path = "match_0.dem";
-                    using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+                    /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
                     {
                         ParseTask ptask = new ParseTask
                         {
@@ -137,8 +137,7 @@ namespace CSGO_Analytics.src.views
                             settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                         };
                         GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-
-                    }
+                    }*/
 
                     using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                     {
@@ -173,7 +172,7 @@ namespace CSGO_Analytics.src.views
             this.mapname = gamestate.meta.mapname;
             string path = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
             //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
-            this.mapmeta = new MapMetaDataPropertyReader(path).metadata;
+            this.mapmeta = MapMetaDataPropertyReader.readProperties(path);
             Console.WriteLine("Loaded Mapdata");
         }
 
@@ -220,9 +219,8 @@ namespace CSGO_Analytics.src.views
 
                 // Initalize all graphical player representations default/start
                 foreach (var p in gamestate.meta.players) // TODO: old data loaded here -> players are drawn where they stood when freeze began
-                {
                     drawPlayer(p);
-                }
+
                 Console.WriteLine("Initialized Map Graphics");
             }));
         }
@@ -260,8 +258,6 @@ namespace CSGO_Analytics.src.views
                         last_tickid = tick.tick_id;
                     int dt = tick.tick_id - last_tickid;
 
-                    if (dt < 0) throw new Exception("Negative time interval not possible");
-
                     int passedTime = (int)(dt * tickrate);// + 2000;
 
                     //Jump out of background to update UI
@@ -270,7 +266,7 @@ namespace CSGO_Analytics.src.views
                         renderTick(tick, comp);
                     }));
 
-                    //Thread.Sleep(passedTime);
+                    Thread.Sleep(passedTime);
 
                     last_tickid = tick.tick_id;
                 }
@@ -367,7 +363,19 @@ namespace CSGO_Analytics.src.views
                             color = Color.FromArgb(255, 0, 255, 255); break; //türkis
                         case 5:
                             color = Color.FromArgb(255, 255, 0, 255); break; //lilarosa
+                        case 6:
+                            color = Color.FromArgb(255, 120, 0, 0); break; //lilarosa
+                        case 7:
+                            color = Color.FromArgb(255, 0, 120, 0); break; //lilarosa
+                        case 8:
+                            color = Color.FromArgb(255, 0, 120, 120); break; //lilarosa
+                        case 9:
+                            color = Color.FromArgb(255, 120, 0, 120); break; //lilarosa
+                        case 10:
+                            color = Color.FromArgb(255, 120, 120, 0); break; //lilarosa
                     }
+
+
                     foreach (var r in this.EDAlgorithm.map.maplevels[i].level_cells)
                     {
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
@@ -375,6 +383,8 @@ namespace CSGO_Analytics.src.views
                             drawRect(r, color);
                         }));
                     }
+
+                    Thread.Sleep(2000);
                 }
             };
             _renderbw.RunWorkerAsync();
@@ -545,11 +555,11 @@ namespace CSGO_Analytics.src.views
             var ps = new System.Windows.Shapes.Rectangle();
             var vector = CSPositionToUIPosition(new math.EDVector3D((float)rect.X, (float)rect.Y, 0));
             ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
-            ps.Width = rect.Width;
-            ps.Height = rect.Height;
-
+            ps.Width = rect.Width * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
+            ps.Height = rect.Height * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
+           
             ps.Fill = new SolidColorBrush(color);
-            ps.Stroke = new SolidColorBrush(color);
+            ps.Stroke = new SolidColorBrush(Color.FromRgb(0,0,0));
             ps.StrokeThickness = 0.5;
 
             mapPanel.Children.Add(ps);
@@ -694,7 +704,6 @@ namespace CSGO_Analytics.src.views
         // EVENTS
         //
         //
-
         #region Events
         //
         //

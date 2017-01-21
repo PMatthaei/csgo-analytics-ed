@@ -9,7 +9,7 @@ using System.Windows.Shapes;
 
 namespace CSGO_Analytics.src.math
 {
-    public class EDRect : IQuadObject
+    public class EDRect
     {
         public double X { get; set; }
         public double Y { get; set; }
@@ -21,34 +21,30 @@ namespace CSGO_Analytics.src.math
         /// </summary>
         public bool occupied { get; set; }
 
-        public Rect Bounds
-        {
-            get
-            {
-                return new Rect(X, Y, Width, Height);
-            }
-        }
 
         public bool Contains(EDVector3D v)
         {
             return new Rect(X, Y, Width, Height).Contains(new Point(v.x,v.y));
         }
 
-        public event EventHandler BoundsChanged;
-
-        private void RaiseBoundsChanged()
-        {
-            EventHandler handler = BoundsChanged;
-            if (handler != null)
-                handler(this, new EventArgs());
-        }
-
+ 
         public override string ToString()
         {
             return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height;
         }
 
-        public System.Drawing.Rectangle getQuadRect()
+        public System.Windows.Rect getAsComputeRect()
+        {
+            return new System.Windows.Rect
+            {
+                X = X,
+                Y = Y,
+                Width = Width,
+                Height = Height
+            };
+        }
+
+        public System.Drawing.Rectangle getAsQuadTreeRect()
         {
             return new System.Drawing.Rectangle {
                 X = (int)X,

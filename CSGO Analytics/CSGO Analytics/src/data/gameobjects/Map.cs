@@ -20,7 +20,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Defines the height of a level. Meaning all points starting from lowest till lowest+levelheight are included.
         /// </summary>
-        private const int LEVELHEIGHT = 120;
+        private const int LEVELHEIGHT = 30;
 
         private const int mapdata_width = 4500;
         private const int mapdata_height = 4500;
@@ -29,8 +29,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
         private static List<EDRect> map_grid;
 
-
-        private const int cellwidth = 10;
+        private const int cellwidth = 50;
 
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to
@@ -68,45 +67,12 @@ namespace CSGO_Analytics.src.data.gameobjects
                     count = 0;
                 }
             }
-            /*for (int i = 0; i < map_grid.Count(); i++)
-            {
-                var line = new EDRect[mapdata_height / cellwidth];
-                for (int j = 0; j < line.Count(); j++)
-                {
-                    line[j] = new EDRect
-                    {
-                        X = currentx,
-                        Y = currenty,
-                        Width = cellwidth,
-                        Height = cellwidth,
-                        occupied = false
-                    };
-                    count++;
-
-                    if(dist_X +cellwidth < mapdata_width)
-                    {
-                        dist_X += cellwidth;
-                        currentx += cellwidth;
-                    }
-                    else
-                    {
-                        currentx = pos_x;
-                        currenty += cellwidth;
-                        dist_X = 0;
-                    }
-
-                }
-                map_grid[i] = line;
-            }*/
-            Console.WriteLine("Gridcells: " + map_grid.Count);
 
             // Create the map levels 
             MapLevel[] maplevels = createMapLevels(ps);
             var map_width_x = ps.Max(point => point.x) - ps.Min(point => point.x);
             var map_width_y = ps.Max(point => point.y) - ps.Min(point => point.y);
             Console.WriteLine("Max x: " + ps.Max(point => point.x) + " Min x: " + ps.Min(point => point.x));
-            Console.WriteLine("Max y: " + ps.Max(point => point.y) + " Min y: " + ps.Min(point => point.y));
-            Console.WriteLine("Mapwidth in x-Range: " + map_width_x + " Mapwidth in y-Range: " + map_width_y);
             Console.WriteLine("Mapwidth in x-Range: " + map_width_x + " Mapwidth in y-Range: " + map_width_y);
 
             return new Map(map_width_x, map_width_y, maplevels);
@@ -121,14 +87,14 @@ namespace CSGO_Analytics.src.data.gameobjects
             Console.WriteLine("Levels to create: " + levelamount);
             var min_z = ps.Min(point => point.z);
             var max_z = ps.Max(point => point.z);
-            Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
+            //Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
 
             for (int i = 0; i < levelamount; i++)
             {
                 var upperbound = min_z + (i + 1) * LEVELHEIGHT;
                 var lowerbound = min_z + i * LEVELHEIGHT;
                 var levelps = ps.Where(point => point.z >= lowerbound && point.z <= upperbound).OrderBy(point => point.z);
-                Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
+                // Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
 
                 if (levelps.Count() == 0)
                 {
@@ -137,9 +103,11 @@ namespace CSGO_Analytics.src.data.gameobjects
                 }
 
                 Console.WriteLine("Level " + i + ": " + levelps.Count() + " points");
-                Console.WriteLine("Level " + i + " starts: " + levelps.First().ToString());
-                Console.WriteLine("Level " + i + " ends: " + levelps.Last().ToString());
-                maplevels[i] = new MapLevel(levelps.ToList(), map_grid);
+                //Console.WriteLine("Level " + i + " starts: " + levelps.First().ToString());
+                //Console.WriteLine("Level " + i + " ends: " + levelps.Last().ToString());
+                var ml = new MapLevel(levelps.ToList(), i);
+                ml.assignLevelcells(map_grid);
+                maplevels[i] = ml;
             }
 
             return maplevels;
@@ -161,8 +129,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest ( 2nd floor etc)
         /// </summary>
         public MapLevel[] maplevels;
-        public float[] maplevels_min_z;
-        public float[] maplevels_max_z;
 
         /// <summary>
         /// Width in x range
@@ -182,6 +148,22 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
 
         /// <summary>
+        /// Returns if this player is standing on the level
+        /// </summary>
+        /// <returns></returns>
+        public MapLevel findPlayerLevel(Player p)
+        {
+            foreach (var level in maplevels)
+            {
+                var ps = level.ps;
+                var pz = p.position.z;
+                if (pz <= ps.Max(point => point.z) && pz >= ps.Min(point => point.z))
+                    return level;
+            }
+            return null;
+
+        }
+        /// <summary>
         /// Returns a bounding box of the map with root at 0,0
         /// </summary>
         /// <returns></returns>
@@ -200,175 +182,58 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     public class MapLevel
     {
-
+        /// <summary>
+        /// Points describing this level
+        /// </summary>
         public List<EDVector3D> ps;
+
+        /// <summary>
+        /// Height of this level on the map - > 0 lowest level 
+        /// </summary>
+        public int height; 
 
         private Hashtable cell_hashtable = new Hashtable();
 
+        /// <summary>
+        /// All map cells representing the obstacles of this maplevel
+        /// </summary>
         public List<EDRect> level_cells = new List<EDRect>();
 
-
-        static readonly object _gridreserverlock = new object();
-
-        public MapLevel(List<EDVector3D> nps, List<EDRect> map_grid)
+        public MapLevel(List<EDVector3D> nps, int height)
         {
-            var grid_copy = map_grid.ToList();
+            this.ps = nps;
+            this.height = height;
+        }
 
-            //nps = removeOutliers(nps);
-
-            // Deprecated: too slow
-            #region Threaded approach
-            /*var watch = System.Diagnostics.Stopwatch.StartNew();
-            ps = nps.Where((p, index) => index % 8 == 0).ToList();
-            Parallel.ForEach(ps, (v) =>
-             {
-                 lock (gridreserverlock)
-                 {
-                     for (int i = grid_copy.Count - 1; i >= 0; i--)
-                     {
-                         var cell = grid_copy[i];
-                         if (cell.Contains(v) && !cell.occupied)
-                         {
-                             cell.occupied = true;
-                             level_cells.Add(cell);
-                             grid_copy.RemoveAt(i);
-                             break;
-                         }
-                     }
-                 }
-             });
-             watch.Stop();
-             var sec = watch.ElapsedMilliseconds / 1000.0f;
-             Console.WriteLine("Time to assign cells: " + sec);*/
-
-            #endregion
-
-            // Deprecated: too slow
-            #region Un-threaded approach
-            /*var watch = System.Diagnostics.Stopwatch.StartNew();
-            ps = nps.Where((p, index) => index % 8 == 0).ToList(); //Reduces amount of points by taking every 2nd element
-
-            for (int i = 0; i < ps.Count; i++)
-            {
-                var v = ps[i];
-                for (int j = grid_copy.Count - 1; j >= 0; j--)
-                {
-                    var cell = grid_copy[j];
-                    if (cell.Contains(v))
-                    {
-                        cell.occupied = true;
-                        level_cells.Add(cell);
-                        grid_copy.RemoveAt(i);
-                        break;
-                    }
-                }
-            }
-            watch.Stop();
-            var sec = watch.ElapsedMilliseconds / 1000.0f;
-            Console.WriteLine("Time to assign cells: " + sec);*/
-            #endregion
-
+        public void assignLevelcells(List<EDRect> map_grid)
+        {
             #region QuadTree Approach
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>(); // can handle ALL! points in a fair time!!
-            foreach (var v in nps)
-            {
-                if (!qtree.Contains(v))
-                    qtree.Add(v);
-            }
 
-            foreach(var cell in map_grid)
+            QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
+            removeOutliers(ps).Distinct().ToList().ForEach(v => qtree.Add(v));
+
+            foreach (var cell in map_grid)
             {
-                var rectps = qtree.GetObjects(cell.getQuadRect()); //Get points in a cell
-                if(rectps.Count > 1) //if at least 2 points are within the rect -> mark cell as part of the level
+                var rectps = qtree.GetObjects(cell.getAsQuadTreeRect()); //Get points in a cell
+                if (rectps.Count > 1) //If at least 2 points are within the rect -> mark cell as part of the level
                     level_cells.Add(cell);
             }
 
+            // TODO: Solve maximal rectangle problem
+
+            Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
             Console.WriteLine("Time to assign cells: " + sec);
             #endregion
-
-            Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
-
         }
 
+        //TODO:
         private List<EDVector3D> removeOutliers(List<EDVector3D> ps)
         {
-            return null;
+            return ps;
         }
-
-        #region TODO
-        /// <summary>
-        /// All polygons defining this level
-        /// </summary>
-        private List<EDPolygon> polygons;
-        private EDPolygon polygon;
-
-        /// <summary>
-        /// Removes all outliers from the point cloud ps to enhance the polygonal map representation.
-        /// Outliers create scattered polygons on every level which do not represent a part of the map.
-        /// </summary>
-        /// <param name="ps"></param>
-        /// <returns></returns>
-
-
-
-        /// <summary>
-        /// Find a polygonal representation of the points to do calculates
-        /// </summary>
-        /// <param name="levelpoints"></param>
-        /// <returns></returns>
-        private List<EDPolygon> findPolygonsFromPoints(List<EDVector3D> levelpoints)
-        {
-            int count = 0;
-            List<EDTriangle> triangles = new List<EDTriangle>();
-            foreach (var p in levelpoints) // Foreach point search 2 nearest points and build a triangle polygon
-            {
-                var nearestpoints = levelpoints.Where(other => EDMathLibrary.getEuclidDistance2D(other, p) < 50).OrderBy(other => EDMathLibrary.getEuclidDistance2D(other, p)).ToList();
-                if (nearestpoints.Count >= 2)
-                {
-                    triangles.Add(new EDTriangle
-                    {
-                        NODE1 = p,
-                        NODE2 = nearestpoints[0],
-                        NODE3 = nearestpoints[1]
-                    });
-                    triangles.Add(new EDTriangle
-                    {
-                        NODE1 = p,
-                        NODE2 = nearestpoints[0],
-                        NODE3 = nearestpoints[1]
-                    });
-                }
-                else
-                    count++;
-            }
-            Console.WriteLine(triangles.Count + " Triangles from " + levelpoints.Count + " Points");
-            Console.WriteLine(triangles.Distinct().Count() + " Distinct Triangles");
-            Console.WriteLine("Triangle with not enough neighbors: " + count);
-            count = 0;
-            var finaltriangles = mergeTriangles(triangles);
-
-            Console.WriteLine("Levelpolygons: " + finaltriangles.Count);
-            foreach (var t in finaltriangles)
-                count += t.ps.Count;
-            Console.WriteLine("Total Points: " + count);
-
-            return finaltriangles;
-        }
-
-        private List<EDPolygon> mergeTriangles(List<EDTriangle> triangles)
-        {
-            return new List<EDPolygon>();
-        }
-
-        public List<EDPolygon> getLevelPolygons()
-        {
-            return polygons;
-        }
-        #endregion
-
     }
 
     public class MapMetaData
@@ -383,48 +248,50 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     public class MapMetaDataPropertyReader
     {
-        public MapMetaData metadata;
-
         /// <summary>
         /// Reads a map info file "<mapname>".txt and extracts the relevant data about the map
         /// </summary>
         /// <param name="path"></param>
-        public MapMetaDataPropertyReader(string path)
+        public static MapMetaData readProperties(string path)
         {
             string line;
 
             var fmt = new NumberFormatInfo();
             fmt.NegativeSign = "-";
 
-            metadata = new MapMetaData();
-            StreamReader file = new StreamReader(path);
-            while ((line = file.ReadLine()) != null)
+            MapMetaData metadata = new MapMetaData();
+            using (var file = new StreamReader(path))
             {
-                var resultString = Regex.Match(line, @"-?\d+").Value; //Match negative and positive int numbers
+                while ((line = file.ReadLine()) != null)
+                {
+                    var resultString = Regex.Match(line, @"-?\d+").Value; //Match negative and positive int numbers
 
-                if (line.Contains("pos_x"))
-                {
-                    metadata.mapcenter_x = double.Parse(resultString, fmt);
+                    if (line.Contains("pos_x"))
+                    {
+                        metadata.mapcenter_x = double.Parse(resultString, fmt);
+                    }
+                    else if (line.Contains("pos_y"))
+                    {
+                        metadata.mapcenter_y = double.Parse(resultString, fmt);
+                    }
+                    else if (line.Contains("scale"))
+                    {
+                        metadata.scale = Double.Parse(resultString);
+                    }
+                    else if (line.Contains("rotate"))
+                    {
+                        metadata.rotate = Int32.Parse(resultString);
+                    }
+                    else if (line.Contains("zoom"))
+                    {
+                        metadata.zoom = Double.Parse(resultString);
+                    }
                 }
-                else if (line.Contains("pos_y"))
-                {
-                    metadata.mapcenter_y = double.Parse(resultString, fmt);
-                }
-                else if (line.Contains("scale"))
-                {
-                    metadata.scale = Double.Parse(resultString);
-                }
-                else if (line.Contains("rotate"))
-                {
-                    metadata.rotate = Int32.Parse(resultString);
-                }
-                else if (line.Contains("zoom"))
-                {
-                    metadata.zoom = Double.Parse(resultString);
-                }
+
+                file.Close();
             }
-
-            file.Close();
+            return metadata;
         }
+
     }
 }
