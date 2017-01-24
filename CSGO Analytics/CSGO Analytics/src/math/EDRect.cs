@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QuadTrees.QTreePoint;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Drawing;
 
 namespace CSGO_Analytics.src.math
 {
@@ -21,16 +23,27 @@ namespace CSGO_Analytics.src.math
         /// </summary>
         public bool occupied { get; set; }
 
-
         public bool Contains(EDVector3D v)
         {
-            return new Rect(X, Y, Width, Height).Contains(new Point(v.x,v.y));
+            return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.x,v.y));
         }
 
  
         public override string ToString()
         {
             return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height;
+        }
+
+        public override bool Equals(object obj)
+        {
+            EDRect r = obj as EDRect;
+
+            return r.X == X && r.Y == Y && r.Width == Width && r.Height == Height;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
 
         public System.Windows.Rect getAsComputeRect()

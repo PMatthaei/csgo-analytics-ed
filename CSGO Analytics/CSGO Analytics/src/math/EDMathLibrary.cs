@@ -35,7 +35,7 @@ namespace CSGO_Analytics.src.math
                 currentdx = currentdx + -dx / steps;
                 currentdy = currentdy + -dy / steps;
                 currentdz = currentdz + -dz / steps;
-                ps.Add(new EDVector3D(start.x + currentdx, start.y + currentdy, start.z+currentdz));
+                ps.Add(new EDVector3D(start.x + currentdx, start.y + currentdy, start.z + currentdz));
                 count++;
             }
             return ps;
@@ -127,20 +127,47 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.y;
 
             double theta = ScalarProductAngle(new EDVector3D(aimdx, aimdy, 0), new EDVector3D((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-             //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
-            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 ) // No max sight distance to restrict FOV
-                    return true;
+                                                                                                                         //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
+            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2) // No max sight distance to restrict FOV
+                return true;
             return false;
         }
+        /// <summary>
+        /// Test if a vetor from actor to reciever collides with a rect representing a wall or obstacle.
+        /// </summary>
+        /// <param name="actorpos"></param>
+        /// <param name="recieverpos"></param>
+        /// <param name="level_cells"></param>
+        /// <returns></returns>
+
+        static readonly object _object = new object();
+
+        static int testcount;
+        public static EDRect vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
+        {
+            Console.WriteLine("Testnr: " + testcount);
+
+            var wallcells = m.level_walls.Where((cell, index) => index % 3000 == 0);
+            foreach (var rect in wallcells)
+            {
+                testcount++;
+                if (LineIntersectsRect(actorpos, recieverpos, rect))
+                {
+                    return rect;
+                }
+            }
+            return null;
+        }
+
 
         /// <summary>
-        /// Tests if a vector clips a sphere simplified as a Ellipse/Circle(Smoke grenade)
+        /// Tests if a vector clips a 2d sphere simplified as a Ellipse/Circle(Smoke grenade)
         /// </summary>
         /// <param name="sphere"></param>
         /// <param name="actorpos"></param>
         /// <param name="actorYaw"></param>
         /// <returns></returns>
-        public static bool vectorClipsSphere2D(float sphereCenterX, float sphereCenterY, float sphereRadius, EDVector3D actorpos, float actorYaw)
+        public static bool vectorIntersectsSphere2D(float sphereCenterX, float sphereCenterY, float sphereRadius, EDVector3D actorpos, float actorYaw)
         {
             // Yaw has to be negated (csgo -> normal)
             var aimX = (float)(actorpos.x + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw 
@@ -163,7 +190,7 @@ namespace CSGO_Analytics.src.math
             var ey = t * dy + aimY;
 
             // compute the euclidean distance from E to C
-            var distanceEC = getEuclidDistance2D(new EDVector3D((float)ex, (float)ey,0), new EDVector3D(sphereCenterX,sphereCenterY,0));
+            var distanceEC = getEuclidDistance2D(new EDVector3D((float)ex, (float)ey, 0), new EDVector3D(sphereCenterX, sphereCenterY, 0));
 
             // test if the line intersects the circle
             if (distanceEC < sphereRadius)
@@ -201,25 +228,46 @@ namespace CSGO_Analytics.src.math
             return getEuclidDistance2D(new EDVector3D(cx, cy, 0), p) <= r;
         }
 
+        public static bool LineIntersectsRect(EDVector3D p1, EDVector3D p2, EDRect r)
+        {
+            return LineIntersectsLine(p1, p2, new EDVector3D((float)r.X, (float)r.Y, 0), new EDVector3D((float)(r.X + r.Width), (float)r.Y, 0)) ||
+                   LineIntersectsLine(p1, p2, new EDVector3D((float)(r.X + r.Width), (float)r.Y, 0), new EDVector3D((float)(r.X + r.Width), (float)(r.Y + r.Height), 0)) ||
+                   LineIntersectsLine(p1, p2, new EDVector3D((float)(r.X + r.Width), (float)(r.Y + r.Height), 0), new EDVector3D((float)r.X, (float)(r.Y + r.Height), 0)) ||
+                   LineIntersectsLine(p1, p2, new EDVector3D((float)r.X, (float)(r.Y + r.Height), 0), new EDVector3D((float)r.X, (float)r.Y, 0)) ||
+                   (r.Contains(p1) && r.Contains(p2));
+        }
+
+        private static bool LineIntersectsLine(EDVector3D l1p1, EDVector3D l1p2, EDVector3D l2p1, EDVector3D l2p2)
+        {
+            float q = (float)((l1p1.y - l2p1.y) * (l2p2.x - l2p1.x) - (l1p1.x - l2p1.x) * (l2p2.y - l2p1.y));
+            float d = (float)((l1p2.x - l1p1.x) * (l2p2.y - l2p1.y) - (l1p2.y - l1p1.y) * (l2p2.x - l2p1.x));
+
+            if (d == 0)
+            {
+                return false;
+            }
+
+            float r = q / d;
+
+            q = (float)((l1p1.y - l2p1.y) * (l1p2.x - l1p1.x) - (l1p1.x - l2p1.x) * (l1p2.y - l1p1.y));
+            float s = q / d;
+
+            if (r < 0 || r > 1 || s < 0 || s > 1)
+            {
+                return false;
+            }
+
+            return true;
+        }
 
 
 
         //
         //
-        // COMPLEX HULL OF POINTS
+        // BASICS
         //
         //
-        
-    
-
-
-
-    //
-    //
-    // BASICS
-    //
-    //
-    public static double ScalarProductAngle(EDVector3D v1, EDVector3D v2)
+        public static double ScalarProductAngle(EDVector3D v1, EDVector3D v2)
         {
             return Math.Acos((v1.x * v2.x + v1.y * v2.y + v1.z * v2.z) / (v1.Absolute() * v2.Absolute()));
         }
@@ -248,12 +296,13 @@ namespace CSGO_Analytics.src.math
         /// <param name="pos"></param>
         /// <param name="yaw"></param>
         /// <returns></returns>
-        public EDVector3D getAimVector(EDVector3D pos, Facing facing)
+        public static EDVector3D getAimVector(EDVector3D pos, Facing facing)
         {
             var aimX = (float)(pos.x + Math.Cos(toRadian(-facing.yaw)));// Aim vector from Yaw
             var aimY = (float)(pos.y + Math.Sin(toRadian(-facing.yaw)));
+            var aimZ = (float)(pos.y + Math.Sin(toRadian(-facing.pitch))); //TODO: richtig?!?!
 
-            return new EDVector3D(aimX, aimY, 0); //TODO: 3D level calc is missing(z achsis change with pitch)
+            return new EDVector3D(aimX, aimY, aimZ);
         }
 
         /// <summary>

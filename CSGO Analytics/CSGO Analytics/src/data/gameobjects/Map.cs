@@ -14,13 +14,91 @@ using QuadTrees.Common;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
+    public class Map
+    {
+        /// <summary>
+        /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest ( 2nd floor etc)
+        /// </summary>
+        public MapLevel[] maplevels;
+
+        /// <summary>
+        /// Width in x range
+        /// </summary>
+        private float width_x;
+
+        /// <summary>
+        /// Width in y range
+        /// </summary>
+        private float width_y;
+
+        public Map(float width_x, float width_y, MapLevel[] maplevels)
+        {
+            this.width_x = width_x;
+            this.width_y = width_y;
+            this.maplevels = maplevels;
+        }
+
+        /// <summary>
+        /// Returns if this player is standing on the level
+        /// </summary>
+        /// <returns></returns>
+        public MapLevel findPlayerLevel(Player p)
+        {
+            foreach (var level in maplevels)
+            {
+                var ps = level.ps;
+                var pz = p.position.z;
+                if (pz <= level.max_z && pz >= level.min_z)
+                    return level;
+            }
+            return null;
+
+        }
+        /// <summary>
+        /// Returns a bounding box of the map with root at 0,0
+        /// </summary>
+        /// <returns></returns>
+        public EDRect getMapBoundingBox()
+        {
+            return new EDRect
+            {
+                X = 0,
+                Y = 0,
+                Width = this.width_x,
+                Height = this.width_y
+            };
+        }
+
+        /// <summary>
+        /// Returns arry of indices maplevel of all maplevels this players aimvector has clipped
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="player_maplevel"></param>
+        /// <returns></returns>
+        internal int[] getClippedLevels(Player player, int player_maplevelheight)
+        {
+            var levelamount = maplevels.Length;
+            var aim = EDMathLibrary.getAimVector(player.position, player.facing);
+            var clips = levelamount - player_maplevelheight;
+            int[] clipped_levels = new int[clips];
+
+            if (aim.z > player.position.z)
+                for (int i = 0; i < clips; i++)
+                    clipped_levels[i] = player_maplevelheight + i;
+            if (aim.z < player.position.z)
+                for (int i = 0; i < clips; i++)
+                    clipped_levels[i] = player_maplevelheight - i;
+
+            return clipped_levels;
+        }
+    }
 
     public class MapCreator
     {
         /// <summary>
         /// Defines the height of a level. Meaning all points starting from lowest till lowest+levelheight are included.
         /// </summary>
-        private const int LEVELHEIGHT = 30;
+        private const int LEVELHEIGHT = 120;
 
         private const int mapdata_width = 4500;
         private const int mapdata_height = 4500;
@@ -56,7 +134,7 @@ namespace CSGO_Analytics.src.data.gameobjects
                 });
                 count++;
 
-                if (count % (mapdata_width / cellwidth) != 0)// new line segment
+                if (count % (mapdata_width / cellwidth) != 0)// new linesegment
                 {
                     currentx += cellwidth;
                 }
@@ -123,63 +201,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
     }
 
-    public class Map
-    {
-        /// <summary>
-        /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest ( 2nd floor etc)
-        /// </summary>
-        public MapLevel[] maplevels;
-
-        /// <summary>
-        /// Width in x range
-        /// </summary>
-        private float width_x;
-
-        /// <summary>
-        /// Width in y range
-        /// </summary>
-        private float width_y;
-
-        public Map(float width_x, float width_y, MapLevel[] maplevels)
-        {
-            this.width_x = width_x;
-            this.width_y = width_y;
-            this.maplevels = maplevels;
-        }
-
-        /// <summary>
-        /// Returns if this player is standing on the level
-        /// </summary>
-        /// <returns></returns>
-        public MapLevel findPlayerLevel(Player p)
-        {
-            foreach (var level in maplevels)
-            {
-                var ps = level.ps;
-                var pz = p.position.z;
-                if (pz <= ps.Max(point => point.z) && pz >= ps.Min(point => point.z))
-                    return level;
-            }
-            return null;
-
-        }
-        /// <summary>
-        /// Returns a bounding box of the map with root at 0,0
-        /// </summary>
-        /// <returns></returns>
-        public EDRect getMapBoundingBox()
-        {
-            return new EDRect
-            {
-                X = 0,
-                Y = 0,
-                Width = this.width_x,
-                Height = this.width_y
-            };
-        }
-
-    }
-
     public class MapLevel
     {
         /// <summary>
@@ -192,16 +213,24 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// </summary>
         public int height; 
 
-        private Hashtable cell_hashtable = new Hashtable();
-
         /// <summary>
-        /// All map cells representing the obstacles of this maplevel
+        /// All map cells representing the free, walkable space of this level
         /// </summary>
         public List<EDRect> level_cells = new List<EDRect>();
+
+        /// <summary>
+        /// All map cells representing obstacles and walls on this level
+        /// </summary>
+        public List<EDRect> level_walls = new List<EDRect>();
+
+        public float min_z, max_z;
 
         public MapLevel(List<EDVector3D> nps, int height)
         {
             this.ps = nps;
+            this.max_z = ps.Max(point => point.z);
+            this.min_z = ps.Min(point => point.z);
+
             this.height = height;
         }
 
@@ -212,16 +241,18 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
             removeOutliers(ps).Distinct().ToList().ForEach(v => qtree.Add(v));
-
             foreach (var cell in map_grid)
             {
                 var rectps = qtree.GetObjects(cell.getAsQuadTreeRect()); //Get points in a cell
-                if (rectps.Count > 1) //If at least 2 points are within the rect -> mark cell as part of the level
+                if (rectps.Count > 0) //If at least 2 points are within the rect -> mark cell as part of the level
                     level_cells.Add(cell);
             }
 
-            // TODO: Solve maximal rectangle problem
+            level_walls = map_grid.ToList().Except(level_cells).ToList();
 
+            // TODO: Solve maximal rectangle problem
+            // TODO: Fill holes cells with more than 2 or 3 neighbors -> prevent obstacles which are not there just because nobody has walked at this cell
+            // TODO: Remove outliers of pointclouds
             Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
@@ -229,7 +260,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             #endregion
         }
 
-        //TODO:
         private List<EDVector3D> removeOutliers(List<EDVector3D> ps)
         {
             return ps;

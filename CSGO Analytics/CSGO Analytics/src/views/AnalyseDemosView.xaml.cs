@@ -121,40 +121,19 @@ namespace CSGO_Analytics.src.views
             BackgroundWorker _initbw = new BackgroundWorker();
 
             _initbw.DoWork += (sender, args) =>
-                {
-                    var path = "match_0.dem";
-                    /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
-                    {
-                        ParseTask ptask = new ParseTask
-                        {
-                            destpath = path,
-                            srcpath = path,
-                            usepretty = true,
-                            showsteps = true,
-                            specialevents = true,
-                            highdetailplayer = true,
-                            positioninterval = 8,
-                            settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                        };
-                        GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-                    }*/
+            {
+                ReadDemodata();
 
-                    using (var reader = new StreamReader(path.Replace(".dem", ".json")))
-                    {
-                        this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                        this.EDAlgorithm = new EncounterDetectionAlgorithm(gamestate);
-                    }
+                InitializeEncounterDetection();
 
-                    InitializeEncounterDetection();
+                InitializeGUIData();
 
-                    InitializeGUIData();
+                LoadMapData();
 
-                    LoadMapData();
+                InitalizeMapConstants();
 
-                    InitalizeMapConstants();
-
-                    InitializeMapGraphic();
-                };
+                InitializeMapGraphic();
+            };
 
             _initbw.RunWorkerCompleted += (sender, args) =>
             {
@@ -165,6 +144,31 @@ namespace CSGO_Analytics.src.views
             _initbw.RunWorkerAsync();
         }
 
+        private void ReadDemodata()
+        {
+            var path = "match_0.dem";
+            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            {
+                ParseTask ptask = new ParseTask
+                {
+                    destpath = path,
+                    srcpath = path,
+                    usepretty = true,
+                    showsteps = true,
+                    specialevents = true,
+                    highdetailplayer = true,
+                    positioninterval = 8,
+                    settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                };
+                GameStateGenerator.GenerateJSONFile(demoparser, ptask);
+            }*/
+
+            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+            {
+                this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
+                this.EDAlgorithm = new EncounterDetectionAlgorithm(gamestate);
+            }
+        }
 
         private void LoadMapData()
         {
@@ -237,7 +241,6 @@ namespace CSGO_Analytics.src.views
         private void playMatch()
         {
             Console.WriteLine("Play Match");
-            Console.WriteLine("Matchreplay found: " + matchreplay != null);
 
             if (matchreplay == null)
                 return;
