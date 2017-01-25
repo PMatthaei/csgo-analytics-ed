@@ -62,13 +62,6 @@ namespace CSGO_Analytics.src.views
         private double scalefactor_map;
         private double map_width;
         private double map_height;
-        private double map_x;
-        private double map_y;
-        private int mapcenter_x;
-        private int mapcenter_y;
-        private double scale;
-        private int rotate;
-        private double zoom;
 
 
         //
@@ -115,6 +108,8 @@ namespace CSGO_Analytics.src.views
 
             InitializeAnalysetools();
         }
+
+
 
         private void InitializeAnalysetools()
         {
@@ -195,10 +190,6 @@ namespace CSGO_Analytics.src.views
 
         }
 
-
-        /// <summary>
-        /// MapPanel and minimap viewbox are initalized
-        /// </summary>
         private void InitializeMapGraphic()
         {
             // Jump out of Background to update UI
@@ -229,13 +220,13 @@ namespace CSGO_Analytics.src.views
             }));
         }
 
-
         public void InitializeEncounterDetection()
         {
             this.matchreplay = this.EDAlgorithm.run(); // Run the algorithm
 
             Console.WriteLine("Initialized ED");
         }
+
 
 
         private void playMatch()
@@ -440,8 +431,8 @@ namespace CSGO_Analytics.src.views
         {
             math.EDVector3D nadepos = CSPositionToUIPosition(n.position);
             NadeShape ns = new NadeShape();
-            ns.X = nadepos.x;
-            ns.Y = nadepos.y;
+            ns.X = nadepos.X;
+            ns.Y = nadepos.Y;
             ns.Radius = 20;
             Color color = Color.FromArgb(0, 0, 0, 0);
             switch (n.gameevent)
@@ -471,7 +462,7 @@ namespace CSGO_Analytics.src.views
 
             foreach (var ns in activeNades)
             {
-                if (ns.X == nadepos.x && ns.Y == nadepos.y)
+                if (ns.X == nadepos.X && ns.Y == nadepos.Y)
                 {
                     activeNades.Remove(ns);
                     mapPanel.Children.Remove(ns);
@@ -542,7 +533,7 @@ namespace CSGO_Analytics.src.views
         {
             var ps = new System.Windows.Shapes.Ellipse();
             var vector = CSPositionToUIPosition(position);
-            ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
+            ps.Margin = new Thickness(vector.X, vector.Y, 0, 0);
             ps.Width = 4;
             ps.Height = 4;
 
@@ -557,7 +548,7 @@ namespace CSGO_Analytics.src.views
         {
             var ps = new System.Windows.Shapes.Rectangle();
             var vector = CSPositionToUIPosition(new math.EDVector3D((float)rect.X, (float)rect.Y, 0));
-            ps.Margin = new Thickness(vector.x, vector.y, 0, 0);
+            ps.Margin = new Thickness(vector.X, vector.Y, 0, 0);
             ps.Width = rect.Width * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
             ps.Height = rect.Height * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
            
@@ -573,8 +564,8 @@ namespace CSGO_Analytics.src.views
             var ps = new PlayerShape();
             ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.yaw);
             var vector = CSPositionToUIPosition(p.position);
-            ps.X = vector.x;
-            ps.Y = vector.y;
+            ps.X = vector.X;
+            ps.Y = vector.Y;
             ps.Radius = 4;
             Color color;
 
@@ -641,8 +632,8 @@ namespace CSGO_Analytics.src.views
             }
 
             var vector = CSPositionToUIPosition(p.position);
-            ps.X = vector.x;
-            ps.Y = vector.y;
+            ps.X = vector.X;
+            ps.Y = vector.Y;
             ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.yaw);
 
         }
@@ -882,9 +873,9 @@ namespace CSGO_Analytics.src.views
         public static EDM.EDVector3D CSPositionToUIPosition(EDM.EDVector3D p)
         {
             // Calculate a given demo point into a point suitable for our gui minimap: therefore we need a rotation factor, the origin of the coordinate and other data about the map. 
-            var x = Math.Abs(map_origin.x - p.x) * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
-            var y = Math.Abs(map_origin.y - p.y) * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
-            return new EDM.EDVector3D((float)x, (float)y, p.z);
+            var x = Math.Abs(map_origin.X - p.X) * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
+            var y = Math.Abs(map_origin.Y - p.Y) * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
+            return new EDM.EDVector3D((float)x, (float)y, p.Z);
         }
         #endregion
     }

@@ -70,8 +70,8 @@ namespace CSGO_Analytics.src.data.gameevents
 
             if (this.isEndEventOf(other) && this.actor.Equals(other.actor) && this.nadetype == other.nadetype)
             {
-                var dx = Math.Abs(other.position.x - this.position.x);
-                var dy = Math.Abs(other.position.y - this.position.y);
+                var dx = Math.Abs(other.position.X - this.position.X);
+                var dy = Math.Abs(other.position.Y - this.position.Y);
                 if (dx < 10 && dy < 10) // 10 units tolerance to confirm the nade
                     return true;
             }
@@ -83,8 +83,8 @@ namespace CSGO_Analytics.src.data.gameevents
             unchecked
             {
                 int hash = 17;
-                hash = hash * 23 + position.x.GetHashCode();
-                hash = hash * 23 + position.y.GetHashCode();
+                hash = hash * 23 + position.X.GetHashCode();
+                hash = hash * 23 + position.Y.GetHashCode();
                 return hash;
             }
         }

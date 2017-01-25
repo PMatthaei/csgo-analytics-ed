@@ -11,35 +11,35 @@ namespace CSGO_Analytics.src.math
 {
     public struct EDVector3D : IComparable, IComparable<EDVector3D>, IEquatable<EDVector3D>, IPointQuadStorable
     {
-        public float x, y, z;
+        public float X, Y, Z;
 
         public System.Drawing.Point Point
         {
             get
             {
-                return new System.Drawing.Point((int)x, (int)y);
+                return new System.Drawing.Point((int)X, (int)Y);
             }
         }
 
         public EDVector3D(float nx, float ny, float nz)
         {
-            x = nx;
-            y = ny;
-            z = nz;
+            X = nx;
+            Y = ny;
+            Z = nz;
         }
         public float getY()
         {
-            return y;
+            return Y;
         }
 
         public float getXZ()
         {
-            return z;
+            return Z;
         }
 
         public float getX()
         {
-            return x;
+            return X;
         }
 
 
@@ -49,14 +49,14 @@ namespace CSGO_Analytics.src.math
         /// <param name="arr"></param>
         public EDVector3D(float[] arr)
         {
-            x = arr[0];
-            y = arr[1];
-            z = arr[2];
+            X = arr[0];
+            Y = arr[1];
+            Z = arr[2];
         }
 
         public EDVector3D Copy()
         {
-            return new EDVector3D(x, y, z);
+            return new EDVector3D(X, Y, Z);
         }
 
 
@@ -70,23 +70,23 @@ namespace CSGO_Analytics.src.math
         public double AbsoluteSquared()
 
         {
-            return this.x * this.x + this.y * this.y + this.z * this.z;
+            return this.X * this.X + this.Y * this.Y + this.Z * this.Z;
 
         }
 
         public float[] getAsArray3D()
         {
-            return new float[] { x, y, z };
+            return new float[] { X, Y, Z };
         }
 
         public double[] getAsDoubleArray2D()
         {
-            return new double[] { x, y };
+            return new double[] { X, Y };
         }
 
         public override string ToString()
         {
-            return "x: " + x + " y: " + y + " z: " + z;
+            return "x: " + X + " y: " + Y + " z: " + Z;
         }
 
         public int CompareTo(object other)
@@ -112,12 +112,27 @@ namespace CSGO_Analytics.src.math
             return 0;
         }
 
+        public static EDVector3D operator +(EDVector3D v, EDVector3D w)
+        {
+            return new EDVector3D(v.X + w.X, v.Y + w.Y, v.Z + w.Z);
+        }
+
+        public static EDVector3D operator -(EDVector3D v, EDVector3D w)
+        {
+            return new EDVector3D(v.X - w.X, v.Y - w.Y, v.Z - w.Z);
+        }
+
+        public static EDVector3D operator *(float factor, EDVector3D v)
+        {
+            return new EDVector3D(v.X * factor, v.Y * factor, v.Z * factor);
+        }
+
         public static bool operator ==(EDVector3D v1, EDVector3D v2)
         {
             return
-                v1.x == v2.x &&
-                v1.y == v2.y &&
-                v1.z == v2.z;
+                v1.X == v2.X &&
+                v1.Y == v2.Y &&
+                v1.Z == v2.Z;
         }
 
         public static bool operator !=(EDVector3D v1, EDVector3D v2)
@@ -137,7 +152,7 @@ namespace CSGO_Analytics.src.math
 
         public static double SumComponents(EDVector3D v1)
         {
-            return v1.x + v1.y + v1.z;
+            return v1.X + v1.Y + v1.Z;
         }
 
         public static double SumComponentSqrs(EDVector3D v1)
@@ -154,9 +169,9 @@ namespace CSGO_Analytics.src.math
         public static EDVector3D SqrComponents(EDVector3D v1)
         {
             return new EDVector3D(
-                v1.x * v1.x,
-                v1.y * v1.y,
-                v1.z * v1.z);
+                v1.X * v1.X,
+                v1.Y * v1.Y,
+                v1.Z * v1.Z);
         }
 
         public double SumComponentSqrs()
@@ -181,18 +196,18 @@ namespace CSGO_Analytics.src.math
         public bool Equals(EDVector3D other)
         {
             return
-               this.x.Equals(other.x) &&
-               this.y.Equals(other.y) &&
-               this.z.Equals(other.z);
+               this.X.Equals(other.X) &&
+               this.Y.Equals(other.Y) &&
+               this.Z.Equals(other.Z);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                var hashCode = this.x.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.y.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.z.GetHashCode();
+                var hashCode = this.X.GetHashCode();
+                hashCode = (hashCode * 397) ^ this.Y.GetHashCode();
+                hashCode = (hashCode * 397) ^ this.Z.GetHashCode();
                 return hashCode;
             }
         }

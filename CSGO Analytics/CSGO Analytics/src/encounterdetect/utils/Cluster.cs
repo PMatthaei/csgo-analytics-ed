@@ -32,10 +32,10 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 
         public Cluster extendCluster(EDVector3D v)
         {
-            var max_x = vs.Max(vec => vec.x);
-            var max_y = vs.Max(vec => vec.y);
-            var min_x = vs.Min(vec => vec.x);
-            var min_y = vs.Min(vec => vec.y);
+            var max_x = vs.Max(vec => vec.X);
+            var max_y = vs.Max(vec => vec.Y);
+            var min_x = vs.Min(vec => vec.X);
+            var min_y = vs.Min(vec => vec.Y);
 
             if (cluster.X > min_x)
                 cluster.X = min_x;

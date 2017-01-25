@@ -1,4 +1,4 @@
-﻿using QuadTrees.QTreePoint;
+﻿using QuadTrees.QTreeRect;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ using System.Drawing;
 
 namespace CSGO_Analytics.src.math
 {
-    public class EDRect
+    public class EDRect : IRectQuadStorable
     {
         public double X { get; set; }
         public double Y { get; set; }
@@ -23,9 +23,17 @@ namespace CSGO_Analytics.src.math
         /// </summary>
         public bool occupied { get; set; }
 
+        public System.Drawing.Rectangle Rect
+        {
+            get
+            {
+                return getAsQuadTreeRect();
+            }
+        }
+
         public bool Contains(EDVector3D v)
         {
-            return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.x,v.y));
+            return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.X,v.Y));
         }
 
  

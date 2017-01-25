@@ -83,8 +83,6 @@
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
     <Compile Include="src\math\EDRect.cs" />
-    <Compile Include="src\math\EDPolygon.cs" />
-    <Compile Include="src\math\EDTriangle.cs" />
     <Compile Include="src\math\EDVector3D.cs" />
     <Compile Include="src\data\gamestate\GameStateGenerator.cs" />
     <Compile Include="src\data\gamestate\Gamestate.cs" />
