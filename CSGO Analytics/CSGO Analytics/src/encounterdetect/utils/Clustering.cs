@@ -5,78 +5,173 @@ using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.math;
 using System.Windows;
+using System.Collections;
 
 namespace CSGO_Analytics.src.encounterdetect.utils
-
 {
-    class Cluster
+    public class Cluster
     {
-        private const int MAX_CLUSTER_WIDTH = 30;
-        private const int MAX_CLUSTER_HEIGHT = 30;
+        public HashSet<EDVector3D> data;
+        public int[] clusterdata { get; set; }
+        public bool IsValueData { get; set; }
+        public double cluster_attackrange { get; set; }
 
-        public List<EDVector3D> vs;
-
-        public Rect cluster;
-
-        public Cluster()
+        public Cluster(bool isValueData)
         {
-            vs = new List<EDVector3D>();
-            cluster = new Rect();
+            IsValueData = isValueData;
+            data = new HashSet<EDVector3D>();
         }
 
-        public void AddVector(EDVector3D v)
+        public void calculateClusterAttackrange(Hashtable ht)
         {
-            vs.Add(v);
-            extendCluster(v);
+            double[] distances = new double[data.Count];
+            int arr_ptr = 0;
+            if (data.Count == 0) return;
+            foreach (var pos in data)
+            {
+                if (!IsValueData)
+                {
+                    EDVector3D value = (EDVector3D)ht[pos]; // No Z variable no hashtable entry -> null -.-
+                    distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, value);
+                    arr_ptr++;
+                }
+                else
+                {
+                    EDVector3D key;
+                    EDVector3D? nkey = searchKey(pos, ht);
+                    key = nkey ?? default(EDVector3D);
+                    distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, key);
+                    arr_ptr++;
+                }
+            }
+
+            cluster_attackrange = distances.Average();
+            Console.WriteLine("Attackrange for this cluster is: " + cluster_attackrange);
         }
 
-        public Cluster extendCluster(EDVector3D v)
+        public EDRect getBoundings()
         {
-            var max_x = vs.Max(vec => vec.X);
-            var max_y = vs.Max(vec => vec.Y);
-            var min_x = vs.Min(vec => vec.X);
-            var min_y = vs.Min(vec => vec.Y);
-
-            if (cluster.X > min_x)
-                cluster.X = min_x;
-            if (cluster.Y > min_y)
-                cluster.Y = min_y;
-            if (cluster.X + cluster.Width < max_x)
-                cluster.Width = max_x - cluster.X;
-            if (cluster.Y + cluster.Height < max_y)
-                cluster.Height = max_y - cluster.Y;
-
-            if (cluster.Width > MAX_CLUSTER_WIDTH || cluster.Height > MAX_CLUSTER_HEIGHT)
-                return splitCluster();
-            else
-                return null;
+            var min_x = data.Min(point => point.X);
+            var min_y = data.Min(point => point.Y);
+            var max_x = data.Max(point => point.X);
+            var max_y = data.Max(point => point.Y);
+            var dx = max_x - min_x;
+            var dy = max_y - min_y;
+            return new EDRect { X = min_x, Y = min_y, Width = dx, Height = dy };
         }
 
-        private Cluster splitCluster()
+        private EDVector3D? searchKey(EDVector3D value, Hashtable ht)
         {
+            foreach (DictionaryEntry p in ht)
+            {
+                if ((EDVector3D)p.Value == value)
+                    return (EDVector3D)p.Key;
+            }
             return null;
+        }
+
+        public void AddPosition(EDVector3D p)
+        {
+            data.Add(p);
         }
     }
 
-
-    // K-means clustering demo. ('Lloyd's algorithm')
-    // Coded using static methods. Normal error-checking removed for clarity.
-    // This code can be used in at least two ways. You can do a copy-paste and then insert the code into some system that uses clustering.
-    // Or you can wrap the code up in a Class Library. The single public method is Cluster().
-
-
-    class KMeansDemo
+    /// <summary>
+    /// K-means clustering('Lloyd's algorithm')
+    /// </summary>
+    /// 
+    public class Clustering
     {
 
+        static void test(string[] args)
+        {
+            Console.WriteLine("\nBegin k-means clustering demo\n");
 
-        // ============================================================================
+            // real data likely to come from a text file or SQL
+            double[][] rawData = new double[20][];
+            rawData[0] = new double[] { 65.0, 220.0 };
+            rawData[1] = new double[] { 73.0, 160.0 };
+            rawData[2] = new double[] { 59.0, 110.0 };
+            rawData[3] = new double[] { 61.0, 120.0 };
+            rawData[4] = new double[] { 75.0, 150.0 };
+            rawData[5] = new double[] { 67.0, 240.0 };
+            rawData[6] = new double[] { 68.0, 230.0 };
+            rawData[7] = new double[] { 70.0, 220.0 };
+            rawData[8] = new double[] { 62.0, 130.0 };
+            rawData[9] = new double[] { 66.0, 210.0 };
+            rawData[10] = new double[] { 77.0, 190.0 };
+            rawData[11] = new double[] { 75.0, 180.0 };
+            rawData[12] = new double[] { 74.0, 170.0 };
+            rawData[13] = new double[] { 70.0, 210.0 };
+            rawData[14] = new double[] { 61.0, 110.0 };
+            rawData[15] = new double[] { 58.0, 100.0 };
+            rawData[16] = new double[] { 66.0, 230.0 };
+            rawData[17] = new double[] { 59.0, 120.0 };
+            rawData[18] = new double[] { 68.0, 210.0 };
+            rawData[19] = new double[] { 61.0, 130.0 };
 
+            Console.WriteLine("Raw unclustered data:\n");
+            Console.WriteLine("    Height Weight");
+            Console.WriteLine("-------------------");
+            ShowData(rawData, 1, true, true);
+
+            int numClusters = 3;
+            Console.WriteLine("\nSetting numClusters to " + numClusters);
+
+            int[] clustering = Cluster(rawData, numClusters); // this is it
+
+            Console.WriteLine("\nK-means clustering complete\n");
+
+            Console.WriteLine("Final clustering in internal form:\n");
+            ShowVector(clustering, true);
+
+            Console.WriteLine("Raw data by cluster:\n");
+            ShowClustered(rawData, clustering, numClusters, 1);
+
+            Console.WriteLine("\nEnd k-means clustering demo\n");
+            Console.ReadLine();
+
+        }
+
+
+        public static Cluster[] createPositionClusters(List<EDVector3D> ps, int numClusters, bool isValueData)
+        {
+            double[][] posdata = new double[ps.Count()][];
+            int data_ptr = 0;
+            foreach (var p in ps)
+            {
+                posdata[data_ptr] = p.getAsDoubleArray2D();
+                data_ptr++;
+            }
+            int[] clusters_data = Cluster(posdata, numClusters);
+
+            Cluster[] clusters = new Cluster[numClusters];
+            for (int i = 0; i < clusters.Length; i++)
+            {
+                clusters[i] = new Cluster(isValueData);
+            }
+
+            for (int tupleid = 0; tupleid < clusters_data.Length; tupleid++)
+            {
+                var clusterid = clusters_data[tupleid];
+                clusters[clusterid].AddPosition(new EDVector3D(posdata[tupleid]));
+            }
+
+            return clusters;
+        }
+
+        /// <summary>
+        /// k-means clustering
+        /// index of return is tuple ID, cell is cluster ID
+        /// ex: [2 1 0 0 2 2] means tuple 0 is cluster 2, tuple 1 is cluster 1, tuple 2 is cluster 0, tuple 3 is cluster 0, etc.
+        /// an alternative clustering DS to save space is to use the .NET BitArray class
+        /// </summary>
+        /// <param name="rawData"></param>
+        /// <param name="numClusters"></param>
+        /// <returns></returns>
         public static int[] Cluster(double[][] rawData, int numClusters)
         {
-            // k-means clustering
-            // index of return is tuple ID, cell is cluster ID
-            // ex: [2 1 0 0 2 2] means tuple 0 is cluster 2, tuple 1 is cluster 1, tuple 2 is cluster 0, tuple 3 is cluster 0, etc.
-            // an alternative clustering DS to save space is to use the .NET BitArray class
+
             double[][] data = Normalized(rawData); // so large values don't dominate
 
             bool changed = true; // was there a change in at least one cluster assignment?
@@ -322,9 +417,10 @@ namespace CSGO_Analytics.src.encounterdetect.utils
                     Console.WriteLine("");
                 }
                 Console.WriteLine("===================");
-            } // k
+            }
         }
-    } // Program
-} // ns
+    }
+}
+
 
 

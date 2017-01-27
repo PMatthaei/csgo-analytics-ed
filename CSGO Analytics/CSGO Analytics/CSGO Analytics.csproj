@@ -74,13 +74,14 @@
     <Compile Include="src\data\gameobjects\Map.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
-    <Compile Include="src\encounterdetect\utils\Cluster.cs" />
+    <Compile Include="src\encounterdetect\utils\Clustering.cs" />
     <Compile Include="src\encounterdetect\Encounter.cs" />
     <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\MatchReplay.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
+    <Compile Include="src\export\CSVExporter.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
     <Compile Include="src\math\EDRect.cs" />
     <Compile Include="src\math\EDVector3D.cs" />

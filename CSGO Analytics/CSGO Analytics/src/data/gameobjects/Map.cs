@@ -17,7 +17,7 @@ namespace CSGO_Analytics.src.data.gameobjects
     public class Map
     {
         /// <summary>
-        /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest ( 2nd floor etc)
+        /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest (2nd floor etc)
         /// </summary>
         public MapLevel[] maplevels;
 
@@ -82,12 +82,12 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             int index = 0;
             if (starth < endh) // Case: p1 is standing on a level below p2
-                for (int i = starth + 1; i <= endh; i++)
+                for (int i = starth + 1; i < endh; i++)
                 {
                     clipped_levels[index] = maplevels[i];
                     index++;
                 }
-            else if (endh < starth) // Case: p2 is standing on a level below p1
+            else if (endh > starth) // Case: p2 is standing on a level below p1
                 for (int i = starth - 1; i > endh; i--)
                 {
                     clipped_levels[index] = maplevels[i];

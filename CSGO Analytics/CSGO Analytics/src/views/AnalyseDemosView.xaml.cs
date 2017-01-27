@@ -37,6 +37,7 @@ namespace CSGO_Analytics.src.views
         /// </summary>
         private BackgroundWorker _replaybw = new BackgroundWorker();
 
+
         private EncounterDetectionAlgorithm EDAlgorithm;
 
         /// <summary>
@@ -333,6 +334,64 @@ namespace CSGO_Analytics.src.views
         #region Rendering additional visuals
         private BackgroundWorker _renderbw = new BackgroundWorker();
 
+        public void renderHurtClusters()
+        {
+            Console.WriteLine("Render Hurteventclusters Levels");
+            _renderbw.DoWork += (sender, args) =>
+            {
+
+                for (int i = 0; i < this.EDAlgorithm.attacker_clusters.Length; i++)
+                {
+                    //var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
+                    var c = this.EDAlgorithm.attacker_clusters[i];
+                    foreach(var p in c.data)
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                        {
+                            drawPos(p, Color.FromRgb(255, 0, 0));
+                        }));
+                    }
+                    var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        drawHollowRect(r, Color.FromRgb(255,0,0));
+                    }));
+                    Thread.Sleep(4000);  
+                }
+
+                Thread.Sleep(2000);
+
+                for (int i = 0; i < this.EDAlgorithm.victim_clusters.Length; i++)
+                {
+
+
+                    var c = this.EDAlgorithm.victim_clusters[i];
+                    foreach (var p in c.data)
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                        {
+                            drawPos(p, Color.FromRgb(0, 255, 0));
+                        }));
+                    }
+                    var r = this.EDAlgorithm.victim_clusters[i].getBoundings();
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        drawHollowRect(r, Color.FromRgb(0, 255, 0));
+                    }));
+                    Thread.Sleep(4000);
+
+                }
+
+            };
+            _renderbw.RunWorkerAsync();
+
+            _renderbw.RunWorkerCompleted += (sender, args) =>
+            {
+                if (args.Error != null)
+                    MessageBox.Show(args.Error.ToString());
+            };
+        }
+
         public void renderMapLevels()
         {
             Console.WriteLine("Render Map Levels");
@@ -559,6 +618,20 @@ namespace CSGO_Analytics.src.views
             mapPanel.Children.Add(ps);
         }
 
+        private void drawHollowRect(math.EDRect rect, Color color)
+        {
+            var ps = new System.Windows.Shapes.Rectangle();
+            var vector = CSPositionToUIPosition(new math.EDVector3D((float)rect.X, (float)rect.Y, 0));
+            ps.Margin = new Thickness(vector.X, vector.Y, 0, 0);
+            ps.Width = rect.Width * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
+            ps.Height = rect.Height * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
+
+            ps.Stroke = new SolidColorBrush(color);
+            ps.StrokeThickness = 0.5;
+
+            mapPanel.Children.Add(ps);
+        }
+
         private void drawPlayer(Player p)
         {
             var ps = new PlayerShape();
@@ -713,7 +786,8 @@ namespace CSGO_Analytics.src.views
 
         private void Button_play(object sender, RoutedEventArgs e)
         {
-            renderMapLevels();
+            //renderMapLevels();
+            renderHurtClusters();
             /*if (paused)
                 _busy.Set();
             else

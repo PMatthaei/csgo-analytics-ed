@@ -53,6 +53,17 @@ namespace CSGO_Analytics.src.math
             Y = arr[1];
             Z = arr[2];
         }
+        public EDVector3D(double[] arr)
+        {
+            X = (float)arr[0];
+            Y = (float)arr[1];
+            Z = 0;
+        }
+
+        public EDVector3D RemoveZ()
+        {
+            return new EDVector3D(X,Y,0);
+        }
 
         public EDVector3D Copy()
         {
