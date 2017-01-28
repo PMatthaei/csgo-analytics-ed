@@ -77,22 +77,28 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <returns></returns>
         internal MapLevel[] getClippedLevels(int starth, int endh)
         {
-            var length = Math.Abs(starth - endh) - 1;
-            MapLevel[] clipped_levels = new MapLevel[length];
+            var level_diff = Math.Abs(starth - endh);
+            if(level_diff == 1) return new MapLevel[] {maplevels[endh] };
+
+            MapLevel[] clipped_levels = new MapLevel[level_diff];
 
             int index = 0;
             if (starth < endh) // Case: p1 is standing on a level below p2
-                for (int i = starth + 1; i < endh; i++)
+                for (int i = starth + 1; i <= endh; i++)
                 {
                     clipped_levels[index] = maplevels[i];
                     index++;
                 }
-            else if (endh > starth) // Case: p2 is standing on a level below p1
-                for (int i = starth - 1; i > endh; i--)
+            else if (starth > endh) // Case: p2 is standing on a level below p1
+                for (int i = starth - 1; i >= endh; i--)
                 {
                     clipped_levels[index] = maplevels[i];
                     index++;
                 }
+            if (clipped_levels.Count() == 0) throw new Exception("Clipped Maplevel List cannot be empty");
+
+            foreach (var m in clipped_levels)
+                if (m == null) throw new Exception("Clipped Maplevel cannot be null");
 
             #region Deprecated
             /*
@@ -127,7 +133,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             }
 
         }
-        public List<MapLevel> getMapLevelNeighbors(int ml_height)
+        public List<MapLevel> getMapLevelNeighbors(int ml_height) //TODO: ist schlecht
         {
             var mls = new List<MapLevel>();
             var upperIndex = ml_height + 1;
@@ -160,7 +166,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
         private static HashSet<EDRect> map_grid;
 
-        private const int cellwidth = 50;
+        private const int cellwidth = 45;
 
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to

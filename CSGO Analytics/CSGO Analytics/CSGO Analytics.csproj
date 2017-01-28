@@ -112,7 +112,6 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\views\AnalyseDemosModel.cs" />
     <Compile Include="src\views\AnalyseDemosView.xaml.cs">
       <DependentUpon>AnalyseDemosView.xaml</DependentUpon>
     </Compile>
@@ -162,10 +161,6 @@
     <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj">
       <Project>{859f0c7d-a7d5-4209-abae-3140a70c7afb}</Project>
       <Name>demoinfo-modded</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\Tools\kd-sharp-master\KDTree\KDTree.csproj">
-      <Project>{33a00a90-c02e-474b-a8c0-3b0559873ea0}</Project>
-      <Name>KDTree</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\..\Tools\QuadTrees-master\QuadTrees\QuadTrees.csproj">
       <Project>{36e9b4e0-069d-4163-bab3-2eda2ae7789f}</Project>

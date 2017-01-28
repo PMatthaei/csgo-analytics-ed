@@ -32,11 +32,6 @@ namespace CSGO_Analytics.src.views
     /// </summary>
     public partial class AnalyseDemosView : Page
     {
-        /// <summary>
-        /// Backgroundworker to handle the replay. Especially preventing UI-Thread Blocking!
-        /// </summary>
-        private BackgroundWorker _replaybw = new BackgroundWorker();
-
 
         private EncounterDetectionAlgorithm EDAlgorithm;
 
@@ -107,6 +102,9 @@ namespace CSGO_Analytics.src.views
         {
             InitializeComponent();
 
+            main_panel.IsEnabled = false; //Block panel while initializaiton is running
+            progress_label.Content = "Processing Data. Detecting Encounters. Please wait ...";
+
             InitializeAnalysetools();
         }
 
@@ -118,6 +116,7 @@ namespace CSGO_Analytics.src.views
 
             _initbw.DoWork += (sender, args) =>
             {
+
                 ReadDemodata();
 
                 InitializeEncounterDetection();
@@ -129,6 +128,15 @@ namespace CSGO_Analytics.src.views
                 InitalizeMapConstants();
 
                 InitializeMapGraphic();
+
+                //Wake up panel after everything has loaded -> UI ready to be clicked
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    main_panel.IsEnabled = true;
+                    progress_label.Content = "";
+                    progress_label.Visibility = Visibility.Hidden;
+                }));
+
             };
 
             _initbw.RunWorkerCompleted += (sender, args) =>
@@ -187,6 +195,17 @@ namespace CSGO_Analytics.src.views
                 time_slider.Minimum = 0;
                 time_slider.Maximum = gamestate.match.rounds.Last().ticks.Last().tick_id;
             }));
+
+            foreach(var p in gamestate.meta.players)
+            {
+                if(p.getTeam() == Team.CT)
+                {
+
+                } else
+                {
+
+                }
+            }
             Console.WriteLine("Initialized GUI");
 
         }
@@ -229,6 +248,10 @@ namespace CSGO_Analytics.src.views
         }
 
 
+        /// <summary>
+        /// Backgroundworker to handle the replay. Especially preventing UI-Thread Blocking!
+        /// </summary>
+        private BackgroundWorker _replaybw = new BackgroundWorker();
 
         private void playMatch()
         {
@@ -344,11 +367,15 @@ namespace CSGO_Analytics.src.views
                 {
                     //var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
                     var c = this.EDAlgorithm.attacker_clusters[i];
+                    var victimpos = new List<EDM.EDVector3D>();
                     foreach(var p in c.data)
                     {
+                        var vp = (math.EDVector3D)this.EDAlgorithm.hit_hashtable[p];
+                        victimpos.Add(vp);
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                         {
                             drawPos(p, Color.FromRgb(255, 0, 0));
+                            drawPos(vp, Color.FromRgb(0, 255, 0));
                         }));
                     }
                     var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
@@ -356,27 +383,10 @@ namespace CSGO_Analytics.src.views
                     {
                         drawHollowRect(r, Color.FromRgb(255,0,0));
                     }));
-                    Thread.Sleep(4000);  
-                }
-
-                Thread.Sleep(2000);
-
-                for (int i = 0; i < this.EDAlgorithm.victim_clusters.Length; i++)
-                {
-
-
-                    var c = this.EDAlgorithm.victim_clusters[i];
-                    foreach (var p in c.data)
-                    {
-                        Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                        {
-                            drawPos(p, Color.FromRgb(0, 255, 0));
-                        }));
-                    }
-                    var r = this.EDAlgorithm.victim_clusters[i].getBoundings();
+                    var vr = EDM.EDMathLibrary.getPointCloudBoundings(victimpos);
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        drawHollowRect(r, Color.FromRgb(0, 255, 0));
+                        drawHollowRect(vr, Color.FromRgb(0, 255, 0));
                     }));
                     Thread.Sleep(4000);
 
@@ -449,20 +459,6 @@ namespace CSGO_Analytics.src.views
             };
         }
 
-        public void renderHurtPositions(Tick tick)
-        {
-            foreach (var e in tick.tickevents)
-            {
-                if (e.gameevent == "player_hurt" || e.gameevent == "player_death")
-                {
-                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        drawPos(e.getPositions()[0], Color.FromArgb(255, 255, 0, 0));
-                        drawPos(e.getPositions()[1], Color.FromArgb(255, 0, 255, 0));
-                    }));
-                }
-            }
-        }
         #endregion
 
 
@@ -716,7 +712,9 @@ namespace CSGO_Analytics.src.views
 
 
         //
+        //
         // UI Functionality - Screenshots, Render Match as AVI etc
+        //
         //
         #region Functionality
         private bool screenshotcooldown = false;
@@ -786,8 +784,8 @@ namespace CSGO_Analytics.src.views
 
         private void Button_play(object sender, RoutedEventArgs e)
         {
-            //renderMapLevels();
-            renderHurtClusters();
+            renderMapLevels();
+            //renderHurtClusters();
             /*if (paused)
                 _busy.Set();
             else

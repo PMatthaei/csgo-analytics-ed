@@ -9,7 +9,7 @@
       Title="AnalyseDemosView" >
 
     <Grid>
-        <DockPanel HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro">
+        <DockPanel x:Name="main_panel" HorizontalAlignment="Left" Height="740" LastChildFill="False" VerticalAlignment="Top" Width="1148" Background="Gainsboro">
             <Grid Height="740" VerticalAlignment="Top" Width="1148">
                 <TabControl x:Name="tabControl" HorizontalAlignment="Left" Height="715" Margin="10,10,0,0" VerticalAlignment="Top" Width="1128" KeyDown="TabControl_KeyDown">
                     <TabItem Header="Live view">
@@ -23,7 +23,9 @@
                                 <ColumnDefinition Width="79*"/>
                                 <ColumnDefinition Width="1036*"/>
                             </Grid.ColumnDefinitions>
-                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="575" Margin="95,15,0,0" VerticalAlignment="Top" Width="935" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnLefttMouseButtonUp" MouseMove="Canvas_OnMouseMove" MouseLeave="Canvas_OnMouseLeave" Grid.RowSpan="3"/>
+                            <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="575" Margin="95,15,0,0" VerticalAlignment="Top" Width="935" Background="Black" Grid.Column="1" MouseWheel="Canvas_OnMouseWheel" MouseLeftButtonDown="Canvas_OnLeftMouseButtonDown" MouseLeftButtonUp="Canvas_OnLefttMouseButtonUp" MouseMove="Canvas_OnMouseMove" MouseLeave="Canvas_OnMouseLeave" Grid.RowSpan="3">
+                                <Label x:Name="progress_label" Content="" Canvas.Left="268" Canvas.Top="278" Width="400" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFDFDFD" HorizontalContentAlignment="Center"/>
+                            </Canvas>
                             <Slider x:Name="time_slider" HorizontalAlignment="Left" Margin="114,321,0,0" VerticalAlignment="Top" Width="866" Grid.Column="1" Grid.Row="2"/>
                             <Label x:Name="time_label" Content="Time: 00:00:00" HorizontalAlignment="Left" Margin="114,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
                             <Label x:Name="tick_label" Content="Tick: 0" HorizontalAlignment="Left" Margin="938,285,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="2"/>
@@ -34,15 +36,15 @@
                             <Button x:Name="button4" Content="&lt;&lt;" HorizontalAlignment="Left" Margin="406,291,0,0" VerticalAlignment="Top" Width="40" Grid.Column="1" Grid.Row="2"/>
                             <Menu x:Name="menu" HorizontalAlignment="Left" Height="673" Margin="0,14,0,0" VerticalAlignment="Top" Width="170" Grid.ColumnSpan="2" Grid.RowSpan="3">
                                 <Label Content="Team Terrorists:"/>
-                                <ListBoxItem Content="Player1" Width="150"/>
-                                <ListBoxItem Content="Player2" Width="150"/>
-                                <ListBoxItem Content="Player3" Width="150"/>
+                                <ListBoxItem Content="Player 1" Width="150"/>
+                                <ListBoxItem Content="Player 2" Width="150"/>
+                                <ListBoxItem Content="Player 3" Width="150"/>
                                 <ListBoxItem Content="Player 4" Width="150"/>
                                 <ListBoxItem Content="Player 5" Width="150"/>
                                 <Label Content="Team CounterTerrorists:"/>
-                                <ListBoxItem Content="Player1" Width="150"/>
-                                <ListBoxItem Content="Player2" Width="150"/>
-                                <ListBoxItem Content="Player3" Width="150"/>
+                                <ListBoxItem Content="Player 1" Width="150"/>
+                                <ListBoxItem Content="Player 2" Width="150"/>
+                                <ListBoxItem Content="Player 3" Width="150"/>
                                 <ListBoxItem Content="Player 4" Width="150"/>
                                 <ListBoxItem Content="Player 5" Width="150"/>
 

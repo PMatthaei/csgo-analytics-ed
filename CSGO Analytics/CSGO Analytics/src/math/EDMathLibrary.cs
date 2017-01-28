@@ -140,8 +140,9 @@ namespace CSGO_Analytics.src.math
         /// <param name="recieverpos"></param>
         /// <param name="level_cells"></param>
         /// <returns></returns>
-        public static EDRect vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
+        public static EDVector3D? vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
         {
+            if (m == null) throw new Exception("Maplevel cannot be null");
             var min_x = Math.Min(actorpos.X, recieverpos.X);
             var max_x = Math.Max(actorpos.X, recieverpos.X);
             var min_y = Math.Min(actorpos.Y, recieverpos.Y);
@@ -156,7 +157,7 @@ namespace CSGO_Analytics.src.math
                 var intersection_point = LineIntersectsRect(actorpos, recieverpos, qr);
                 if (intersection_point != null)
                 {
-                    return qr;
+                    return intersection_point;
                 }
             }
 
@@ -310,6 +311,17 @@ namespace CSGO_Analytics.src.math
             }
 
             return a1 + t * b;
+        }
+
+        public static EDRect getPointCloudBoundings(List<EDVector3D> data)
+        {
+            var min_x = data.Min(point => point.X);
+            var min_y = data.Min(point => point.Y);
+            var max_x = data.Max(point => point.X);
+            var max_y = data.Max(point => point.Y);
+            var dx = max_x - min_x;
+            var dy = max_y - min_y;
+            return new EDRect { X = min_x, Y = max_y, Width = dx, Height = dy };
         }
 
         //

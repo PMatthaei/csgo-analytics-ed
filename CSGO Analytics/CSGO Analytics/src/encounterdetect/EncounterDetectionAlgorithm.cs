@@ -18,7 +18,7 @@ namespace CSGO_Analytics.src.encounterdetect
     public class EncounterDetectionAlgorithm
     {
         //
-        // VARIABLES AND CONSTANTS
+        // CONSTANTS
         //
 
         // Timeouts in seconds.
@@ -34,10 +34,15 @@ namespace CSGO_Analytics.src.encounterdetect
         private const float DECOY_ATTRACTION_ANGLE = 10;
         private const float DECOY_SUPPORTRANGE = 200;
 
-        private const float ATTACKRANGE = 500.0f;
-        private const float SUPPORTRANGE = 300.0f;
+        private const float ATTACKRANGE_FIXED = 500.0f;
+        private const float SUPPORTRANGE_FIXED = 300.0f;
 
-        private const float CLUSTERINGRANGE = 20.0f;
+        //
+        // Variables
+        //
+
+        private double SUPPORTRANGE_AVERAGE;
+        private double ATTACKRANGE_AVERAGE;
 
         /// <summary>
         /// Tickrate of the demo this algorithm runs on. 
@@ -61,7 +66,8 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Holds every (attackerposition, victimposition) pair of a hitevent with the attackerposition as key
         /// </summary>
-        private Hashtable hit_hashtable = new Hashtable();
+        public Hashtable hit_hashtable = new Hashtable();
+        private Hashtable assist_hashtable = new Hashtable();
 
         private const int CLUSTER_NUM = 6; // TODO: 5 seems like a good value-> why? define starting from 7 it makes no sense
         public Cluster[] attacker_clusters;
@@ -107,8 +113,15 @@ namespace CSGO_Analytics.src.encounterdetect
 
             initTables(ownid); // Initalize tables for all players(should be 10 for csgo)
 
-            generateMap();
-            generateHurteventClusters(hit_hashtable);
+            // Gather data and prepare
+            var ps = preprocessReplayData();
+            // Generate Map
+            map = MapCreator.createMap(ps);
+            // Generate Clusters
+            attacker_clusters = Clustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
+            foreach (var a in attacker_clusters)
+                a.calculateClusterAttackrange(hit_hashtable);
+
         }
 
         public Player[] getPlayers()
@@ -174,7 +187,6 @@ namespace CSGO_Analytics.src.encounterdetect
             MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            sightwatch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var round in match.rounds)
             {
                 foreach (var tick in new HashSet<Tick>(round.ticks))
@@ -274,6 +286,7 @@ namespace CSGO_Analytics.src.encounterdetect
             // Dump stats to console
             pCount = nCount + uCount + mCount;
             Console.WriteLine("Hashed Hurt Events: " + hit_hashtable.Count);
+            Console.WriteLine("Hashed Assist Events: " + assist_hashtable.Count);
             Console.WriteLine("\nComponent Predecessors handled: " + pCount);
             Console.WriteLine("New Encounters occured: " + nCount);
             Console.WriteLine("Encounter Merges occured: " + mCount);
@@ -333,53 +346,58 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Collect all positions of this replay necessary to build a approximate representation of the map
+        /// Collect all positions of this replay necessary to build a approximate representation of the map and calculate all necessary data to 
+        /// continue with algorithms
         /// </summary>
         /// <returns></returns>
-        private void generateMap()
+        private HashSet<EDVector3D> preprocessReplayData()
         {
             var ps = new HashSet<EDVector3D>();
-
-            var watch = System.Diagnostics.Stopwatch.StartNew();
+            List<double> hurt_ranges = new List<double>();
+            List<double> support_ranges = new List<double>();
 
             #region Collect positions for preprocessing 
-            foreach (var round in match.rounds)//TODO: move this somewhere clearer. we build the hashtable of all hurtevents and collect all positions for map creation
+            foreach (var round in match.rounds)
             {
                 foreach (var tick in round.ticks)
                 {
                     foreach (var gevent in tick.tickevents)
                     {
-                        if (gevent.gameevent == "player_hurt" || gevent.gameevent == "player_killed")
+                        switch(gevent.gameevent)
                         {
-                            PlayerHurt ph = (PlayerHurt)gevent;
-                            hit_hashtable[ph.actor.position.RemoveZ()] = ph.victim.position.RemoveZ();
+                            case "player_hurt":
+                                PlayerHurt ph = (PlayerHurt)gevent;
+                                hit_hashtable[ph.actor.position.RemoveZ()] = ph.victim.position.RemoveZ();
+                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(ph.actor.position, ph.victim.position));
+                                break;
+                            case "player_killed":
+                                PlayerKilled pk = (PlayerKilled)gevent;
+                                hit_hashtable[pk.actor.position.RemoveZ()] = pk.victim.position.RemoveZ();
+                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.victim.position));
+
+                                if (pk.assister != null)
+                                {
+                                    assist_hashtable[pk.actor.position.RemoveZ()] = pk.assister.position.RemoveZ();
+                                    support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
+                                }
+
+
+                                break;
                         }
                         ps.UnionWith(gevent.getPositions().ToList());
                     }
                 }
             }
             #endregion
-
-            watch.Stop();
-            var sec = watch.ElapsedMilliseconds / 1000.0f;
-            Console.WriteLine("Collected points in: " + sec + " seconds");
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
-            map = MapCreator.createMap(ps);
-        }
+            ATTACKRANGE_AVERAGE = hurt_ranges.Average();
+            SUPPORTRANGE_AVERAGE = support_ranges.Average();
 
 
-        private void generateHurteventClusters(Hashtable ht)
-        {
-            attacker_clusters = Clustering.createPositionClusters(ht.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
-            victim_clusters = Clustering.createPositionClusters(ht.Values.Cast<EDVector3D>().ToList(), CLUSTER_NUM, true);
-            Console.WriteLine("Attackclusters : " + attacker_clusters.Count());
-            foreach(var a in attacker_clusters)
-                a.calculateClusterAttackrange(ht);
-            Console.WriteLine("Victimclusters : "+ victim_clusters.Count());
-            foreach (var v in victim_clusters)
-                v.calculateClusterAttackrange(ht);
+            return ps;
         }
+
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -475,7 +493,6 @@ namespace CSGO_Analytics.src.encounterdetect
         private List<Player> scandidates = new List<Player>();
 
 
-        System.Diagnostics.Stopwatch sightwatch;
 
         /// <summary>
         /// Feeds the component with a links resulting from the procedure handling this tick
@@ -489,11 +506,11 @@ namespace CSGO_Analytics.src.encounterdetect
             //searchEventbasedSightCombatLinks(tick, links);
             searchSightbasedSightCombatLinks(tick, links);
 
-            searchClusterDistancebasedLinks(links);
+            //searchClusterDistancebasedLinks(links);
             //searchDistancebasedLinks(links);
 
-            searchEventbasedLinks(tick, links);
-            searchEventbasedNadeSupportlinks(tick, links);
+            //searchEventbasedLinks(tick, links);
+            //searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
             if (links.Count != 0) //If links have been found
@@ -581,13 +598,13 @@ namespace CSGO_Analytics.src.encounterdetect
             var p2Height = playerlevels[p2].height;
 
             var current_ml = playerlevels[p1];
-            var coll_rect = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, current_ml); // Check if the p1`s view is blocked on his level
+            var coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, current_ml); // Check if the p1`s view is blocked on his level
 
-            //Both players are on same level and a collision with a rect was found
-            if (p1Height == p2Height && coll_rect != null) return null;
+            //Both players are on same level and a collision with a rect was found -> No free sight -> no link
+            if (p1Height == p2Height && coll_pos != null) return null;
 
             //Both players are on same level and no collision with a rect was found -> Free sight -> no wall no obstacle and no other level obstructs the LOS
-            if (p1Height == p2Height && coll_rect == null) { sightCount++; return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT); }
+            if (p1Height == p2Height && coll_pos == null) { sightCount++; return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT); }
 
 
             //
@@ -596,28 +613,31 @@ namespace CSGO_Analytics.src.encounterdetect
 
             // All levels that have to see from p1 to p2 -> p1`s LOS clips these levels if he wants to see him
             MapLevel[] clipped_levels = map.getClippedLevels(p1Height, p2Height);
+            int current_ml_index = 0;
 
-            /*
-                        var next_collides = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, clipped_levels[current_ml_index]);
+            while(current_ml_index < clipped_levels.Length)
+            {
+                var nextlevel = clipped_levels[current_ml_index];
 
-                        // Case: On p1`s level an obstacle/wall was found   -> check if it is just a transition to the next level or a real obstacle/wall
-                        if (coll_rect != null)
-                        {
-                            // Case: current level has the same collision rect as its succesor -> on both levels has been a wall -> No free sight because the LOS cant pass this level
-                            if (next_collides.Equals(coll_rect))
-                            {
-                            } // Case: The Collision rect is not the same so we have to test again if its a transition between levels or a wall
-                            else
-                            {
-                                next_collides = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, clipped_levels[current_ml_index]);
-                            }
-                        }
-                        else // Case: On p1`s level no obstacle was found   -> check next level
-                        {
-                            next_collides = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, clipped_levels[current_ml_index]);
-                        }
-                        */
-            return null;
+                if (coll_pos == null)
+                {
+                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, nextlevel);
+                    current_ml_index++;
+                }
+                else if (coll_pos != null)
+                {
+                    EDVector3D coll_posn = coll_pos ?? default(EDVector3D);
+                    if (coll_posn == null) throw new Exception("Collision point cannot be null");
+                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(coll_posn, p2.position, nextlevel);
+                    if (coll_pos == null) // Transition between levels -> search next level
+                        current_ml_index++;
+                    else
+                        return null; // Obstacle found -> abort link search
+                }
+            }
+            // Sight has been free from p1 to p2 so add a combatlink
+            sightCount++;
+            return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT);
         }
 
         /// <summary>
@@ -633,9 +653,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     var distance = distance_table[getTableID(player)][getTableID(other)];
 
-                    if (distance <= ATTACKRANGE && other.getTeam() != player.getTeam())
+                    if (distance <= ATTACKRANGE_FIXED && other.getTeam() != player.getTeam())
                         links.Add(new Link(player, other, LinkType.COMBATLINK, Direction.DEFAULT));
-                    else if (distance <= SUPPORTRANGE && other.getTeam() == player.getTeam())
+                    else if (distance <= SUPPORTRANGE_FIXED && other.getTeam() == player.getTeam())
                         links.Add(new Link(player, other, LinkType.SUPPORTLINK, Direction.DEFAULT));
                 }
             }
@@ -695,8 +715,6 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         handleIncomingHurtEvent(ph, tick.tick_id, links); // CAN PRODUCE SUPPORTLINKS!
 
-                        //hit_hashtable[(ph.actor.position)] = ph.victim.position;
-
                         break;
                     case "player_killed":
                         PlayerKilled pk = (PlayerKilled)g;
@@ -708,8 +726,6 @@ namespace CSGO_Analytics.src.encounterdetect
                             links.Add(new Link(pk.assister, pk.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
                             assistCount++;
                         }
-
-                        //hit_hashtable[pk.actor.position] = pk.victim.position;
 
                         break;
                     case "weapon_fire":
@@ -1015,43 +1031,26 @@ namespace CSGO_Analytics.src.encounterdetect
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
                 {
-                    // Fetch latest data from table because here might be older events which are not up to date
-
                     // Test if an enemy can see our actor
                     if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.yaw, hurtevent.victim.position))
                     {
                         vcandidates.Add(hurtevent.victim);
-                        //Order by closest player to determine which is the probablest candidate                    }
-                        vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, hurtevent.victim.position));
+                        // Order by closest or by closest los player to determine which is the probablest candidate
+                        //vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
+                        vcandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(wf.actor.position, wf.actor.facing.yaw, hurtevent.victim.position)); //  Offset = Angle between lineofsight of actor and position of candidate
                         break;
                     }
 
-                    vcandidates.Add(hurtevent.victim);
-                    // Order by closest or by closest los player to determine which is the probablest candidate
-                    //vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
-                    vcandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(wf.actor.position, wf.actor.facing.yaw, hurtevent.victim.position)); //  Offset = Angle between lineofsight of actor and position of candidate
-                    break;
                 }
                 else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
                 {
                     pendingWFEQueue.Add(wf, tick_id);
                     break;
-
                 }
             }
 
             if (vcandidates.Count == 0)
                 return null;
-            else if (vcandidates.Count == 1)
-            {
-                var player = vcandidates[0];
-                if (player.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
-                vcandidates.Clear();
-                return player;
-            }
-
-            if (vcandidates.Count > 1)
-                Console.WriteLine("More than one candidate");
             // Choose the first in the list as we ordered it by Offset (see above)
             var victim = vcandidates[0];
             if (victim.getTeam() == wf.actor.getTeam()) throw new Exception("No teamfire possible for combatlink creation");
@@ -1083,24 +1082,10 @@ namespace CSGO_Analytics.src.encounterdetect
             if (scandidates.Count == 0)
                 return null;
 
-            if (scandidates.Count == 1)
-            {
-                var player = scandidates[0];
-                if (player.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
-                scandidates.Clear();
-                return player;
-            }
-            if (scandidates.Count > 1)
-            {
-                // The one with the shortest distance or the smallest los offset to the actor is the spotter
-                //var nearestplayer = scandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(candidate.position, actor.position)).ToList()[0];
-                var nearestplayer = scandidates[0];
-                if (nearestplayer.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
-
-                scandidates.Clear();
-                return nearestplayer;
-            }
-            return null;
+            var nearestplayer = scandidates[0];
+            if (nearestplayer.getTeam() == actor.getTeam()) throw new Exception("No teamspotting possible");
+            scandidates.Clear();
+            return nearestplayer;
         }
 
 
@@ -1206,41 +1191,6 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
         /// <summary>
-        /// adds only elements of ls if they are not closer than the clusterrange to the master list
-        /// </summary>
-        /// <param name="ls"></param>
-        /// <param name="master"></param>
-        private void AddNecessaryRange(List<EDVector3D> ls, List<EDVector3D> master)
-        {
-            foreach (var p in ls)
-            {
-                bool add = true;
-
-                Parallel.ForEach(master, (m, state) =>
-                {
-                    if (EDMathLibrary.getEuclidDistance2D(p, m) < CLUSTERINGRANGE)
-                    {
-                        add = false;
-                        state.Break();
-                    }
-                });
-
-                //
-                // Bad and slow code !!!
-                //
-                /*foreach (var m in master)
-                {
-                    if (EDMathLibrary.getEuclidDistance2D(p, m) < CLUSTERINGRANGE)
-                    {
-                        add = false;
-                        break;
-                    }
-                }*/
-                if (add) master.Add(p);
-            }
-        }
-
-        /// <summary>
         /// Clear all lists and queues that loose relevance at the end of the round to prevent events from carrying over to the next round
         /// </summary>
         private void clearRoundData()
@@ -1253,30 +1203,16 @@ namespace CSGO_Analytics.src.encounterdetect
             scandidates.Clear();
             vcandidates.Clear();
         }
-
+        /// <summary>
+        /// Gets player that is not updated and tell if he is dead.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
         private bool getLivingPlayer(Player p)
         {
             return livingplayers.Where(player => player.player_id == p.player_id).Count() == 0;
         }
         #endregion
-
-        public void buildHurtClusters()
-        {
-            var starts = new List<EDVector3D>();
-            var ends = new List<EDVector3D>();
-
-            foreach (var round in match.rounds)
-            {
-                foreach (var tick in round.ticks)
-                {
-                    foreach (var gevent in tick.tickevents)
-                    {
-                        var start = gevent.getPositions()[0]; //Change!!
-                        var end = gevent.getPositions()[1];
-                    }
-                }
-            }
-        }
 
         /// <summary>
         /// Returns a list of all interpolated positions between start and end of a hurtevent
