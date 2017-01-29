@@ -46,13 +46,14 @@ namespace CSGO_Analytics.src.data.gameobjects
         {
             foreach (var level in maplevels)
             {
-                var ps = level.ps;
                 var pz = p.position.Z;
                 if (pz <= level.max_z && pz >= level.min_z)
                     return level;
             }
-            return null;
-
+            throw new Exception("No level found for this player: " + p.ToString());
+            // This problem occurs because: Positions where player had z-velocity had been sorted out
+            // Then we built the levels. If now such a player wants to know his level but current levels dont capture
+            // This position because it was sorted out -> no suitable level found
         }
         /// <summary>
         /// Returns a bounding box of the map with root at 0,0
@@ -100,23 +101,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             foreach (var m in clipped_levels)
                 if (m == null) throw new Exception("Clipped Maplevel cannot be null");
 
-            #region Deprecated
-            /*
-            var levelamount = maplevels.Length;
-            var aim = EDMathLibrary.getAimVector(player.position, player.facing);
-            var maxclips = (levelamount - player_maplevelheight) - 1;
-            int[] clipped_levels = new int[maxclips];
-
-            //if (aim.z > player.position.z) 
-            if (0 < player.facing.pitch) //nach oben aimen
-                    for (int i = 0; i < maxclips; i++)
-                    clipped_levels[i] = player_maplevelheight + i;
-            //if (aim.z < player.position.z) // nach unten aimen
-            if (0 > player.facing.pitch)
-                    for (int i = 0; i < maxclips; i++)
-                    clipped_levels[i] = player_maplevelheight - i;
-                    */
-            #endregion
             return clipped_levels;
         }
 
@@ -166,7 +150,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
         private static HashSet<EDRect> map_grid;
 
-        private const int cellwidth = 45;
+        private const int cellwidth = 60;
 
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to
@@ -224,14 +208,14 @@ namespace CSGO_Analytics.src.data.gameobjects
             Console.WriteLine("Levels to create: " + levelamount);
             var min_z = ps.Min(point => point.Z);
             var max_z = ps.Max(point => point.Z);
-            //Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
+            Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
 
             for (int i = 0; i < levelamount; i++)
             {
                 var upperbound = min_z + (i + 1) * LEVELHEIGHT;
                 var lowerbound = min_z + i * LEVELHEIGHT;
                 var levelps = new HashSet<EDVector3D>(ps.Where(point => point.Z >= lowerbound && point.Z <= upperbound).OrderBy(point => point.Z));
-                // Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
+                Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
 
                 if (levelps.Count() == 0)
                 {
@@ -242,7 +226,7 @@ namespace CSGO_Analytics.src.data.gameobjects
                 Console.WriteLine("Level " + i + ": " + levelps.Count() + " points");
                 //Console.WriteLine("Level " + i + " starts: " + levelps.First().ToString());
                 //Console.WriteLine("Level " + i + " ends: " + levelps.Last().ToString());
-                var ml = new MapLevel(levelps, i);
+                var ml = new MapLevel(levelps, i, lowerbound, upperbound);
                 ml.assignLevelcells(map_grid);
                 maplevels[i] = ml;
             }
@@ -290,16 +274,16 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// </summary>
         public float min_z, max_z;
 
-        public MapLevel(HashSet<EDVector3D> nps, int height)
+        public MapLevel(HashSet<EDVector3D> nps, int height, float min_z, float max_z)
         {
             this.ps = nps;
-            this.max_z = ps.Max(point => point.Z);
-            this.min_z = ps.Min(point => point.Z);
+            this.max_z = max_z;
+            this.min_z = min_z;
 
             this.height = height;
         }
 
-        public void assignLevelcells(HashSet<EDRect> map_grid)
+        public void assignLevelcells(HashSet<EDRect> map_grid) //TODO: maybe move to map creator
         {
             #region QuadTree Approach
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -313,7 +297,7 @@ namespace CSGO_Analytics.src.data.gameobjects
                     level_cells.Add(cell);
             }
 
-            qlevel_walls.AddRange(map_grid.Except(level_cells).OrderBy(r => r.X).ThenBy(r => r.Y));
+            qlevel_walls.AddRange(map_grid.Except(level_cells));//.OrderBy(r => r.X).ThenBy(r => r.Y));
 
             // TODO: Solve maximal rectangle problem
             // TODO: Fill holes cells with more than 2 or 3 neighbors -> prevent obstacles which are not there just because nobody has walked at this cell

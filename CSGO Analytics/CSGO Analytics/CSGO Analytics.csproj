@@ -121,9 +121,9 @@
     <Compile Include="src\views\ManageDemosView.xaml.cs">
       <DependentUpon>ManageDemosView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\views\objects\NadeShape.cs" />
-    <Compile Include="src\views\objects\LinkShape.cs" />
-    <Compile Include="src\views\objects\PlayerShape.cs" />
+    <Compile Include="src\views\renderobjects\NadeShape.cs" />
+    <Compile Include="src\views\renderobjects\LinkShape.cs" />
+    <Compile Include="src\views\renderobjects\PlayerShape.cs" />
     <Compile Include="StartView.xaml.cs">
       <DependentUpon>StartView.xaml</DependentUpon>
       <SubType>Code</SubType>

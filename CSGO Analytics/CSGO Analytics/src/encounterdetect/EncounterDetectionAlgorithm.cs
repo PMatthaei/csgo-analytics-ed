@@ -10,6 +10,7 @@ using CSGO_Analytics.src.encounterdetect.utils;
 using CSGO_Analytics.src.math;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
+using CSGO_Analytics.src.export;
 using System.Collections;
 
 namespace CSGO_Analytics.src.encounterdetect
@@ -17,6 +18,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
     public class EncounterDetectionAlgorithm
     {
+        /// <summary>
+        /// Export data to csv
+        /// </summary>
+        CSVExporter exporter = new CSVExporter();
         //
         // CONSTANTS
         //
@@ -322,7 +327,35 @@ namespace CSGO_Analytics.src.encounterdetect
 
             Console.WriteLine("\n  Time to run Algorithm: " + sec + "sec. \n");
 
+            //
+            // Export data to csv
+            //
+            if(false)
+                exportEDDataToCSV(sec);
+
             return replay;
+        }
+
+        private void exportEDDataToCSV(float sec)
+        {
+            exporter.AddRow();
+            exporter["Demoname"] = "";
+            exporter["Runtime in sec"] = sec;
+            exporter["Demofilesize"] = "New York, USA";
+            exporter["Ticks tested"] = "New York, USA";
+            exporter["Hurt/Killed-Events"] = hit_hashtable.Count;
+            exporter["Encounters found"] = closed_encounters.Count;
+            exporter["Sightcombatlink - Sightbased"] = sightCount;
+            exporter["Sightcombatlink - Eventbased"] = "New York, USA";
+            exporter["Combatlink - Eventbased"] = "New York, USA";
+            exporter["Combatlink - Distancebased(Average Hurtrange)"] = "New York, USA";
+            exporter["Combatlink - Distancebased(Clustered Range)"] = clCount;
+            exporter["Supportlinks - Eventbased"] = "New York, USA";
+            exporter["Supportlinks - Smoke"] = smokeAssistCount;
+            exporter["Supportlinks - Flash"] = fsCount;
+            exporter["Supportlinks - Assist"] = assistCount;
+            exporter["Supportlinks - Damageassist"] = dAssistCount;
+            exporter.ExportToFile("encounter_detection_results.csv");
         }
 
         /// <summary>
@@ -365,6 +398,11 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         switch(gevent.gameevent)
                         {
+                            // Sort out all events that dont gurantee that the player was standing on the ground when the event happend
+                            /*case "player_fallen":
+                            case "weapon_fire":
+                            case "player_position":
+                            case "player_jumped": continue;*/
                             case "player_hurt":
                                 PlayerHurt ph = (PlayerHurt)gevent;
                                 hit_hashtable[ph.actor.position.RemoveZ()] = ph.victim.position.RemoveZ();
@@ -381,10 +419,12 @@ namespace CSGO_Analytics.src.encounterdetect
                                     support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
                                 }
 
-
                                 break;
                         }
-                        ps.UnionWith(gevent.getPositions().ToList());
+                        foreach(var player in gevent.getPlayers())
+                            if (player.velocity.vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
+                                ps.Add(player.position);
+                        //ps.UnionWith(gevent.getPositions().ToList());
                     }
                 }
             }

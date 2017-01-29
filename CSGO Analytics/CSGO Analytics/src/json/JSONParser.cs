@@ -384,7 +384,7 @@ namespace CSGO_Analytics.src.json.parser
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = p.Velocity.Absolute // Velocity -> Length of Movementvector 
+                velocity = new ED.Velocity { vx = p.Velocity.X, vy = p.Velocity.Y, vz = p.Velocity.Z }  
             };
         }
 
@@ -403,7 +403,7 @@ namespace CSGO_Analytics.src.json.parser
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = p.Velocity.Absolute, // Velocity -> Length of Movementvector 
+                velocity = new ED.Velocity { vx = p.Velocity.X, vy = p.Velocity.Y, vz = p.Velocity.Z },
                 items = assembleWeapons(p.Weapons)
             };
 

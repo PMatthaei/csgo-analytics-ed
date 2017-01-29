@@ -117,7 +117,7 @@ namespace CSGO_Analytics.src.views
             _initbw.DoWork += (sender, args) =>
             {
 
-                ReadDemodata();
+                ReadDemofiledata();
 
                 InitializeEncounterDetection();
 
@@ -148,7 +148,7 @@ namespace CSGO_Analytics.src.views
             _initbw.RunWorkerAsync();
         }
 
-        private void ReadDemodata()
+        private void ReadDemofiledata()
         {
             var path = "match_0.dem";
             /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
@@ -446,6 +446,7 @@ namespace CSGO_Analytics.src.views
                             drawRect(r, color);
                         }));
                     }
+
 
                     Thread.Sleep(2000);
                 }

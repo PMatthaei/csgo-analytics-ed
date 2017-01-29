@@ -30,7 +30,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public string team { get; set; }
         public EDVector3D position { get; set; }
         public Facing facing { get; set; }
-
+        public Velocity velocity { get; set; }
         public int HP { get; set; }
         public bool isSpotted { get; set; }
 
@@ -107,7 +107,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         public bool isDucking { get; set; }
         public bool isWalking { get; set; }
         public bool isScoped { get; set; }
-        public double velocity { get; set; }
     }
 
     class PlayerDetailedWithItems : PlayerDetailed
@@ -142,6 +141,23 @@ namespace CSGO_Analytics.src.data.gameobjects
         internal float[] getAsArray()
         {
             return new float[] { yaw, pitch };
+        }
+    }
+
+    public class Velocity
+    {
+        public float vx { get; set; }
+        public float vy { get; set; }
+        public float vz { get; set; }
+
+        internal Velocity Copy()
+        {
+            return new Velocity() { vx = vx, vy = vy, vz = vz };
+        }
+
+        internal float[] getAsArray()
+        {
+            return new float[] { vx, vy, vz };
         }
     }
 }
