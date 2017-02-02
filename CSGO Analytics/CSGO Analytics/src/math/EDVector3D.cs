@@ -60,7 +60,7 @@ namespace CSGO_Analytics.src.math
             Z = 0;
         }
 
-        public EDVector3D RemoveZ()
+        public EDVector3D ResetZ()
         {
             return new EDVector3D(X,Y,0);
         }

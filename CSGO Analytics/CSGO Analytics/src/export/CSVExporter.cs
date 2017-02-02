@@ -198,7 +198,10 @@ namespace CSGO_Analytics.src.export
         /// </summary>
         public void ExportToFile(string path)
         {
-            File.WriteAllLines(path, ExportToLines(), Encoding.UTF8);
+            if(File.Exists(path))
+                File.AppendAllLines(path, ExportToLines(), Encoding.UTF8);
+            else
+                File.WriteAllLines(path, ExportToLines(), Encoding.UTF8);
         }
 
         /// <summary>

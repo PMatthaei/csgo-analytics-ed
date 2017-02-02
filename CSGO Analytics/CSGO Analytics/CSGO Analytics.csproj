@@ -79,7 +79,7 @@
     <Compile Include="src\encounterdetect\EncounterDetectionAlgorithm.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
-    <Compile Include="src\encounterdetect\MatchReplay.cs" />
+    <Compile Include="src\encounterdetect\MatchEDReplay.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\export\CSVExporter.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />
@@ -162,7 +162,11 @@
       <Project>{859f0c7d-a7d5-4209-abae-3140a70c7afb}</Project>
       <Name>demoinfo-modded</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\Tools\QuadTrees-master\QuadTrees\QuadTrees.csproj">
+    <ProjectReference Include="..\..\..\..\Tools, Libs\KdTree-master\KdTreeLib\KdTreeLib.csproj">
+      <Project>{68c8066d-7844-41c2-993d-3160798164d1}</Project>
+      <Name>KdTreeLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\Tools, Libs\QuadTrees-master\QuadTrees\QuadTrees.csproj">
       <Project>{36e9b4e0-069d-4163-bab3-2eda2ae7789f}</Project>
       <Name>QuadTrees</Name>
     </ProjectReference>

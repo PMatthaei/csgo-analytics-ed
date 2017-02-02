@@ -43,7 +43,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// The replay returned by the algorithm
         /// </summary>
-        private MatchReplay matchreplay;
+        private MatchEDReplay matchreplay;
 
         /// <summary>
         /// Metadata about the map played in the match

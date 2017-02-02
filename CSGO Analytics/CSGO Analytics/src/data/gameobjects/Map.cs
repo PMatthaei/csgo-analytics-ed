@@ -11,6 +11,7 @@ using System.Windows;
 using System.Collections;
 using QuadTrees;
 using QuadTrees.Common;
+using KdTree.Math;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
@@ -55,6 +56,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             // Then we built the levels. If now such a player wants to know his level but current levels dont capture
             // This position because it was sorted out -> no suitable level found
         }
+
         /// <summary>
         /// Returns a bounding box of the map with root at 0,0
         /// </summary>
@@ -79,7 +81,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         internal MapLevel[] getClippedLevels(int starth, int endh)
         {
             var level_diff = Math.Abs(starth - endh);
-            if(level_diff == 1) return new MapLevel[] {maplevels[endh] };
+            if (level_diff == 1) return new MapLevel[] { maplevels[endh] };
 
             MapLevel[] clipped_levels = new MapLevel[level_diff];
 
@@ -113,27 +115,12 @@ namespace CSGO_Analytics.src.data.gameobjects
             }
             catch (Exception e)
             {
+                Console.WriteLine("Could not find next level");
                 return null;
             }
 
         }
-        public List<MapLevel> getMapLevelNeighbors(int ml_height) //TODO: ist schlecht
-        {
-            var mls = new List<MapLevel>();
-            var upperIndex = ml_height + 1;
-            var lowerIndex = ml_height - 1;
-            try
-            {
-                mls.Add(maplevels[upperIndex]);
-            }
-            catch (Exception e) { }
-            try
-            {
-                mls.Add(maplevels[lowerIndex]);
-            }
-            catch (Exception e) { }
-            return mls;
-        }
+
     }
 
     public class MapCreator
@@ -279,7 +266,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             this.ps = nps;
             this.max_z = max_z;
             this.min_z = min_z;
-
             this.height = height;
         }
 
@@ -297,12 +283,13 @@ namespace CSGO_Analytics.src.data.gameobjects
                     level_cells.Add(cell);
             }
 
-            qlevel_walls.AddRange(map_grid.Except(level_cells));//.OrderBy(r => r.X).ThenBy(r => r.Y));
+            qlevel_walls.AddRange(map_grid.Except(level_cells));
 
             // TODO: Solve maximal rectangle problem
             // TODO: Fill holes cells with more than 2 or 3 neighbors -> prevent obstacles which are not there just because nobody has walked at this cell
             // TODO: Remove outliers of pointclouds
             Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
+            level_cells.Clear(); //We dont need them all the time
             watch.Stop();
             var sec = watch.ElapsedMilliseconds / 1000.0f;
             Console.WriteLine("Time to assign cells: " + sec);
@@ -314,7 +301,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             return ps;
         }
 
-        public List<EDRect> getCellNeighbors(EDRect cell)
+        public List<EDRect> getWallCellNeighbors(EDRect cell)
         {
             var neighbors = qlevel_walls.GetObjects(new System.Drawing.Rectangle
             {
