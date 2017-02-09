@@ -45,11 +45,11 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             positions[tick_id] = pos;
         }
 
-        public EDVector3D GetPosition(int tick_id)
-        {
-            return (EDVector3D)positions[tick_id];
-        }
-
+        /// <summary>
+        /// Get position at index. index is the tick_id
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
         public EDVector3D Get(int index)
         {
             return (EDVector3D)positions[index];

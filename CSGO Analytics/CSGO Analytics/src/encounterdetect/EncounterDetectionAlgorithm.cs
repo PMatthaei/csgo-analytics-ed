@@ -19,7 +19,7 @@ namespace CSGO_Analytics.src.encounterdetect
     public class EncounterDetectionAlgorithm
     {
         /// <summary>
-        /// Export data to csv
+        /// Export data to csv file format
         /// </summary>
         CSVExporter exporter = new CSVExporter();
         //
@@ -171,7 +171,8 @@ namespace CSGO_Analytics.src.encounterdetect
         int killAssistCount = 0;
         int smokeAssistCount_fov = 0;
         int smokeAssistCount_sight = 0;
-        int flashAssistCount = 0;
+        int flashAssistCount_fov = 0;
+        int flashAssistCount_sight = 0;
 
         int distancetestCLinksCount = 0;
         int distancetestSLinksCount = 0;
@@ -179,7 +180,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         int sighttestCLinksCount = 0;
         int eventtestCLinksCount = 0;
-
+        int eventestSightCLinkCount = 0;
         int spotteventsCount = 0;
         int ticks_with_spotted_playersCount = 0;
         int spotterFoundCount = 0;
@@ -215,6 +216,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
+                        if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
                         int id = getTableID(updatedPlayer);
 
                         if (!updatedPlayer.isDead())
@@ -321,11 +323,11 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\nSpotted-Events occured: " + spotteventsCount);
             Console.WriteLine("\nPlayer is spotted in: " + ticks_with_spotted_playersCount + " ticks");
             Console.WriteLine("No Spotters found in: " + noSpotterFoundCount + " ticks");
-            Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks");
+            Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks"); 
 
             Console.WriteLine("Sightbased Combatlinks: " + sighttestCLinksCount);
             Console.WriteLine("Distance (clustered) Combatlinks: " + clustered_average_distancetestCLinksCount);
-            Console.WriteLine("Distance (averaged) Combatlinks: " + distancetestCLinksCount + distancetestSLinksCount);
+            Console.WriteLine("Distance (averaged) Combatlinks: " + (distancetestCLinksCount + distancetestSLinksCount));
 
             Console.WriteLine("\nAssist-Supportlinks: " + killAssistCount);
             Console.WriteLine("DamageAssist-Supportlinks: " + damageAssistCount);
@@ -333,7 +335,8 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Smoke Supportlinks (fov): " + smokeAssistCount_fov);
             Console.WriteLine("Smoke Supportlinks (sight): " + smokeAssistCount_sight);
             Console.WriteLine("Flashes exploded: " + flashexplodedCount);
-            Console.WriteLine("Flash Supportlinks: " + flashSLinkCount);
+            Console.WriteLine("Flash Supportlinks (fov): " + flashAssistCount_fov);
+            Console.WriteLine("Flash Supportlinks (sight): " + flashAssistCount_sight);
             Console.WriteLine("Flash Combatlinks: " + flashCLinkCount);
 
 
@@ -398,7 +401,7 @@ namespace CSGO_Analytics.src.encounterdetect
                             case "player_hurt":
                                 PlayerHurt ph = (PlayerHurt)gevent;
                                 // Remove Z-Coordinate because we later get keys from clusters with points in 2D space -> hashtable needs keys with 2d data
-                                hit_hashtable[ph.actor.position.ResetZ()] = ph.victim.position.ResetZ(); 
+                                hit_hashtable[ph.actor.position.ResetZ()] = ph.victim.position.ResetZ();
                                 hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(ph.actor.position, ph.victim.position));
                                 break;
                             case "player_killed":
@@ -570,13 +573,13 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
-            //searchEventbasedSightCombatLinks(tick, links);
-            searchSightbasedSightCombatLinks(tick, links);
+            searchEventbasedSightCombatLinks(tick, links);
+            searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
-            //searchClusterDistancebasedLinks(links);
-            //searchDistancebasedLinks(links);
+            searchClusterDistancebasedLinks(links);
+            searchDistancebasedLinks(links);
 
-            //searchEventbasedLinks(tick, links);
+            searchEventbasedLinks(tick, links);
             searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
@@ -614,6 +617,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     }
 
                     links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
+                    eventestSightCLinkCount++;
                 }
             }
 
@@ -627,7 +631,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchSightbasedSightCombatLinks(Tick tick, List<Link> links)
         {
-            // Update playerlevels
+            // Update playerlevels TODO: move somewhere else. to much dependencies on this
             foreach (var p in livingplayers)
             {
                 if (playerlevels.ContainsKey(p))
@@ -944,7 +948,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             updateFlashes(tick); // Flashes dont provide an end-event so we have to figure out when their effect has ended -> we update their effecttime
 
-            searchSupportFlashes(links);
+            searchFlashes(links);
             searchSupportSmokes(links);
             searchSupportDecoys(links);
             searchSupportFires(links);
@@ -1016,14 +1020,14 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Searches Supportlinks built by flashbang events
         /// </summary>
         /// <param name="links"></param>
-        private void searchSupportFlashes(List<Link> links)
+        private void searchFlashes(List<Link> links)
         {
             foreach (var f in activeNades.Where(item => item.Key.gameevent == "flash_exploded")) //Update players flashtime and check for links
             {
                 FlashNade flash = (FlashNade)f.Key;
 
                 // Each (STILL!) living flashed player - as long as it is not a teammate of the actor - is tested for sight on a teammember of the flasher (has flasher prevented sight on one of his teammates) 
-                var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && player.flashedduration >= 0 && getLivingPlayer(player));
+                var flashedenemies = flash.flashedplayers.Where(player => player.getTeam() != flash.actor.getTeam() && player.flashedduration >= 0 && getLivingPlayer(player) != null);
                 if (flashedenemies.Count() == 0)
                     continue;
 
@@ -1032,6 +1036,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     links.Add(new Link(flash.actor, flashedEnemyplayer, LinkType.COMBATLINK, Direction.DEFAULT)); //Sucessful flash counts as combatlink
                     eventtestCLinksCount++;
+                    flashCLinkCount++;
 
                     foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
                     {
@@ -1041,7 +1046,13 @@ namespace CSGO_Analytics.src.encounterdetect
                         {
                             Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
                             links.Add(flashsupportlink);
-                            flashAssistCount++;
+                            flashAssistCount_fov++;
+                        }
+                        if (checkVisibility(getLivingPlayer(flashedEnemyplayer), teammate) != null)
+                        {
+                            Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
+                            links.Add(flashsupportlink);
+                            flashAssistCount_sight++;
                         }
                     }
                 }
@@ -1065,7 +1076,7 @@ namespace CSGO_Analytics.src.encounterdetect
                         // Check if he could have seen a player from the thrower team
                         foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == smokeitem.Key.actor.getTeam()))
                         {
-                            if(checkVisibility(counterplayer, teammate) != null)
+                            if (checkVisibility(counterplayer, teammate) != null)
                             {
                                 // The actor supported a teammate -> Supportlink
                                 Link link = new Link(smokeitem.Key.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
@@ -1227,17 +1238,17 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter.AddRow();
             exporter["Demoname"] = "";
             exporter["Runtime in sec"] = sec;
-            exporter["Demofilesize"] = "New York, USA";
-            exporter["Observed ticks"] = "New York, USA";
-            exporter["Observed events"] = "New York, USA";
+            //exporter["Demofilesize"] = "New York, USA";
+            exporter["Observed ticks"] = tickCount;
+            exporter["Observed events"] = eventCount;
             exporter["Hurt/Killed-Events"] = hit_hashtable.Count;
             exporter["Encounters found"] = closed_encounters.Count;
             exporter["Sightcombatlink - Sightbased"] = sighttestCLinksCount;
-            exporter["Sightcombatlink - Eventbased"] = "New York, USA";
-            exporter["Combatlink - Eventbased"] = "New York, USA";
-            exporter["Combatlink - Distancebased(Average Hurtrange)"] = "New York, USA";
-            exporter["Combatlink - Distancebased(Clustered Range)"] = clustered_average_distancetestCLinksCount;
-            exporter["Supportlinks - Eventbased"] = "New York, USA";
+            exporter["Sightcombatlink - Eventbased"] = eventestSightCLinkCount;
+            exporter["Combatlinks - Eventbased"] = eventtestCLinksCount;
+            exporter["Combatlinks - Distancebased(Average Hurtrange)"] = distancetestCLinksCount + distancetestSLinksCount;
+            exporter["Combatlinks - Distancebased(Clustered Range)"] = clustered_average_distancetestCLinksCount;
+            exporter["Supportlinks - Eventbased"] = damageAssistCount + killAssistCount;
             exporter["Supportlinks - Smoke"] = smokeAssistCount_fov;
             exporter["Supportlinks - Flash"] = flashSLinkCount;
             exporter["Supportlinks - Assist"] = killAssistCount;
@@ -1310,14 +1321,20 @@ namespace CSGO_Analytics.src.encounterdetect
             scandidates.Clear();
             vcandidates.Clear();
         }
+
         /// <summary>
         /// Gets player that is not updated and tell if he is dead.
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        private bool getLivingPlayer(Player p)
+        private Player getLivingPlayer(Player p)
         {
-            return livingplayers.Where(player => player.player_id == p.player_id).Count() == 0;
+            var players = livingplayers.Where(player => player.player_id == p.player_id);
+
+            if (players.Count() == 1)
+                return players.First();
+            else
+                return null;
         }
         #endregion
 
