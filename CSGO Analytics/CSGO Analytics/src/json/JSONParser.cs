@@ -363,17 +363,12 @@ namespace CSGO_Analytics.src.json.parser
         internal ED.PlayerDetailed assemblePlayerDetailed(DemoInfoModded.Player p)
         {
             if (p == null) return null;
-            EDVector3D pos;
-            pos.X = p.Position.X;
-            pos.Y = p.Position.Y;
-            pos.Z = p.Position.Z;
-
+ 
             return new ED.PlayerDetailed
             {
-
                 playername = p.Name,
                 player_id = p.EntityID,
-                position = pos,
+                position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
                 facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,

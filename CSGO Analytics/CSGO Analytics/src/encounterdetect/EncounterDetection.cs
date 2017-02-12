@@ -16,7 +16,7 @@ using System.Collections;
 namespace CSGO_Analytics.src.encounterdetect
 {
 
-    public class EncounterDetectionAlgorithm
+    public class EncounterDetection
     {
         /// <summary>
         /// Export data to csv file format
@@ -98,7 +98,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private Dictionary<int, int> playerID_dictionary = new Dictionary<int, int>();
 
 
-        public EncounterDetectionAlgorithm(Gamestate gamestate)
+        public EncounterDetection(Gamestate gamestate)
         {
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
@@ -120,7 +120,7 @@ namespace CSGO_Analytics.src.encounterdetect
             // Generate Map
             map = MapCreator.createMap(ps);
             // Generate Hurteventclusters
-            attacker_clusters = Clustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
+            attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
             foreach (var a in attacker_clusters)
                 a.calculateClusterAttackrange(hit_hashtable);
 
@@ -323,7 +323,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("\nSpotted-Events occured: " + spotteventsCount);
             Console.WriteLine("\nPlayer is spotted in: " + ticks_with_spotted_playersCount + " ticks");
             Console.WriteLine("No Spotters found in: " + noSpotterFoundCount + " ticks");
-            Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks"); 
+            Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks");
 
             Console.WriteLine("Sightbased Combatlinks: " + sighttestCLinksCount);
             Console.WriteLine("Distance (clustered) Combatlinks: " + clustered_average_distancetestCLinksCount);
@@ -384,20 +384,15 @@ namespace CSGO_Analytics.src.encounterdetect
             List<double> hurt_ranges = new List<double>();
             List<double> support_ranges = new List<double>();
 
-            #region Collect positions for preprocessing 
+            #region Collect positions for preprocessing  and build hashtables of events
             foreach (var round in match.rounds)
             {
                 foreach (var tick in round.ticks)
                 {
                     foreach (var gevent in tick.tickevents)
                     {
-                        switch (gevent.gameevent)
+                        switch (gevent.gameevent) //Build hashtables with events we need later
                         {
-                            // Sort out all events that dont gurantee that the player was standing on the ground when the event happend
-                            /*case "player_fallen":
-                            case "weapon_fire":
-                            case "player_position":
-                            case "player_jumped": continue;*/
                             case "player_hurt":
                                 PlayerHurt ph = (PlayerHurt)gevent;
                                 // Remove Z-Coordinate because we later get keys from clusters with points in 2D space -> hashtable needs keys with 2d data
@@ -414,13 +409,12 @@ namespace CSGO_Analytics.src.encounterdetect
                                     assist_hashtable[pk.actor.position.ResetZ()] = pk.assister.position.ResetZ();
                                     support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
                                 }
-
                                 break;
                         }
+
                         foreach (var player in gevent.getPlayers())
                             if (player.velocity.vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
                                 ps.Add(player.position);
-                        //ps.UnionWith(gevent.getPositions().ToList());
                     }
                 }
             }
@@ -577,7 +571,7 @@ namespace CSGO_Analytics.src.encounterdetect
             searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
             searchClusterDistancebasedLinks(links);
-            searchDistancebasedLinks(links);
+            //searchDistancebasedLinks(links);
 
             searchEventbasedLinks(tick, links);
             searchEventbasedNadeSupportlinks(tick, links);
@@ -631,7 +625,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchSightbasedSightCombatLinks(Tick tick, List<Link> links)
         {
-            // Update playerlevels TODO: move somewhere else. to much dependencies on this
+            // Update playerlevels TODO: maybe consider jumps -> can cause different map level assigning but they are still on the same level just "float" above it
             foreach (var p in livingplayers)
             {
                 if (playerlevels.ContainsKey(p))
@@ -698,14 +692,14 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 if (coll_pos == null)
                 {
-                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, nextlevel);
+                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, nextlevel); // TODO: Richtiges maplevel gewählt für test?
                     current_ml_index++;
                 }
                 else if (coll_pos != null)
                 {
-                    EDVector3D coll_posn = coll_pos ?? default(EDVector3D);
+                    EDVector3D coll_posn = coll_pos;
                     if (coll_posn == null) throw new Exception("Collision point cannot be null");
-                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(coll_posn, p2.position, nextlevel);
+                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(coll_posn, p2.position, nextlevel); // TODO: Richtiges maplevel gewählt für test?
                     if (coll_pos == null) // Transition between levels -> search next level
                         current_ml_index++;
                     else
@@ -726,7 +720,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var player in livingplayers)
             {
-                foreach (var other in livingplayers)
+                foreach (var other in livingplayers.Where(p => !p.Equals(player)) )
                 {
                     var distance = distance_table[getTableID(player)][getTableID(other)];
 
@@ -752,11 +746,11 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var player in livingplayers)
             {
-                foreach (var other in livingplayers)
+                foreach (var other in livingplayers.Where(p => !p.Equals(player)))
                 {
                     var distance = distance_table[getTableID(player)][getTableID(other)];
                     Cluster playercluster = null;
-                    foreach (var c in attacker_clusters) // TODO: Change this if clustercount gets to high
+                    foreach (var c in attacker_clusters) // TODO: Change this if clustercount gets to high. Very slow
                     {
                         if (c.getBoundings().Contains(player.position))
                         {

@@ -6,20 +6,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using QuadTrees.QTreePoint;
+using FastDBScan;
 
 namespace CSGO_Analytics.src.math
 {
-    public struct EDVector3D : IComparable, IComparable<EDVector3D>, IEquatable<EDVector3D>, IPointQuadStorable
-    {
-        public float X, Y, Z;
 
-        public System.Drawing.Point Point
-        {
-            get
-            {
-                return new System.Drawing.Point((int)X, (int)Y);
-            }
-        }
+    public class EDVector3D :  IComparable /*, IComparable<EDVector3D>*/, IEquatable<EDVector3D>, IPointQuadStorable
+    {
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Z { get; set; }
+
+        public EDVector3D(){}
 
         public EDVector3D(float nx, float ny, float nz)
         {
@@ -108,7 +106,7 @@ namespace CSGO_Analytics.src.math
                 throw new Exception("Not comparable");
         }
 
-        public int CompareTo(EDVector3D other)
+        /*public int CompareTo(EDVector3D other)
         {
             if (this < other)
             {
@@ -121,7 +119,7 @@ namespace CSGO_Analytics.src.math
             }
 
             return 0;
-        }
+        }*/
 
         public static EDVector3D operator +(EDVector3D v, EDVector3D w)
         {
@@ -138,7 +136,7 @@ namespace CSGO_Analytics.src.math
             return new EDVector3D(v.X * factor, v.Y * factor, v.Z * factor);
         }
 
-        public static bool operator ==(EDVector3D v1, EDVector3D v2)
+       /* public static bool operator ==(EDVector3D v1, EDVector3D v2)
         {
             return
                 v1.X == v2.X &&
@@ -159,7 +157,7 @@ namespace CSGO_Analytics.src.math
         public static bool operator >(EDVector3D v1, EDVector3D v2)
         {
             return v1.SumComponentSqrs() > v2.SumComponentSqrs();
-        }
+        }*/
 
         public static double SumComponents(EDVector3D v1)
         {
@@ -201,6 +199,14 @@ namespace CSGO_Analytics.src.math
             else
             {
                 return false;
+            }
+        }
+
+        public System.Drawing.Point Point
+        {
+            get
+            {
+                return new System.Drawing.Point((int)X, (int)Y);
             }
         }
 

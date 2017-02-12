@@ -37,9 +37,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
                 }
                 else
                 {
-                    EDVector3D key;
-                    EDVector3D? nkey = searchKey(pos, ht);
-                    key = nkey ?? default(EDVector3D);
+                    EDVector3D key = searchKey(pos, ht);
                     distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, key);
                     arr_ptr++;
                 }
@@ -60,11 +58,11 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             return new EDRect { X = min_x, Y = max_y, Width = dx, Height = dy };
         }
 
-        private EDVector3D? searchKey(EDVector3D value, Hashtable ht)
+        private EDVector3D searchKey(EDVector3D value, Hashtable ht)
         {
             foreach (DictionaryEntry p in ht)
             {
-                if ((EDVector3D)p.Value == value)
+                if (((EDVector3D)p.Value).Equals(value))
                     return (EDVector3D)p.Key;
             }
             return null;
@@ -81,7 +79,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
     /// K-means clustering('Lloyd's algorithm')
     /// </summary>
     /// 
-    public class Clustering
+    public class KMeanClustering
     {
 
         public static Cluster[] createPositionClusters(List<EDVector3D> ps, int numClusters, bool isValueData)

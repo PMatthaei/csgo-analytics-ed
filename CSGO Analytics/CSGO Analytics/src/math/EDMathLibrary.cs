@@ -50,6 +50,7 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static double getEuclidDistance2D(EDVector3D p1, EDVector3D p2)
         {
+            if (p2 == null || p1 == null) throw new Exception("Vector cant be null");
             return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
         }
 
@@ -140,8 +141,9 @@ namespace CSGO_Analytics.src.math
         /// <param name="recieverpos"></param>
         /// <param name="level_cells"></param>
         /// <returns></returns>
-        public static EDVector3D? vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
+        public static EDVector3D vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
         {
+            //TODO: check if test is correct
             if (m == null) throw new Exception("Maplevel cannot be null");
             var min_x = Math.Min(actorpos.X, recieverpos.X);
             var max_x = Math.Max(actorpos.X, recieverpos.X);
@@ -239,12 +241,14 @@ namespace CSGO_Analytics.src.math
             var l2 = LineLineIntersectionPoint(p1, p2, new EDVector3D((float)(r.X + r.Width), (float)r.Y, 0), new EDVector3D((float)(r.X + r.Width), (float)(r.Y + r.Height), 0));
             var l3 = LineLineIntersectionPoint(p1, p2, new EDVector3D((float)(r.X + r.Width), (float)(r.Y + r.Height), 0), new EDVector3D((float)r.X, (float)(r.Y + r.Height), 0));
             var l4 = LineLineIntersectionPoint(p1, p2, new EDVector3D((float)r.X, (float)(r.Y + r.Height), 0), new EDVector3D((float)r.X, (float)r.Y, 0));
-            EDVector3D l1_n = l1 ?? default(EDVector3D);
-            EDVector3D l2_n = l2 ?? default(EDVector3D);
-            EDVector3D l3_n = l3 ?? default(EDVector3D);
-            EDVector3D l4_n = l4 ?? default(EDVector3D);
-            List<EDVector3D> ps = new List<EDVector3D> { l1_n,l2_n, l3_n,l4_n };
-            ps.OrderBy(point => getEuclidDistance2D(p1, point));
+
+            List<EDVector3D> ps = new List<EDVector3D>();
+            if (l1 != null) ps.Add(l1);//TODO: Ugly code
+            if (l2 != null) ps.Add(l2);
+            if (l3 != null) ps.Add(l3);
+            if (l4 != null) ps.Add(l4);
+            if (ps.Count == 0) return null;
+            ps.OrderBy(point => getEuclidDistance2D(p1, point)); // Collisionpoint with closesest distance to our start is the one we want 
             return ps.OrderBy(point => getEuclidDistance2D(p1, point)).ToArray()[0];
         }
 
@@ -278,7 +282,7 @@ namespace CSGO_Analytics.src.math
 
             return true;
         }
-        
+
         /// <summary>
         /// Get Intersection point
         /// </summary>
@@ -287,7 +291,7 @@ namespace CSGO_Analytics.src.math
         /// <param name="b1">b1 is line2 start</param>
         /// <param name="b2">b2 is line2 end</param>
         /// <returns></returns>
-        public static EDVector3D? LineLineIntersectionPoint(EDVector3D a1, EDVector3D a2, EDVector3D b1, EDVector3D b2)
+        public static EDVector3D LineLineIntersectionPoint(EDVector3D a1, EDVector3D a2, EDVector3D b1, EDVector3D b2)
         {
             EDVector3D b = a2 - a1;
             EDVector3D d = b2 - b1;
@@ -362,7 +366,7 @@ namespace CSGO_Analytics.src.math
         {
             var aimX = (float)(pos.X + Math.Cos(toRadian(-facing.yaw)));// Aim vector from Yaw
             var aimY = (float)(pos.Y + Math.Sin(toRadian(-facing.yaw)));
-            var aimZ = (float)(pos.Y + Math.Sin(toRadian(-facing.pitch))); //TODO: richtig?!?!
+            var aimZ = (float)(pos.Y + Math.Sin(toRadian(-facing.pitch))); //TODO: check if valid?!?!
 
             return new EDVector3D(aimX, aimY, aimZ);
         }

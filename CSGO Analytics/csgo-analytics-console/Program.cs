@@ -85,7 +85,7 @@ namespace csgo_analytics_console
                  using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                  {
                      var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
-                     EncounterDetectionAlgorithm ed_algorithm = new EncounterDetectionAlgorithm(deserializedGamestate);
+                     EncounterDetection ed_algorithm = new EncounterDetection(deserializedGamestate);
                      ed_algorithm.run();
                  }
 

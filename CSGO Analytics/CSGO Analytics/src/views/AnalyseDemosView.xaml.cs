@@ -33,7 +33,7 @@ namespace CSGO_Analytics.src.views
     public partial class AnalyseDemosView : Page
     {
 
-        private EncounterDetectionAlgorithm EDAlgorithm;
+        private EncounterDetection EDAlgorithm;
 
         /// <summary>
         /// The gamestate to apply the encounter detection on
@@ -170,7 +170,7 @@ namespace CSGO_Analytics.src.views
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
                 this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                this.EDAlgorithm = new EncounterDetectionAlgorithm(gamestate);
+                this.EDAlgorithm = new EncounterDetection(gamestate);
             }
         }
 
@@ -216,6 +216,7 @@ namespace CSGO_Analytics.src.views
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
                 BitmapImage bi = new BitmapImage(new Uri(@"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
+                //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
                 map_width = bi.Width; // Save original size to apply scaling
                 map_height = bi.Height;
                 mapPanel.Background = new ImageBrush(bi);
@@ -402,6 +403,71 @@ namespace CSGO_Analytics.src.views
             };
         }
 
+        public void renderMapLevelClusters()
+        {
+            Console.WriteLine("Render Map Level Cluster");
+            _renderbw.DoWork += (sender, args) =>
+            {
+
+                for (int i = 0; i < this.EDAlgorithm.map.maplevels.Count(); i++)
+                {
+                    Console.WriteLine("Level: " + i);
+                    Color color = Color.FromArgb(255, 0, 0, 0);
+                    switch (i)
+                    {
+                        case 0:
+                            color = Color.FromArgb(255, 255, 0, 0); break; //rot
+                        case 1:
+                            color = Color.FromArgb(255, 0, 255, 0); break; //grün
+                        case 2:
+                            color = Color.FromArgb(255, 0, 0, 255); break; //blau
+                        case 3:
+                            color = Color.FromArgb(255, 255, 255, 0); break; //gelb
+                        case 4:
+                            color = Color.FromArgb(255, 0, 255, 255); break; //türkis
+                        case 5:
+                            color = Color.FromArgb(255, 255, 0, 255); break; //lilarosa
+                        case 6:
+                            color = Color.FromArgb(255, 120, 0, 0); break; //lilarosa
+                        case 7:
+                            color = Color.FromArgb(255, 0, 120, 0); break; //lilarosa
+                        case 8:
+                            color = Color.FromArgb(255, 0, 120, 120); break; //lilarosa
+                        case 9:
+                            color = Color.FromArgb(255, 120, 0, 120); break; //lilarosa
+                        case 10:
+                            color = Color.FromArgb(255, 120, 120, 0); break; //lilarosa
+                    }
+
+
+                    foreach (var cl in this.EDAlgorithm.map.maplevels[i].clusters)
+                    {
+                        foreach (var p in cl)
+                        {
+                            Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                            {
+                                drawPos(p, color);
+                            }));
+                        }
+                    }
+                    Thread.Sleep(4000);
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        captureScreenshot();
+                    }));
+                    Thread.Sleep(4000);
+
+                }
+            };
+            _renderbw.RunWorkerAsync();
+
+            _renderbw.RunWorkerCompleted += (sender, args) =>
+            {
+                if (args.Error != null)
+                    MessageBox.Show(args.Error.ToString());
+            };
+        }
+
         public void renderMapLevels()
         {
             Console.WriteLine("Render Map Levels");
@@ -439,7 +505,7 @@ namespace CSGO_Analytics.src.views
                     }
 
 
-                    foreach (var r in this.EDAlgorithm.map.maplevels[i].level_cells)
+                    foreach (var r in this.EDAlgorithm.map.maplevels[i].qlevel_walls)
                     {
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                         {
@@ -448,7 +514,12 @@ namespace CSGO_Analytics.src.views
                     }
 
 
-                    Thread.Sleep(2000);
+                    Thread.Sleep(4000);
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        captureScreenshot();
+                    }));
+                    Thread.Sleep(4000);
                 }
             };
             _renderbw.RunWorkerAsync();
@@ -590,8 +661,8 @@ namespace CSGO_Analytics.src.views
             var ps = new System.Windows.Shapes.Ellipse();
             var vector = CSPositionToUIPosition(position);
             ps.Margin = new Thickness(vector.X, vector.Y, 0, 0);
-            ps.Width = 4;
-            ps.Height = 4;
+            ps.Width = 2;
+            ps.Height = 2;
 
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
@@ -785,6 +856,7 @@ namespace CSGO_Analytics.src.views
 
         private void Button_play(object sender, RoutedEventArgs e)
         {
+            //renderMapLevelClusters();
             renderMapLevels();
             //renderHurtClusters();
             /*if (paused)

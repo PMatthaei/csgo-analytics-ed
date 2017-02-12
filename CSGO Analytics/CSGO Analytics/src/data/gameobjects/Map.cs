@@ -11,14 +11,14 @@ using System.Windows;
 using System.Collections;
 using QuadTrees;
 using QuadTrees.Common;
-using KdTree.Math;
+using FastDBScan;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
     public class Map
     {
         /// <summary>
-        /// Array holding the different maplevels ordered from lowest level (tunnels beneth the ground) to highest (2nd floor etc)
+        /// Array holding the different maplevels ordered from lowest level (f.e. tunnels beneath the ground) to highest (2nd floor etc)
         /// </summary>
         public MapLevel[] maplevels;
 
@@ -237,19 +237,19 @@ namespace CSGO_Analytics.src.data.gameobjects
         private const int MIN_CELL_QUERY = 1;
 
         /// <summary>
-        /// Points describing this level
+        /// points describing this level
         /// </summary>
-        public HashSet<EDVector3D> ps;
+        public EDVector3D[] points;
+
+        /// <summary>
+        /// Clusters containing the points describing this level
+        /// </summary>
+        public HashSet<EDVector3D[]> clusters;
 
         /// <summary>
         /// Height of this level on the map - > 0 lowest level 
         /// </summary>
         public int height;
-
-        /// <summary>
-        /// All map cells representing the free, walkable space of this level
-        /// </summary>
-        public HashSet<EDRect> level_cells = new HashSet<EDRect>();
 
         /// <summary>
         /// All map cells representing obstacles and walls on this level
@@ -263,7 +263,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
         public MapLevel(HashSet<EDVector3D> nps, int height, float min_z, float max_z)
         {
-            this.ps = nps;
+            points = nps.ToArray();
             this.max_z = max_z;
             this.min_z = min_z;
             this.height = height;
@@ -271,11 +271,19 @@ namespace CSGO_Analytics.src.data.gameobjects
 
         public void assignLevelcells(HashSet<EDRect> map_grid) //TODO: maybe move to map creator
         {
+            HashSet<EDRect> level_cells = new HashSet<EDRect>();
             #region QuadTree Approach
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
+            var dbscan = new FasterDbscanAlgorithm((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+
+            clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 50.01, minPts: 2);
+            points = null; //Collect points for garbage
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
-            removeOutliers(ps).Distinct().ToList().ForEach(v => qtree.Add(v));
+            foreach (var cl in clusters)
+                foreach (var p in cl)
+                    qtree.Add(p);
+
             foreach (var cell in map_grid)
             {
                 var rectps = qtree.GetObjects(cell.getAsQuadTreeRect()); //Get points in a cell
@@ -287,7 +295,6 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             // TODO: Solve maximal rectangle problem
             // TODO: Fill holes cells with more than 2 or 3 neighbors -> prevent obstacles which are not there just because nobody has walked at this cell
-            // TODO: Remove outliers of pointclouds
             Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
             level_cells.Clear(); //We dont need them all the time
             watch.Stop();
@@ -296,10 +303,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             #endregion
         }
 
-        private HashSet<EDVector3D> removeOutliers(HashSet<EDVector3D> ps)
-        {
-            return ps;
-        }
+
 
         public List<EDRect> getWallCellNeighbors(EDRect cell)
         {
