@@ -228,5 +228,10 @@ namespace CSGO_Analytics.src.math
                 return hashCode;
             }
         }
+
+        internal EDVector3D ChangeZ(float v)
+        {
+            return new EDVector3D(X,Y,Z+v);
+        }
     }
 }

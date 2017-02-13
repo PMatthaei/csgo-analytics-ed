@@ -164,6 +164,18 @@ namespace CSGO_Analytics.src.json.parser
             return gsstr;
         }
 
+        public static string peakMapname(DemoParser newdemoparser, ParseTask newtask)
+        {
+            ptask = newtask;
+            parser = newdemoparser;
+
+            initializeGenerator();
+
+            parser.ParseHeader();
+
+            return parser.Map;
+        }
+
         /// <summary>
         /// Assembles the gamestate object from data given by the demoparser.
         /// </summary>
@@ -427,15 +439,13 @@ namespace CSGO_Analytics.src.json.parser
             parser.PlayerDisconnect += (sender, e) =>
             {
                 if(hasMatchStarted)
-                    Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " disconnected");
-                //tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
+                    tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
             };
 
             parser.PlayerBind += (sender, e) =>
             {
                 if (hasMatchStarted)
-                    Console.WriteLine("Player: " + e.Player.Name + " ID: " + e.Player.EntityID + " is binded");
-                //tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
+                    tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
             };
             #endregion
 
@@ -555,7 +565,7 @@ namespace CSGO_Analytics.src.json.parser
             Console.WriteLine("You can find the corresponding JSON at the same path. \n");
         }
 
-        private static void cleanUp()
+        public static void cleanUp()
         {
             jsonparser.stopParser();
             ptask = null;

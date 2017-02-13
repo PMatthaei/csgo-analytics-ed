@@ -228,19 +228,21 @@ namespace CSGO_Analytics.src.json.parser
         #endregion
 
         #region Serverevents
-        internal Event assemblePlayerBind(DemoInfoModded.Player player)
+        internal ServerEvents assemblePlayerBind(DemoInfoModded.Player player)
         {
-            return new Event
+            Console.WriteLine("player_bind: " + player.Name + " ID: " + player.EntityID);
+            return new ServerEvents
             {
                 gameevent = "player_bind",
                 actor = assemblePlayer(player)
             };
         }
 
-        internal Event assemblePlayerDisconnected(DemoInfoModded.Player player)
+        internal ServerEvents assemblePlayerDisconnected(DemoInfoModded.Player player)
         {
-            return new Event
-            {
+            Console.WriteLine("player_disconnected: " + player.Name + " ID: "+ player.EntityID );
+            return new ServerEvents
+            { 
                 gameevent = "player_disconnected",
                 actor = assemblePlayer(player)
             };
@@ -258,6 +260,21 @@ namespace CSGO_Analytics.src.json.parser
                 players.Add(assemblePlayer(player));
 
             return players;
+        }
+
+        internal ED.Player assemblePlayer(DemoInfoModded.Player p)
+        {
+            return new ED.Player
+            {
+                playername = p.Name,
+                player_id = p.EntityID,
+                position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
+                facing = new ED.Facing { Yaw = p.ViewDirectionX, Pitch = p.ViewDirectionY },
+                velocity = new ED.Velocity { VX = p.Velocity.X, VY = p.Velocity.Y, VZ = p.Velocity.Z },
+                team = p.Team.ToString(),
+                isSpotted = p.IsSpotted,
+                HP = p.HP
+            };
         }
 
         internal List<ED.PlayerFlashed> assembleFlashedPlayers(DemoInfoModded.Player[] ps)
@@ -278,7 +295,10 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
-                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                velocity = new ED.Velocity { VX = p.Velocity.X, VY = p.Velocity.X, VZ = p.Velocity.X },
+                facing = new ED.Facing { Yaw = p.ViewDirectionX, Pitch = p.ViewDirectionY },
+                HP = p.HP,
+                isSpotted = p.IsSpotted,
                 team = p.Team.ToString(),
                 flashedduration = p.FlashDuration
             };
@@ -334,19 +354,7 @@ namespace CSGO_Analytics.src.json.parser
         }*/
 
 
-        internal ED.Player assemblePlayer(DemoInfoModded.Player p)
-        {
-            return new ED.Player
-            {
-                playername = p.Name,
-                player_id = p.EntityID,
-                position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
-                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
-                team = p.Team.ToString(),
-                isSpotted = p.IsSpotted,
-                HP = p.HP
-            };
-        }
+
 
         internal ED.PlayerMeta assemblePlayerMeta(DemoInfoModded.Player p)
         {
@@ -369,7 +377,7 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
-                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new ED.Facing { Yaw = p.ViewDirectionX, Pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 isSpotted = p.IsSpotted,
@@ -379,7 +387,7 @@ namespace CSGO_Analytics.src.json.parser
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = new ED.Velocity { vx = p.Velocity.X, vy = p.Velocity.Y, vz = p.Velocity.Z }  
+                velocity = new ED.Velocity { VX = p.Velocity.X, VY = p.Velocity.Y, VZ = p.Velocity.Z }  
             };
         }
 
@@ -391,14 +399,14 @@ namespace CSGO_Analytics.src.json.parser
                 playername = p.Name,
                 player_id = p.EntityID,
                 position = new EDVector3D { X = p.Position.X, Y = p.Position.Y, Z = p.Position.Z },
-                facing = new ED.Facing { yaw = p.ViewDirectionX, pitch = p.ViewDirectionY },
+                facing = new ED.Facing { Yaw = p.ViewDirectionX, Pitch = p.ViewDirectionY },
                 team = p.Team.ToString(),
                 isDucking = p.IsDucking,
                 hasHelmet = p.HasHelmet,
                 hasDefuser = p.HasDefuseKit,
                 HP = p.HP,
                 armor = p.Armor,
-                velocity = new ED.Velocity { vx = p.Velocity.X, vy = p.Velocity.Y, vz = p.Velocity.Z },
+                velocity = new ED.Velocity { VX = p.Velocity.X, VY = p.Velocity.Y, VZ = p.Velocity.Z },
                 items = assembleWeapons(p.Weapons)
             };
 

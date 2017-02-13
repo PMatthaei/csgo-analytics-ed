@@ -27,9 +27,9 @@ namespace CSGO_Analytics.src.encounterdetect
         public Link(Player actor, Player reciever, LinkType type, Direction dir)
         {
             if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
-                throw new Exception("Cannot create Supportlink between different teams");
+                Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
             if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
-                throw new Exception("Cannot create Combatlink in the same team");
+                Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
 
             players = new Player[2];
             players[0] = actor;

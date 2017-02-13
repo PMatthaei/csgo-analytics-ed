@@ -19,9 +19,10 @@ namespace CSGO_Analytics.src.encounterdetect
     public class EncounterDetection
     {
         /// <summary>
-        /// Export data to csv file format
+        /// Exporter for csv file format
         /// </summary>
         CSVExporter exporter = new CSVExporter();
+
         //
         // CONSTANTS
         //
@@ -42,9 +43,8 @@ namespace CSGO_Analytics.src.encounterdetect
         private const int CLUSTER_NUM = 6; // TODO: 5-6 seems like a good value-> why? starting from 7 it makes no sense
 
         //
-        // Variables
+        // Variable constants. Depend on match
         //
-
         private double SUPPORTRANGE_AVERAGE;
         private double ATTACKRANGE_AVERAGE;
 
@@ -61,7 +61,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// All living players with the latest data.(position health etc)
         /// </summary>
-        private List<Player> livingplayers;
+        private HashSet<Player> livingplayers;
         private List<Player> deadplayers;
 
         private float[][] position_table;
@@ -103,7 +103,7 @@ namespace CSGO_Analytics.src.encounterdetect
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
-            this.livingplayers = players.ToList();
+            this.livingplayers = new HashSet<Player>(players.ToList());
             this.deadplayers = new List<Player>();
 
             int ownid = 0;
@@ -115,14 +115,9 @@ namespace CSGO_Analytics.src.encounterdetect
 
             initTables(ownid); // Initalize tables for all players(should be 10 for csgo)
 
-            // Gather data and prepare
-            var ps = preprocessReplayData();
-            // Generate Map
-            map = MapCreator.createMap(ps);
-            // Generate Hurteventclusters
-            attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
-            foreach (var a in attacker_clusters)
-                a.calculateClusterAttackrange(hit_hashtable);
+            // Gather and prepare data for later 
+            preprocessReplayData();
+
 
         }
 
@@ -212,7 +207,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 foreach (var tick in new HashSet<Tick>(round.ticks))
                 {
                     tickCount++;
-                    eventCount += tick.tickevents.Count;
+                    eventCount += tick.getTickevents().Count;
+
+                    handleServerEvents(tick.getServerEvents()); //Check for serverevents as these have impact on our id and player-system
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
@@ -221,7 +218,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         if (!updatedPlayer.isDead())
                         {
-                            if (deadplayers.Contains(updatedPlayer))
+                            if (deadplayers.Contains(updatedPlayer) && !livingplayers.Contains(updatedPlayer))
                             {
                                 deadplayers.Remove(updatedPlayer);
                                 livingplayers.Add(updatedPlayer);
@@ -353,24 +350,52 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
+        private void handleServerEvents(List<ServerEvents> events)
+        {
+            // Iterate over all disconnects and connects
+            foreach (var sevent in events)
+            {
+                var player = sevent.actor;
+                switch (sevent.gameevent)
+                {
+                    case "player_bind":
+                        break;
+                    case "player_disconnected": break;
+                    default: throw new Exception("Unkown ServerEvent");
+                }
+            }
+        }
+
 
         /// <summary>
         /// Update a players with his most recent version.
         /// </summary>
-        /// <param name="updatedPlayer"></param>
-        private void updatePlayer(Player updatedPlayer)
+        /// <param name="toUpdate"></param>
+        private void updatePlayer(Player toUpdate)
         {
+            if (toUpdate.position == null) throw new Exception("Cannot update with null position");
+            if (toUpdate.velocity == null) throw new Exception("Cannot update with null velocity");
             int count = 0;
-            for (int i = 0; i < livingplayers.Count; i++)
+            //Console.WriteLine("\nNew Update for player: " + toUpdate);
+
+            foreach (var player in livingplayers.ToArray())
             {
-                if (livingplayers[i].player_id == updatedPlayer.player_id)
+                //Console.WriteLine("Test : " + player);
+                if (player.player_id == toUpdate.player_id)
                 {
-                    livingplayers[i] = updatedPlayer;
+                    //Console.WriteLine("Valid. Updating player : " + player);
+                    livingplayers.Remove(player);
+                    livingplayers.Add(toUpdate);
                     count++;
                 }
 
-                if (count > 1) throw new Exception("More than one player with id living or revive is invalid: " + updatedPlayer.player_id);
+                if (count > 1)
+                {
+                    printLivingPlayers();
+                    throw new Exception("More than one player with id living or revive is invalid: " + toUpdate.player_id);
+                }
             }
+
         }
 
 
@@ -378,7 +403,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Loop through the replay data and collect important data such as positions, hurtevent, averages etc for later calculations.
         /// </summary>
         /// <returns></returns>
-        private HashSet<EDVector3D> preprocessReplayData()
+        private void preprocessReplayData()
         {
             var ps = new HashSet<EDVector3D>();
             List<double> hurt_ranges = new List<double>();
@@ -389,7 +414,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var tick in round.ticks)
                 {
-                    foreach (var gevent in tick.tickevents)
+                    foreach (var gevent in tick.getTickevents())
                     {
                         switch (gevent.gameevent) //Build hashtables with events we need later
                         {
@@ -413,19 +438,30 @@ namespace CSGO_Analytics.src.encounterdetect
                         }
 
                         foreach (var player in gevent.getPlayers())
-                            if (player.velocity.vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
+                        {
+                            var vz = player.velocity.VZ;
+                            if (vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
                                 ps.Add(player.position);
+                            else
+                                ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
+                        }
+
                     }
                 }
             }
             #endregion
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
+            // Generate Map
+            this.map = MapCreator.createMap(ps);
+            // Generate Hurteventclusters
+            this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
+            foreach (var a in attacker_clusters)
+                a.calculateClusterAttackrange(hit_hashtable);
+
             ATTACKRANGE_AVERAGE = hurt_ranges.Average();
             SUPPORTRANGE_AVERAGE = support_ranges.Average();
 
-
-            return ps;
         }
 
         /// <summary>
@@ -567,10 +603,10 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
-            searchEventbasedSightCombatLinks(tick, links);
+            //searchEventbasedSightCombatLinks(tick, links);
             searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
-            searchClusterDistancebasedLinks(links);
+            //searchClusterDistancebasedLinks(links);
             //searchDistancebasedLinks(links);
 
             searchEventbasedLinks(tick, links);
@@ -656,7 +692,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="p2"></param>
         private Link checkVisibility(Player p1, Player p2)
         {
-            bool p1FOVp2 = EDMathLibrary.isInFOV(p1.position, p1.facing.yaw, p2.position); // p2 is in fov of p1
+            bool p1FOVp2 = EDMathLibrary.isInFOV(p1.position, p1.facing.Yaw, p2.position); // p2 is in fov of p1
             if (!p1FOVp2) return null; // If false -> no sight from p1 to p2 possible because p2 is not even in the fov of p1 -> no link
 
             //Level height of p1 and p2
@@ -720,7 +756,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var player in livingplayers)
             {
-                foreach (var other in livingplayers.Where(p => !p.Equals(player)) )
+                foreach (var other in livingplayers.Where(p => !p.Equals(player)))
                 {
                     var distance = distance_table[getTableID(player)][getTableID(other)];
 
@@ -783,7 +819,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private void searchEventbasedLinks(Tick tick, List<Link> links)
         {
             // Events contain players with newest data to this tick
-            foreach (var g in tick.tickevents)
+            foreach (var g in tick.getTickevents())
             { // Read all gameevents in that tick and build links of them for the component
                 switch (g.gameevent)
                 {
@@ -907,7 +943,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private void searchEventbasedNadeSupportlinks(Tick tick, List<Link> links)
         {
             // Update active nades list with the new tick
-            foreach (var g in tick.tickevents)
+            foreach (var g in tick.getTickevents())
             {
                 switch (g.gameevent)
                 {
@@ -978,7 +1014,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 // Register all enemy players that walked near the grenade -> maybe they thought its a real player
                 registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE && decoyevent.actor.getTeam() != player.getTeam()));
                 // Register all enemy players that looked at the grenade in a certain angle -> maybe they thought its a real player
-                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getLoSOffset(player.position, player.facing.yaw, decoyitem.Key.position) < DECOY_ATTRACTION_ANGLE && decoyevent.actor.getTeam() != player.getTeam()));
+                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getLoSOffset(player.position, player.facing.Yaw, decoyitem.Key.position) < DECOY_ATTRACTION_ANGLE && decoyevent.actor.getTeam() != player.getTeam()));
             }
         }
         #endregion
@@ -1036,7 +1072,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         //TODO: better sight test
                         // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
-                        if (EDMathLibrary.isInFOV(flashedEnemyplayer.position, flashedEnemyplayer.facing.yaw, teammate.position))
+                        if (EDMathLibrary.isInFOV(flashedEnemyplayer.position, flashedEnemyplayer.facing.Yaw, teammate.position))
                         {
                             Link flashsupportlink = new Link(flash.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
                             links.Add(flashsupportlink);
@@ -1065,7 +1101,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != smokeitem.Key.actor.getTeam()))
                 {
                     //If a player from the opposing team of the smoke thrower saw into the smoke
-                    if (EDMathLibrary.vectorIntersectsSphere2D(smokeitem.Key.position.X, smokeitem.Key.position.Y, 250, counterplayer.position, counterplayer.facing.yaw))
+                    if (EDMathLibrary.vectorIntersectsSphere2D(smokeitem.Key.position.X, smokeitem.Key.position.Y, 250, counterplayer.position, counterplayer.facing.Yaw))
                     {
                         // Check if he could have seen a player from the thrower team
                         foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == smokeitem.Key.actor.getTeam()))
@@ -1078,7 +1114,7 @@ namespace CSGO_Analytics.src.encounterdetect
                                 smokeAssistCount_sight++;
                             }
                             // Test if the player who looked in the smoke can see a player from the oppposing( thrower) team
-                            if (EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.yaw, teammate.position))
+                            if (EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.Yaw, teammate.position))
                             {
                                 // The actor supported a teammate -> Supportlink
                                 Link link = new Link(smokeitem.Key.actor, teammate, LinkType.SUPPORTLINK, Direction.DEFAULT);
@@ -1120,17 +1156,17 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
                 {
                     // Test if an enemy can see our actor
-                    if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.yaw, hurtevent.victim.position))
+                    if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.Yaw, hurtevent.victim.position))
                     {
                         vcandidates.Add(hurtevent.victim);
                         // Order by closest or by closest los player to determine which is the probablest candidate
                         //vcandidates.OrderBy(candidate => EDMathLibrary.getEuclidDistance2D(hvictimpos, wfactorpos));
-                        vcandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(wf.actor.position, wf.actor.facing.yaw, hurtevent.victim.position)); //  Offset = Angle between lineofsight of actor and position of candidate
+                        vcandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(wf.actor.position, wf.actor.facing.Yaw, hurtevent.victim.position)); //  Offset = Angle between lineofsight of actor and position of candidate
                         break;
                     }
 
                 }
-                else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf. so we store and try another time
+                else // We didnt find a matching hurtevent but there is still a chance for a later hurt event to suite for wf -> store this event and try another time
                 {
                     pendingWFEQueue.Add(wf, tick_id);
                     break;
@@ -1160,10 +1196,10 @@ namespace CSGO_Analytics.src.encounterdetect
             foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != actor.getTeam()))
             {
                 // Test if an enemy can see our actor
-                if (EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.yaw, actor.position))
+                if (EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.Yaw, actor.position))
                 {
                     scandidates.Add(counterplayer);
-                    scandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(counterplayer.position, counterplayer.facing.yaw, actor.position)); //  Offset = Angle between lineofsight of actor and position of candidate
+                    scandidates.OrderBy(candidate => EDMathLibrary.getLoSOffset(counterplayer.position, counterplayer.facing.Yaw, actor.position)); //  Offset = Angle between lineofsight of actor and position of candidate
                 }
             }
 
@@ -1261,7 +1297,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 Console.WriteLine("Could not map unkown CS-ID: " + player.player_id + " on Analytics-ID. CS-ID change occured -> Key needs update");
 #if Debug
-                foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
+                foreach (KeyValuePair<int, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
 #endif
                 handleChangedID(player);
@@ -1289,7 +1325,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
                     playerID_dictionary.Add(p.player_id, value);
 #if Debug
-                foreach (KeyValuePair<int, int> pair in mappedPlayerIDs)
+                foreach (KeyValuePair<int, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
 #endif
                     return;
@@ -1330,39 +1366,15 @@ namespace CSGO_Analytics.src.encounterdetect
             else
                 return null;
         }
-        #endregion
 
-        /// <summary>
-        /// Returns a list of all interpolated positions between start and end of a hurtevent
-        /// </summary>
-        /// <param name="gevent"></param>
-        /// <returns></returns>
-        public List<EDVector3D> getHitvectorPositions(Event gevent)
+        private void printLivingPlayers()
         {
-            List<EDVector3D> ps = new List<EDVector3D>();
+            foreach (var p in livingplayers)
+                Console.WriteLine(p);
 
-            string weapon = "";
-            // Add Positions interpolated on Hit-Vectors - every point on the route of a hitvector is viable
-            switch (gevent.gameevent)
-            {
-                case "player_hurt":
-                    PlayerHurt ph = (PlayerHurt)gevent;
-                    weapon = ph.weapon.name;
-                    break;
-                case "player_death":
-                    PlayerKilled pk = (PlayerKilled)gevent;
-                    weapon = pk.weapon.name;
-                    break;
-            }
-            //Exclude some nades because they do not deliver correct positions(nades can explode around corners and after a certain time -> hitvector is falsified)
-            if (weapon != WeaponType.HE.ToString() && weapon != WeaponType.Incendiary.ToString() && weapon != "")
-            {
-                var start = gevent.getPositions()[0]; // TODO: change to getPositon("victim");?
-                var end = gevent.getPositions()[1];
-                var ipos = EDMathLibrary.linear_interpolatePositions(start, end, 20);
-                ps.AddRange(ipos);
-            }
-            return ps;
+            foreach (KeyValuePair<int, int> pair in playerID_dictionary)
+                Console.WriteLine("CS ID Key: " + pair.Key + " TableID Value: " + pair.Value);
         }
+        #endregion
     }
 }

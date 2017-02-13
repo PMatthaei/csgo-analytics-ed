@@ -47,7 +47,9 @@ namespace CSGO_Analytics.src.data.gameobjects
         {
             foreach (var level in maplevels)
             {
+                var vz = p.velocity.VZ;
                 var pz = p.position.Z;
+                if (vz != 0) pz -= 54; // Substract velocity to get real z coordinate
                 if (pz <= level.max_z && pz >= level.min_z)
                     return level;
             }
@@ -277,7 +279,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             var dbscan = new FasterDbscanAlgorithm((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
 
-            clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 50.01, minPts: 2);
+            clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
             points = null; //Collect points for garbage
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
             foreach (var cl in clusters)

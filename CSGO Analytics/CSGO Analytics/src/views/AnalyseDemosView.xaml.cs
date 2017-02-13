@@ -151,7 +151,7 @@ namespace CSGO_Analytics.src.views
         private void ReadDemofiledata()
         {
             var path = "match_0.dem";
-            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
             {
                 ParseTask ptask = new ParseTask
                 {
@@ -165,7 +165,7 @@ namespace CSGO_Analytics.src.views
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-            }*/
+            }
 
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
@@ -703,7 +703,7 @@ namespace CSGO_Analytics.src.views
         private void drawPlayer(Player p)
         {
             var ps = new PlayerShape();
-            ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.yaw);
+            ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.Yaw);
             var vector = CSPositionToUIPosition(p.position);
             ps.X = vector.X;
             ps.Y = vector.Y;
@@ -775,7 +775,7 @@ namespace CSGO_Analytics.src.views
             var vector = CSPositionToUIPosition(p.position);
             ps.X = vector.X;
             ps.Y = vector.Y;
-            ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.yaw);
+            ps.Yaw = EDM.EDMathLibrary.toRadian(-p.facing.Yaw);
 
         }
         #endregion
@@ -857,12 +857,12 @@ namespace CSGO_Analytics.src.views
         private void Button_play(object sender, RoutedEventArgs e)
         {
             //renderMapLevelClusters();
-            renderMapLevels();
+            //renderMapLevels();
             //renderHurtClusters();
-            /*if (paused)
+            if (paused)
                 _busy.Set();
             else
-                playMatch();*/
+                playMatch();
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)

@@ -364,9 +364,9 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static EDVector3D getAimVector(EDVector3D pos, Facing facing)
         {
-            var aimX = (float)(pos.X + Math.Cos(toRadian(-facing.yaw)));// Aim vector from Yaw
-            var aimY = (float)(pos.Y + Math.Sin(toRadian(-facing.yaw)));
-            var aimZ = (float)(pos.Y + Math.Sin(toRadian(-facing.pitch))); //TODO: check if valid?!?!
+            var aimX = (float)(pos.X + Math.Cos(toRadian(-facing.Yaw)));// Aim vector from Yaw
+            var aimY = (float)(pos.Y + Math.Sin(toRadian(-facing.Yaw)));
+            var aimZ = (float)(pos.Y + Math.Sin(toRadian(-facing.Pitch))); //TODO: check if valid?!?!
 
             return new EDVector3D(aimX, aimY, aimZ);
         }

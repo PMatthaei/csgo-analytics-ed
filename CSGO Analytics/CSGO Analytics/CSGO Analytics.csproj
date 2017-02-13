@@ -69,7 +69,7 @@
     <Compile Include="src\data\gameevents\Event.cs" />
     <Compile Include="src\data\gameevents\NadeEvents.cs" />
     <Compile Include="src\data\gameevents\MovementEvents.cs" />
-    <Compile Include="src\data\gameevents\ServerEvent.cs" />
+    <Compile Include="src\data\gameevents\ServerEvents.cs" />
     <Compile Include="src\data\gameobjects\GameObject.cs" />
     <Compile Include="src\data\gameobjects\Map.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />

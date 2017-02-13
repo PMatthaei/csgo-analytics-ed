@@ -24,6 +24,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public const int PLAYERMODELL_HEIGHT = 72;
         public const int PLAYERMODELL_CROUCH_HEIGHT = 54;
         public const int PLAYERMODELL_WIDTH = 32;
+        public const int PLAYERMODELL_JUMPHEIGHT = 54;
 
         public string playername { get; set; }
         public int player_id { get; set; }
@@ -65,6 +66,11 @@ namespace CSGO_Analytics.src.data.gameobjects
                 return true;
             else
                 return false;
+        }
+
+        public override string ToString()
+        {
+            return "Name: " + playername + " ID: "+ player_id + " Team: " +team;
         }
 
         public override bool Equals(object obj) //Why does a true overriden Equals kill the json serialisation?!?
@@ -130,34 +136,34 @@ namespace CSGO_Analytics.src.data.gameobjects
 
     public class Facing
     {
-        public float yaw { get; set; }
-        public float pitch { get; set; }
+        public float Yaw { get; set; }
+        public float Pitch { get; set; }
 
         internal Facing Copy()
         {
-            return new Facing() { yaw = yaw, pitch = pitch };
+            return new Facing() { Yaw = Yaw, Pitch = Pitch };
         }
 
         internal float[] getAsArray()
         {
-            return new float[] { yaw, pitch };
+            return new float[] { Yaw, Pitch };
         }
     }
 
     public class Velocity
     {
-        public float vx { get; set; }
-        public float vy { get; set; }
-        public float vz { get; set; }
+        public float VX { get; set; }
+        public float VY { get; set; }
+        public float VZ { get; set; }
 
         internal Velocity Copy()
         {
-            return new Velocity() { vx = vx, vy = vy, vz = vz };
+            return new Velocity() { VX = VX, VY = VY, VZ = VZ };
         }
 
         internal float[] getAsArray()
         {
-            return new float[] { vx, vy, vz };
+            return new float[] { VX, VY, VZ };
         }
     }
 }
