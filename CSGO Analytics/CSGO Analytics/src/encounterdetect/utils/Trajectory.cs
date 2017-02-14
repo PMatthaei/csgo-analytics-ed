@@ -55,5 +55,10 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             return (EDVector3D)positions[index];
         }
 
+        private void compress()
+        {
+
+        }
+
     }
 }

@@ -13,10 +13,9 @@ namespace CSGO_Analytics.src.data.gameobjects
     public class PlayerMeta
     {
         public string playername { get; set; }
-        public int player_id { get; set; }
+        public long player_id { get; set; }
         public string team { get; set; }
         public string clanname { get; set; }
-        public long steam_id { get; set; }
     }
 
     public class Player
@@ -27,7 +26,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public const int PLAYERMODELL_JUMPHEIGHT = 54;
 
         public string playername { get; set; }
-        public int player_id { get; set; }
+        public long player_id { get; set; }
         public string team { get; set; }
         public EDVector3D position { get; set; }
         public Facing facing { get; set; }

@@ -62,7 +62,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// All living players with the latest data.(position health etc)
         /// </summary>
         private HashSet<Player> livingplayers;
-        private List<Player> deadplayers;
+        private HashSet<Player> deadplayers;
 
         private float[][] position_table;
         private float[][] distance_table;
@@ -95,7 +95,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Dictionary for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
         /// (Watch out for id changes caused by disconnects/reconnects!!)
         /// </summary>
-        private Dictionary<int, int> playerID_dictionary = new Dictionary<int, int>();
+        private Dictionary<long, int> playerID_dictionary = new Dictionary<long, int>();
 
 
         public EncounterDetection(Gamestate gamestate)
@@ -104,7 +104,7 @@ namespace CSGO_Analytics.src.encounterdetect
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
             this.livingplayers = new HashSet<Player>(players.ToList());
-            this.deadplayers = new List<Player>();
+            this.deadplayers = new HashSet<Player>();
 
             int ownid = 0;
             foreach (var player in players) // Map all CS Entity IDs to our own table-ids
@@ -193,6 +193,7 @@ namespace CSGO_Analytics.src.encounterdetect
         #endregion
 
         private List<Encounter> predecessors = new List<Encounter>();
+
         /// <summary>
         /// 
         /// </summary>
@@ -209,12 +210,12 @@ namespace CSGO_Analytics.src.encounterdetect
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
 
-                    handleServerEvents(tick.getServerEvents()); //Check for serverevents as these have impact on our id and player-system
+                    handleServerEvents(tick); //Check for serverevents as these have impact on our id and update-system
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
                         if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
-                        int id = getTableID(updatedPlayer);
+                        int id = GetTableID(updatedPlayer);
 
                         if (!updatedPlayer.isDead())
                         {
@@ -350,17 +351,28 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
-        private void handleServerEvents(List<ServerEvents> events)
+        private HashSet<Player> disconnectedplayers = new HashSet<Player>();
+        private long lastdisconnect_id = 0;
+        private void handleServerEvents(Tick tick)
         {
-            // Iterate over all disconnects and connects
-            foreach (var sevent in events)
+            // Iterate over all disconnects and connects in this tick
+            foreach (var sevent in tick.getServerEvents())
             {
                 var player = sevent.actor;
                 switch (sevent.gameevent)
                 {
                     case "player_bind":
+                        if (disconnectedplayers.Contains(sevent.actor))
+                            disconnectedplayers.Remove(sevent.actor);
+                        //problem cannot find id for bots
+                        ChangeTableIDKey(lastdisconnect_id, sevent.actor.player_id);
+                        livingplayers.Add(sevent.actor);
                         break;
-                    case "player_disconnected": break;
+                    case "player_disconnected":
+                        lastdisconnect_id = sevent.actor.player_id;
+                        livingplayers.Remove(sevent.actor);
+                        disconnectedplayers.Add(sevent.actor);
+                        break;
                     default: throw new Exception("Unkown ServerEvent");
                 }
             }
@@ -758,7 +770,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var other in livingplayers.Where(p => !p.Equals(player)))
                 {
-                    var distance = distance_table[getTableID(player)][getTableID(other)];
+                    var distance = distance_table[GetTableID(player)][GetTableID(other)];
 
                     if (distance <= ATTACKRANGE_AVERAGE && other.getTeam() != player.getTeam())
                     {
@@ -784,7 +796,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var other in livingplayers.Where(p => !p.Equals(player)))
                 {
-                    var distance = distance_table[getTableID(player)][getTableID(other)];
+                    var distance = distance_table[GetTableID(player)][GetTableID(other)];
                     Cluster playercluster = null;
                     foreach (var c in attacker_clusters) // TODO: Change this if clustercount gets to high. Very slow
                     {
@@ -1267,8 +1279,9 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             exporter.AddRow();
             exporter["Demoname"] = "";
+            exporter["Tickrate"] = sec;
             exporter["Runtime in sec"] = sec;
-            //exporter["Demofilesize"] = "New York, USA";
+            exporter["Total ticks"] = sec;
             exporter["Observed ticks"] = tickCount;
             exporter["Observed events"] = eventCount;
             exporter["Hurt/Killed-Events"] = hit_hashtable.Count;
@@ -1286,7 +1299,7 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter.ExportToFile("encounter_detection_results.csv");
         }
 
-        public int getTableID(Player player) // Problem with ID Mapping: Player disconnect or else changes ID of this player
+        public int GetTableID(Player player) // Problem with ID Mapping: Player disconnect or else changes ID of this player
         {
             int id;
             if (playerID_dictionary.TryGetValue(player.player_id, out id))
@@ -1297,13 +1310,31 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 Console.WriteLine("Could not map unkown CS-ID: " + player.player_id + " on Analytics-ID. CS-ID change occured -> Key needs update");
 #if Debug
-                foreach (KeyValuePair<int, int> pair in playerID_dictionary)
+                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
 #endif
                 handleChangedID(player);
-                return getTableID(player);
+                return GetTableID(player);
             }
 
+
+        }
+
+        public void ChangeTableIDKey(long fromKey, long toKey)
+        {
+            try {
+                int value = playerID_dictionary[fromKey];
+                playerID_dictionary.Remove(fromKey);
+                playerID_dictionary[toKey] = value;
+            }
+            catch (Exception e)
+            {
+                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
+                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            Console.ReadLine();
 
         }
 
@@ -1314,7 +1345,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="p"></param>
         private void handleChangedID(Player p)
         {
-            int changedKey = -99; //Deprecated
+            long changedKey = -99; //Deprecated
             int value = -99;
             for (int i = 0; i < players.Count() - 1; i++)
             {
@@ -1325,7 +1356,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
                     playerID_dictionary.Add(p.player_id, value);
 #if Debug
-                foreach (KeyValuePair<int, int> pair in playerID_dictionary)
+                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
 #endif
                     return;
@@ -1372,7 +1403,7 @@ namespace CSGO_Analytics.src.encounterdetect
             foreach (var p in livingplayers)
                 Console.WriteLine(p);
 
-            foreach (KeyValuePair<int, int> pair in playerID_dictionary)
+            foreach (KeyValuePair<long, int> pair in playerID_dictionary)
                 Console.WriteLine("CS ID Key: " + pair.Key + " TableID Value: " + pair.Value);
         }
         #endregion

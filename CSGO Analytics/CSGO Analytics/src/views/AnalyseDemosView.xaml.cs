@@ -603,11 +603,11 @@ namespace CSGO_Analytics.src.views
         {
             LinkShape ls = new LinkShape(actor, reciever);
 
-            PlayerShape aps = playershapes[EDAlgorithm.getTableID(actor)];
+            PlayerShape aps = playershapes[EDAlgorithm.GetTableID(actor)];
             ls.X1 = aps.X;
             ls.Y1 = aps.Y;
 
-            PlayerShape rps = playershapes[EDAlgorithm.getTableID(reciever)];
+            PlayerShape rps = playershapes[EDAlgorithm.GetTableID(reciever)];
             ls.X2 = rps.X;
             ls.Y2 = rps.Y;
 
@@ -627,8 +627,8 @@ namespace CSGO_Analytics.src.views
         {
             Player actor = link.getActor();
             Player reciever = link.getReciever();
-            var psr = playershapes[EDAlgorithm.getTableID(reciever)];
-            var psa = playershapes[EDAlgorithm.getTableID(actor)];
+            var psr = playershapes[EDAlgorithm.GetTableID(reciever)];
+            var psa = playershapes[EDAlgorithm.GetTableID(actor)];
 
             foreach (var ls in links)
             {
@@ -720,7 +720,7 @@ namespace CSGO_Analytics.src.views
             ps.StrokeThickness = 0.5;
             ps.Active = true;
 
-            playershapes[EDAlgorithm.getTableID(p)] = ps;
+            playershapes[EDAlgorithm.GetTableID(p)] = ps;
             mapPanel.Children.Add(ps);
         }
 
@@ -728,7 +728,7 @@ namespace CSGO_Analytics.src.views
 
         private void updatePlayer(Player p)
         {
-            PlayerShape ps = playershapes[EDAlgorithm.getTableID(p)];
+            PlayerShape ps = playershapes[EDAlgorithm.GetTableID(p)];
             if (p.HP <= 0)
                 ps.Active = false;
             if (p.HP > 0)
