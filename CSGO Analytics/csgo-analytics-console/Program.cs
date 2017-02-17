@@ -26,6 +26,10 @@ namespace csgo_analytics_console
 
         static void Main(string[] args)
         {
+            var x = -179.2278;
+            var z = -179.2278;
+            var y = -59.22775;
+            Console.WriteLine(x <= y && x >= z);
             readAllFiles();
             Console.ReadLine();
         }

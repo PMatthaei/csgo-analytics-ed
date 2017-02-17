@@ -45,15 +45,16 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <returns></returns>
         public MapLevel findPlayerLevel(Player p)
         {
+            var vz = p.velocity.VZ;
+            var pz = p.position.Z;
+            if (vz != 0)
+                pz -= 53.99f; // Substract jumpheight to get real z coordinate(see process data)
             foreach (var level in maplevels)
-            {
-                var vz = p.velocity.VZ;
-                var pz = p.position.Z;
-                if (vz != 0) pz -= 54; // Substract velocity to get real z coordinate
                 if (pz <= level.max_z && pz >= level.min_z)
                     return level;
-            }
-            throw new Exception("No level found for this player: " + p.ToString());
+
+
+            return null;
             // This problem occurs because: Positions where player had z-velocity had been sorted out
             // Then we built the levels. If now such a player wants to know his level but current levels dont capture
             // This position because it was sorted out -> no suitable level found

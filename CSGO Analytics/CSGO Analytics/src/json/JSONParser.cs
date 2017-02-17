@@ -230,7 +230,6 @@ namespace CSGO_Analytics.src.json.parser
         #region Serverevents
         internal ServerEvents assemblePlayerBind(DemoInfoModded.Player player)
         {
-            Console.WriteLine("player_bind: " + player.Name + " ID: " + player.SteamID + " CSID: " + player.EntityID);
             return new ServerEvents
             {
                 gameevent = "player_bind",
@@ -240,24 +239,34 @@ namespace CSGO_Analytics.src.json.parser
 
         internal ServerEvents assemblePlayerDisconnected(DemoInfoModded.Player player)
         {
-            Console.WriteLine("player_disconnected: " + player.Name + " ID: "+ player.SteamID + " CSID: " +player.EntityID);
             return new ServerEvents
             { 
                 gameevent = "player_disconnected",
                 actor = assemblePlayer(player)
             };
         }
+
+        internal TakeOverEvent assemblePlayerTakeOver(BotTakeOverEventArgs e)
+        {
+            return new TakeOverEvent
+            {
+                gameevent = "player_takeover",
+                actor = assemblePlayer(e.Taker),
+                taken = assemblePlayer(e.Taken)
+            };
+        }
+
         #endregion
 
         #region Subevents
 
-        internal List<ED.Player> assemblePlayers(DemoInfoModded.Player[] ps)
+        internal List<ED.PlayerDetailed> assemblePlayers(DemoInfoModded.Player[] ps)
         {
             if (ps == null)
                 return null;
-            List<ED.Player> players = new List<ED.Player>();
+            List<ED.PlayerDetailed> players = new List<ED.PlayerDetailed>();
             foreach (var player in ps)
-                players.Add(assemblePlayer(player));
+                players.Add(assemblePlayerDetailed(player));
 
             return players;
         }
@@ -438,6 +447,8 @@ namespace CSGO_Analytics.src.json.parser
 
             return jwp;
         }
+
+
 
         #endregion
     }

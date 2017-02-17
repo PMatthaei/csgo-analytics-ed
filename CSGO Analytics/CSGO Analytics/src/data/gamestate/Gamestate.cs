@@ -19,7 +19,7 @@ namespace CSGO_Analytics.src.json.jsonobjects
         public string mapname { get; set; }
         public float tickrate { get; set; }
         public int tickcount { get; set; }
-        public List<Player> players { get; set; }
+        public List<PlayerDetailed> players { get; set; }
     }
 
     public class Match

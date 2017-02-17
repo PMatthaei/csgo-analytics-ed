@@ -103,7 +103,9 @@ namespace CSGO_Analytics.src.encounterdetect
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
             this.players = gamestate.meta.players.ToArray();
+            Console.WriteLine("Start with " + players.Count() + " players.");
             this.livingplayers = new HashSet<Player>(players.ToList());
+            printLivingPlayers();
             this.deadplayers = new HashSet<Player>();
 
             int ownid = 0;
@@ -210,35 +212,19 @@ namespace CSGO_Analytics.src.encounterdetect
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
 
-                    handleServerEvents(tick); //Check for serverevents as these have impact on our id and update-system
+                    handleServerEvents(tick, true);
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
+                        if (illegalplayer.Contains(updatedPlayer)) continue;
                         if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
+                        updatePlayer(updatedPlayer);
                         int id = GetTableID(updatedPlayer);
-
-                        if (!updatedPlayer.isDead())
-                        {
-                            if (deadplayers.Contains(updatedPlayer) && !livingplayers.Contains(updatedPlayer))
-                            {
-                                deadplayers.Remove(updatedPlayer);
-                                livingplayers.Add(updatedPlayer);
-                            }
-
-                            updatePlayer(updatedPlayer);
-                            updatePosition(id, updatedPlayer.position.getAsArray3D()); // Update position first then distance!!
-                            updateDistance(id);
-                        }
-                        else
-                        {
-                            if (!deadplayers.Contains(updatedPlayer))
-                            {
-                                livingplayers.Remove(updatedPlayer);
-                                deadplayers.Add(updatedPlayer);
-                            }
-                        }
-
+                        updatePosition(id, updatedPlayer.position.getAsArray3D()); // Update position first then distance!!
+                        updateDistance(id);
                     }
+
+                    handleServerEvents(tick, false);
 
 
                     CombatComponent component = buildComponent(tick);
@@ -350,10 +336,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
             return replay;
         }
-
+        private HashSet<Player> illegalplayer = new HashSet<Player>();
         private HashSet<Player> disconnectedplayers = new HashSet<Player>();
+        private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
         private long lastdisconnect_id = 0;
-        private void handleServerEvents(Tick tick)
+        private void handleServerEvents(Tick tick, bool handledisconnects)
         {
             // Iterate over all disconnects and connects in this tick
             foreach (var sevent in tick.getServerEvents())
@@ -362,16 +349,27 @@ namespace CSGO_Analytics.src.encounterdetect
                 switch (sevent.gameevent)
                 {
                     case "player_bind":
-                        if (disconnectedplayers.Contains(sevent.actor))
-                            disconnectedplayers.Remove(sevent.actor);
-                        //problem cannot find id for bots
-                        ChangeTableIDKey(lastdisconnect_id, sevent.actor.player_id);
-                        livingplayers.Add(sevent.actor);
+                        if (disconnectedplayers.Count == 0) illegalplayer.Add(player);
+                        if (!handledisconnects) continue;
+                        Console.WriteLine("player_bind: " + player);
+                        if (player.player_id == 0)
+                        { // Player is a bot
+                            botid_to_steamid.Add(player.playername, lastdisconnect_id); // This Bot took over the last disconnected players steamid
+                            continue;
+                        }
+                        if (disconnectedplayers.Contains(player))
+                            disconnectedplayers.Remove(player);
                         break;
                     case "player_disconnected":
-                        lastdisconnect_id = sevent.actor.player_id;
-                        livingplayers.Remove(sevent.actor);
-                        disconnectedplayers.Add(sevent.actor);
+                        if (handledisconnects) continue;
+                        Console.WriteLine("player_disconnected: "+ player);
+                        if (player.player_id == 0)
+                        { // Player is a bot -> when a bot disconnects remove his binding to the players steamid
+                            botid_to_steamid.Remove(player.playername);
+                            continue;
+                        }
+                        lastdisconnect_id = player.player_id;
+                        disconnectedplayers.Add(player);
                         break;
                     default: throw new Exception("Unkown ServerEvent");
                 }
@@ -380,7 +378,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Update a players with his most recent version.
+        /// Update a players with his most recent version. Further keeps track of all living players
         /// </summary>
         /// <param name="toUpdate"></param>
         private void updatePlayer(Player toUpdate)
@@ -388,17 +386,35 @@ namespace CSGO_Analytics.src.encounterdetect
             if (toUpdate.position == null) throw new Exception("Cannot update with null position");
             if (toUpdate.velocity == null) throw new Exception("Cannot update with null velocity");
             int count = 0;
-            //Console.WriteLine("\nNew Update for player: " + toUpdate);
-
-            foreach (var player in livingplayers.ToArray())
+            foreach (var player in players.ToArray())
             {
-                //Console.WriteLine("Test : " + player);
-                if (player.player_id == toUpdate.player_id)
+                var updateid = toUpdate.player_id;
+                if (updateid == 0) // We want to update data from a bot in the name of a disconnected player
+                    botid_to_steamid.TryGetValue(toUpdate.playername, out updateid);
+
+                if (player.player_id == updateid) // We found the player with a matching id -> update all changeable values
                 {
-                    //Console.WriteLine("Valid. Updating player : " + player);
-                    livingplayers.Remove(player);
-                    livingplayers.Add(toUpdate);
-                    count++;
+                    if (toUpdate.isDead() && !deadplayers.Contains(player)) //This player is dead but not in removed from the living -> do so
+                    {
+                        livingplayers.Remove(player);
+                        deadplayers.Add(player);
+                    } else //Player is alive -> make sure hes in the living list and update him
+                    {
+                        if (deadplayers.Contains(player) && !livingplayers.Contains(player)) // Player was dead but lives now -> make sure hes in the right list
+                        {
+                            deadplayers.Remove(player);
+                            livingplayers.Add(player);
+                        }
+
+                        player.facing = toUpdate.facing;
+                        player.position = toUpdate.position;
+                        player.velocity = toUpdate.velocity;
+                        player.HP = toUpdate.HP;
+                        player.isSpotted = toUpdate.isSpotted;
+                        count++;
+                    }
+
+
                 }
 
                 if (count > 1)
@@ -406,6 +422,12 @@ namespace CSGO_Analytics.src.encounterdetect
                     printLivingPlayers();
                     throw new Exception("More than one player with id living or revive is invalid: " + toUpdate.player_id);
                 }
+            }
+
+            if (count == 0 && !toUpdate.isDead())
+            {
+                printLivingPlayers();
+                throw new Exception("Player :"+ toUpdate + " updated");
             }
 
         }
@@ -615,7 +637,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
-            //searchEventbasedSightCombatLinks(tick, links);
+            searchEventbasedSightCombatLinks(tick, links);
             searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
             //searchClusterDistancebasedLinks(links);
@@ -1299,16 +1321,20 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter.ExportToFile("encounter_detection_results.csv");
         }
 
-        public int GetTableID(Player player) // Problem with ID Mapping: Player disconnect or else changes ID of this player
+        public int GetTableID(Player player)
         {
+            var updateid = player.player_id;
+            if (updateid == 0) // Check if the player is a bot -> get his mapped id from a disconnected player
+                botid_to_steamid.TryGetValue(player.playername, out updateid);
+
             int id;
-            if (playerID_dictionary.TryGetValue(player.player_id, out id))
+            if (playerID_dictionary.TryGetValue(updateid, out id))
             {
                 return id;
             }
             else
             {
-                Console.WriteLine("Could not map unkown CS-ID: " + player.player_id + " on Analytics-ID. CS-ID change occured -> Key needs update");
+                Console.WriteLine("Could not map unkown CS-ID: " + updateid + " of Player " +player.playername +" on Analytics-ID. CS-ID change occured -> Key needs update");
 #if Debug
                 foreach (KeyValuePair<long, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
@@ -1322,7 +1348,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public void ChangeTableIDKey(long fromKey, long toKey)
         {
-            try {
+            try
+            {
                 int value = playerID_dictionary[fromKey];
                 playerID_dictionary.Remove(fromKey);
                 playerID_dictionary[toKey] = value;

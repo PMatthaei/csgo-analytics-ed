@@ -103,7 +103,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
     }
 
-    class PlayerDetailed : Player
+    public class PlayerDetailed : Player
     {
         public int armor { get; set; }
         public bool hasHelmet { get; set; }
@@ -114,7 +114,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public bool isScoped { get; set; }
     }
 
-    class PlayerDetailedWithItems : PlayerDetailed
+    public class PlayerDetailedWithItems : PlayerDetailed
     {
         public List<Weapon> items { get; set; }
 

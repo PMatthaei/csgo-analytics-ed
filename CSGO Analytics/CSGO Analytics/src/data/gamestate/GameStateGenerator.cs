@@ -438,13 +438,19 @@ namespace CSGO_Analytics.src.json.parser
 
             parser.PlayerDisconnect += (sender, e) =>
             {
-                if(hasMatchStarted)
+                if(hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
                     tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
+            };
+
+            parser.BotTakeOver += (sender, e) =>
+            {
+                if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Taker))
+                    tick.tickevents.Add(jsonparser.assemblePlayerTakeOver(e));
             };
 
             parser.PlayerBind += (sender, e) =>
             {
-                if (hasMatchStarted)
+                if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
                     tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
             };
             #endregion
