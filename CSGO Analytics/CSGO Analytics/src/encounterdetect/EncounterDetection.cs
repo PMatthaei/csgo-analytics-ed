@@ -102,6 +102,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
+            Console.WriteLine("Tickrate: " + tickrate);
             this.players = gamestate.meta.players.ToArray();
             Console.WriteLine("Start with " + players.Count() + " players.");
             this.livingplayers = new HashSet<Player>(players.ToList());
@@ -331,7 +332,7 @@ namespace CSGO_Analytics.src.encounterdetect
             //
             // Export data to csv
             //
-            if (false)
+            if (true)
                 exportEDDataToCSV(sec);
 
             return replay;
@@ -342,7 +343,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private long lastdisconnect_id = 0;
         private void handleServerEvents(Tick tick, bool handledisconnects)
         {
-            // Iterate over all disconnects and connects in this tick
+            // Iterate over all disconnects and connects in this tick //TODO: problem: player has not connected when match starts -> later bind not possible with this algo because he did not disconnect
             foreach (var sevent in tick.getServerEvents())
             {
                 var player = sevent.actor;
@@ -386,6 +387,7 @@ namespace CSGO_Analytics.src.encounterdetect
             if (toUpdate.position == null) throw new Exception("Cannot update with null position");
             if (toUpdate.velocity == null) throw new Exception("Cannot update with null velocity");
             int count = 0;
+
             foreach (var player in players.ToArray())
             {
                 var updateid = toUpdate.player_id;
@@ -578,14 +580,15 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 bool inserted = false;
                 var valid_comps = en.cs.Where(comp => comp.tick_id == tick_id);
-                if (valid_comps.Count() > 1) throw new Exception("More than one component at tick :" + tick_id + " existing: Components are unique.");
-                foreach (var comp in valid_comps)
-                {
-                    wf_insertCount++;
-                    comp.links.Add(insertlink);
-                    inserted = true;
-                    break;
-                }
+                if (valid_comps.Count() > 1)
+                    throw new Exception("More than one component at tick :" + tick_id + " existing. Components have to be unique!");
+                else if (valid_comps.Count() == 0)
+                    continue;
+
+                valid_comps.First().links.Add(insertlink);
+                wf_insertCount++;
+                inserted = true;
+
                 if (inserted) //This should be useless if components and their tick_ids are unique
                     break;
             }
@@ -695,7 +698,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchSightbasedSightCombatLinks(Tick tick, List<Link> links)
         {
-            // Update playerlevels TODO: maybe consider jumps -> can cause different map level assigning but they are still on the same level just "float" above it
+            // Update playerlevels before we start using them to search links
             foreach (var p in livingplayers)
             {
                 if (playerlevels.ContainsKey(p))
@@ -1187,7 +1190,8 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
                 // Watch out for teamdamage -> create wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
+                //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) 
                 {
                     // Test if an enemy can see our actor
                     if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.Yaw, hurtevent.victim.position))
@@ -1301,7 +1305,8 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             exporter.AddRow();
             exporter["Demoname"] = "";
-            exporter["Tickrate"] = sec;
+            exporter["Map"] = "";
+            exporter["Tickrate"] = tickrate;
             exporter["Runtime in sec"] = sec;
             exporter["Total ticks"] = sec;
             exporter["Observed ticks"] = tickCount;
@@ -1311,9 +1316,10 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter["Sightcombatlink - Sightbased"] = sighttestCLinksCount;
             exporter["Sightcombatlink - Eventbased"] = eventestSightCLinkCount;
             exporter["Combatlinks - Eventbased"] = eventtestCLinksCount;
-            exporter["Combatlinks - Distancebased(Average Hurtrange)"] = distancetestCLinksCount + distancetestSLinksCount;
+            exporter["Combatlinks - Distancebased(Average Hurtrange)"] = distancetestCLinksCount;
             exporter["Combatlinks - Distancebased(Clustered Range)"] = clustered_average_distancetestCLinksCount;
             exporter["Supportlinks - Eventbased"] = damageAssistCount + killAssistCount;
+            exporter["Supportlinks - Distancebased(Average Hurtrange)"] = distancetestSLinksCount;
             exporter["Supportlinks - Smoke"] = smokeAssistCount_fov;
             exporter["Supportlinks - Flash"] = flashSLinkCount;
             exporter["Supportlinks - Assist"] = killAssistCount;

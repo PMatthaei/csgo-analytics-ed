@@ -26,11 +26,8 @@ namespace csgo_analytics_console
 
         static void Main(string[] args)
         {
-            var x = -179.2278;
-            var z = -179.2278;
-            var y = -59.22775;
-            Console.WriteLine(x <= y && x >= z);
-            readAllFiles();
+            readFilesFromCommandline(args);
+            //readAllFiles();
             Console.ReadLine();
         }
 
@@ -49,7 +46,7 @@ namespace csgo_analytics_console
         }
 
 
-        private void readFilesFromCommandline(string[] args)
+        private static void readFilesFromCommandline(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -78,7 +75,7 @@ namespace csgo_analytics_console
                 var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
                 Console.WriteLine("Map: " + mapname);
                 if (mapname != "de_dust2")
-                    skipfile = true;
+                    skipfile = false;
                 
                 GameStateGenerator.cleanUp();
                 var newdemoparser = new DemoParser(File.OpenRead(path));

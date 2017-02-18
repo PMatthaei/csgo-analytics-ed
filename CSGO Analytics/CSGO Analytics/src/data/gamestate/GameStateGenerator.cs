@@ -261,13 +261,17 @@ namespace CSGO_Analytics.src.json.parser
             parser.WeaponReload += (object sender, WeaponReloadEventArgs we) =>
             {
                 if (hasMatchStarted)
-                    tick.tickevents.Add(jsonparser.assembleWeaponReload(we));
+                {
+                    //tick.tickevents.Add(jsonparser.assembleWeaponReload(we));
+                }
             };
 
             parser.WeaponFiredEmpty += (object sender, WeaponFiredEmptyEventArgs we) =>
             {
                 if (hasMatchStarted)
-                    tick.tickevents.Add(jsonparser.assembleWeaponFireEmpty(we));
+                {
+                    //tick.tickevents.Add(jsonparser.assembleWeaponFireEmpty(we));
+                }
             };
 
             parser.PlayerJumped += (sender, e) =>
@@ -276,8 +280,8 @@ namespace CSGO_Analytics.src.json.parser
                 {
                     if (e.Jumper != null)
                     {
-                        tick.tickevents.Add(jsonparser.assemblePlayerJumped(e));
-                        steppers.Add(e.Jumper);
+                        //tick.tickevents.Add(jsonparser.assemblePlayerJumped(e));
+                        //steppers.Add(e.Jumper);
                     }
                 }
 
@@ -286,22 +290,21 @@ namespace CSGO_Analytics.src.json.parser
             parser.PlayerFallen += (sender, e) =>
             {
                 if (hasMatchStarted)
-                {
                     if (e.Fallen != null)
                     {
-                        tick.tickevents.Add(jsonparser.assemblePlayerFallen(e));
+                        //tick.tickevents.Add(jsonparser.assemblePlayerFallen(e));
                     }
-                }
-
             };
 
             parser.PlayerStepped += (sender, e) =>
             {
                 if (hasMatchStarted)
                 {
-                    if (e.Stepper != null && parser.PlayingParticipants.Contains(e.Stepper)) //Prevent spectating players from producing steps 
+                    if (e.Stepper != null && parser.PlayingParticipants.Contains(e.Stepper))
+                    { //Prevent spectating players from producing steps 
                         tick.tickevents.Add(jsonparser.assemblePlayerStepped(e));
                         steppers.Add(e.Stepper);
+                    }
                 }
 
             };
@@ -312,7 +315,11 @@ namespace CSGO_Analytics.src.json.parser
                 {
                     //the killer is null if vicitm is killed by the world - eg. by falling
                     if (e.Killer != null)
+                    {
                         tick.tickevents.Add(jsonparser.assemblePlayerKilled(e));
+                        steppers.Add(e.Killer);
+                        steppers.Add(e.Victim);
+                    }
                 }
 
             };
@@ -322,29 +329,33 @@ namespace CSGO_Analytics.src.json.parser
                 if (hasMatchStarted)
                     //the attacker is null if vicitm is damaged by the world - eg. by falling
                     if (e.Attacker != null)
+                    {
                         tick.tickevents.Add(jsonparser.assemblePlayerHurt(e));
+                        steppers.Add(e.Attacker);
+                        steppers.Add(e.Victim);
+                    }
             };
             #endregion
 
             #region Nadeevents
             //Nade (Smoke Fire Decoy Flashbang and HE) events
             parser.ExplosiveNadeExploded += (object sender, GrenadeEventArgs e) =>
-            {
-                if (e.ThrownBy != null && hasMatchStarted)
-                    tick.tickevents.Add(jsonparser.assembleNade(e, "hegrenade_exploded"));
-            };
+                {
+                    if (e.ThrownBy != null && hasMatchStarted)
+                        tick.tickevents.Add(jsonparser.assembleNade(e, "hegrenade_exploded"));
+                };
 
             parser.FireNadeStarted += (object sender, FireEventArgs e) =>
-            {
-                if (e.ThrownBy != null && hasMatchStarted)
-                    tick.tickevents.Add(jsonparser.assembleNade(e, "firenade_exploded"));
-            };
+                    {
+                        if (e.ThrownBy != null && hasMatchStarted)
+                            tick.tickevents.Add(jsonparser.assembleNade(e, "firenade_exploded"));
+                    };
 
             parser.FireNadeEnded += (object sender, FireEventArgs e) =>
-            {
-                if (e.ThrownBy != null && hasMatchStarted)
-                    tick.tickevents.Add(jsonparser.assembleNade(e, "firenade_ended"));
-            };
+                        {
+                            if (e.ThrownBy != null && hasMatchStarted)
+                                tick.tickevents.Add(jsonparser.assembleNade(e, "firenade_ended"));
+                        };
 
             parser.SmokeNadeStarted += (object sender, SmokeEventArgs e) =>
             {
@@ -389,48 +400,48 @@ namespace CSGO_Analytics.src.json.parser
             #region Bombevents
             parser.BombAbortPlant += (object sender, BombEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_abort_plant"));
+                //tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_abort_plant"));
             };
 
             parser.BombAbortDefuse += (object sender, BombDefuseEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBombDefuse(e, "bomb_abort_defuse"));
+                //tick.tickevents.Add(jsonparser.assembleBombDefuse(e, "bomb_abort_defuse"));
             };
 
             parser.BombBeginPlant += (object sender, BombEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_begin_plant"));
+                //tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_begin_plant"));
             };
 
             parser.BombBeginDefuse += (object sender, BombDefuseEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBombDefuse(e, "bomb_begin_defuse"));
+                //tick.tickevents.Add(jsonparser.assembleBombDefuse(e, "bomb_begin_defuse"));
             };
 
             parser.BombPlanted += (object sender, BombEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_planted"));
+                //tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_planted"));
             };
 
             parser.BombDefused += (object sender, BombEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_defused"));
+                //tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_defused"));
             };
 
             parser.BombExploded += (object sender, BombEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_exploded"));
+                //tick.tickevents.Add(jsonparser.assembleBomb(e, "bomb_exploded"));
             };
 
 
             parser.BombDropped += (object sender, BombDropEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBombState(e, "bomb_dropped"));
+                //tick.tickevents.Add(jsonparser.assembleBombState(e, "bomb_dropped"));
             };
 
             parser.BombPicked += (object sender, BombPickUpEventArgs e) =>
             {
-                tick.tickevents.Add(jsonparser.assembleBombState(e, "bomb_picked"));
+                //tick.tickevents.Add(jsonparser.assembleBombState(e, "bomb_picked"));
             };
             #endregion
 
@@ -438,7 +449,7 @@ namespace CSGO_Analytics.src.json.parser
 
             parser.PlayerDisconnect += (sender, e) =>
             {
-                if(hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
+                if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
                     tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
             };
 
@@ -483,7 +494,7 @@ namespace CSGO_Analytics.src.json.parser
 
 
                     // Dump playerpositions every positioninterval-ticks when freezetime has ended
-                    if ((tick_id % positioninterval == 0) && hasFreeezEnded)
+                    if ((tick_id % 8 == 0) && hasFreeezEnded)
                     {
                         foreach (var player in parser.PlayingParticipants.Where(player => !steppers.Contains(player)))
                         {

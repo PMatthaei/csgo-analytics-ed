@@ -112,7 +112,7 @@ namespace CSGO_Analytics.src.json.parser
             {
                 gameevent = "player_hurt",
                 actor = assemblePlayerDetailed(phe.Attacker),
-                victim = assemblePlayerDetailed(phe.Player),
+                victim = assemblePlayerDetailed(phe.Victim),
                 armor = phe.Armor,
                 armor_damage = phe.ArmorDamage,
                 HP = phe.Health,
