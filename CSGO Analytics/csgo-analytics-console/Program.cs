@@ -68,16 +68,16 @@ namespace csgo_analytics_console
                     showsteps = true,
                     specialevents = true,
                     highdetailplayer = true,
-                    positioninterval = 8,
+                    positioninterval = 250,
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
 
-                var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
+                /*var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
                 Console.WriteLine("Map: " + mapname);
                 if (mapname != "de_dust2")
-                    skipfile = false;
+                    skipfile = true;
                 
-                GameStateGenerator.cleanUp();
+                GameStateGenerator.cleanUp();*/
                 var newdemoparser = new DemoParser(File.OpenRead(path));
                 if (!skipfile)
                 {

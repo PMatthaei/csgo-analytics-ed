@@ -48,7 +48,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             var vz = p.velocity.VZ;
             var pz = p.position.Z;
             if (vz != 0)
-                pz -= 53.99f; // Substract jumpheight to get real z coordinate(see process data)
+                pz -= Player.PLAYERMODELL_JUMPHEIGHT; // Substract jumpheight to get real z coordinate(see process data)
             foreach (var level in maplevels)
                 if (pz <= level.max_z && pz >= level.min_z)
                     return level;
@@ -189,6 +189,11 @@ namespace CSGO_Analytics.src.data.gameobjects
             return new Map(map_width_x, map_width_y, maplevels);
         }
 
+        /// <summary>
+        /// Create a maplevel according to its walkable space.
+        /// </summary>
+        /// <param name="ps"></param>
+        /// <returns></returns>
         private static MapLevel[] createMapLevels(HashSet<EDVector3D> ps)
         {
             MapLevel[] maplevels;
@@ -308,7 +313,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
 
 
-        public List<EDRect> getWallCellNeighbors(EDRect cell)
+        public List<EDRect> getWallcellNeighbors(EDRect cell)
         {
             var neighbors = qlevel_walls.GetObjects(new System.Drawing.Rectangle
             {

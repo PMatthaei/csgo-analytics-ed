@@ -230,6 +230,7 @@ namespace CSGO_Analytics.src.json.parser
         #region Serverevents
         internal ServerEvents assemblePlayerBind(DemoInfoModded.Player player)
         {
+            Console.WriteLine("Bind: " + player.Name + " ID: " + player.SteamID);
             return new ServerEvents
             {
                 gameevent = "player_bind",
@@ -239,6 +240,7 @@ namespace CSGO_Analytics.src.json.parser
 
         internal ServerEvents assemblePlayerDisconnected(DemoInfoModded.Player player)
         {
+            Console.WriteLine("Disconnect: " +player.Name + " ID: "+player.SteamID);
             return new ServerEvents
             { 
                 gameevent = "player_disconnected",
@@ -248,6 +250,11 @@ namespace CSGO_Analytics.src.json.parser
 
         internal TakeOverEvent assemblePlayerTakeOver(BotTakeOverEventArgs e)
         {
+            if(e.Index != null)
+                Console.WriteLine("Takeover: Taker:" + e.Taker.Name + " ID: " + e.Taker.SteamID+ " Taken:" + e.Taken.Name + " ID: " + e.Taken.SteamID + " Index:" + e.Index.Name + " ID: " + e.Index.SteamID);
+            else
+                Console.WriteLine("Takeover: Taker:" + e.Taker.Name + " ID: " + e.Taker.SteamID + " Taken:" + e.Taken.Name + " ID: " + e.Taken.SteamID );
+
             return new TakeOverEvent
             {
                 gameevent = "player_takeover",

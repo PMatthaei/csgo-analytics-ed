@@ -161,7 +161,7 @@ namespace CSGO_Analytics.src.views
                     showsteps = true,
                     specialevents = true,
                     highdetailplayer = true,
-                    positioninterval = 8,
+                    positioninterval = 240,
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
@@ -277,7 +277,7 @@ namespace CSGO_Analytics.src.views
                         last_tickid = tick.tick_id;
                     int dt = tick.tick_id - last_tickid;
 
-                    int passedTime = (int)(dt * tickrate);// + 2000;
+                    int passedTime = (int)(dt * 1000/tickrate);// + 2000;
 
                     //Jump out of background to update UI
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
@@ -548,7 +548,7 @@ namespace CSGO_Analytics.src.views
             time_slider.Value = tick.tick_id;
             tick_label.Content = "Tick: " + tick.tick_id;
 
-            double ticks = (double)(tick.tick_id * tickrate);
+            double ticks = (double)(tick.tick_id * 1000/tickrate);
             TimeSpan time = TimeSpan.FromMilliseconds(ticks);
             DateTime startdate = new DateTime(1970, 1, 1) + time;
             time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;

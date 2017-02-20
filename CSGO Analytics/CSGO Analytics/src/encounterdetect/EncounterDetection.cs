@@ -49,9 +49,10 @@ namespace CSGO_Analytics.src.encounterdetect
         private double ATTACKRANGE_AVERAGE;
 
         /// <summary>
-        /// Tickrate of the demo this algorithm runs on. 
+        /// Tickrate of the demo in Hz this algorithm runs on. 
         /// </summary>
         public float tickrate;
+        public float ticktime;
 
         /// <summary>
         /// All players - communicated by the meta-data - which are participating in this match.
@@ -102,7 +103,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
-            Console.WriteLine("Tickrate: " + tickrate);
+            this.ticktime = 1000 / tickrate;
             this.players = gamestate.meta.players.ToArray();
             Console.WriteLine("Start with " + players.Count() + " players.");
             this.livingplayers = new HashSet<Player>(players.ToList());
@@ -202,7 +203,8 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public MatchEDReplay run()
         {
-
+            Console.ReadLine();
+            return null;
             MatchEDReplay replay = new MatchEDReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -212,12 +214,16 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
+                    Console.WriteLine("Serverevents in this tick");
+                    foreach (var sevent in tick.getServerEvents())
+                        Console.WriteLine(sevent.gameevent + " " + sevent.actor);
 
-                    handleServerEvents(tick, true);
+                    handleServerEvents(tick);
 
+                    //Check player binded in this tick before updating
+                    handleBindedPlayers();
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
-                        if (illegalplayer.Contains(updatedPlayer)) continue;
                         if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
                         updatePlayer(updatedPlayer);
                         int id = GetTableID(updatedPlayer);
@@ -225,7 +231,8 @@ namespace CSGO_Analytics.src.encounterdetect
                         updateDistance(id);
                     }
 
-                    handleServerEvents(tick, false);
+                    //Check player disconnects in this tick after updating
+                    handleDisconnectedPlayers();
 
 
                     CombatComponent component = buildComponent(tick);
@@ -268,7 +275,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
                         Encounter e = open_encounters[i];
-                        if (Math.Abs(e.tick_id - tick.tick_id) * tickrate / 1000 > ENCOUNTER_TIMEOUT)
+                        if (Math.Abs(e.tick_id - tick.tick_id) * ticktime > ENCOUNTER_TIMEOUT)
                         {
                             open_encounters.Remove(e);
                             closed_encounters.Add(e);
@@ -332,45 +339,57 @@ namespace CSGO_Analytics.src.encounterdetect
             //
             // Export data to csv
             //
-            if (true)
+            if (false)
                 exportEDDataToCSV(sec);
 
             return replay;
         }
+
+        private void handleBindedPlayers()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void handleDisconnectedPlayers()
+        {
+            throw new NotImplementedException();
+        }
         private HashSet<Player> illegalplayer = new HashSet<Player>();
         private HashSet<Player> disconnectedplayers = new HashSet<Player>();
+        private HashSet<Player> bindedplayers = new HashSet<Player>();
         private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
         private long lastdisconnect_id = 0;
-        private void handleServerEvents(Tick tick, bool handledisconnects)
+
+        private void handleServerEvents(Tick tick)
         {
-            // Iterate over all disconnects and connects in this tick //TODO: problem: player has not connected when match starts -> later bind not possible with this algo because he did not disconnect
             foreach (var sevent in tick.getServerEvents())
             {
                 var player = sevent.actor;
                 switch (sevent.gameevent)
                 {
                     case "player_bind":
-                        if (disconnectedplayers.Count == 0) illegalplayer.Add(player);
-                        if (!handledisconnects) continue;
-                        Console.WriteLine("player_bind: " + player);
-                        if (player.player_id == 0)
-                        { // Player is a bot
-                            botid_to_steamid.Add(player.playername, lastdisconnect_id); // This Bot took over the last disconnected players steamid
+                        bindedplayers.Add(player);
+
+                        if (player.player_id == 0) // Player is a bot -> map his id on a disconnectedplayer -> we update the player with the botdata
+                        {
+                            botid_to_steamid.Add(player.playername, lastdisconnect_id);
                             continue;
                         }
                         if (disconnectedplayers.Contains(player))
                             disconnectedplayers.Remove(player);
+                        
                         break;
                     case "player_disconnected":
-                        if (handledisconnects) continue;
-                        Console.WriteLine("player_disconnected: "+ player);
-                        if (player.player_id == 0)
-                        { // Player is a bot -> when a bot disconnects remove his binding to the players steamid
+                        disconnectedplayers.Add(player);
+
+                        if (player.player_id == 0) // Player is a bot -> when a bot disconnects remove his binding to the players steamid
+                        {
                             botid_to_steamid.Remove(player.playername);
                             continue;
+                        } else // For disconnected players save their id
+                        {
+                            lastdisconnect_id = player.player_id;
                         }
-                        lastdisconnect_id = player.player_id;
-                        disconnectedplayers.Add(player);
                         break;
                     default: throw new Exception("Unkown ServerEvent");
                 }
@@ -400,7 +419,8 @@ namespace CSGO_Analytics.src.encounterdetect
                     {
                         livingplayers.Remove(player);
                         deadplayers.Add(player);
-                    } else //Player is alive -> make sure hes in the living list and update him
+                    }
+                    else //Player is alive -> make sure hes in the living list and update him
                     {
                         if (deadplayers.Contains(player) && !livingplayers.Contains(player)) // Player was dead but lives now -> make sure hes in the right list
                         {
@@ -415,8 +435,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         player.isSpotted = toUpdate.isSpotted;
                         count++;
                     }
-
-
                 }
 
                 if (count > 1)
@@ -429,7 +447,7 @@ namespace CSGO_Analytics.src.encounterdetect
             if (count == 0 && !toUpdate.isDead())
             {
                 printLivingPlayers();
-                throw new Exception("Player :"+ toUpdate + " updated");
+                throw new Exception("Player :" + toUpdate + " could not be updated.");
             }
 
         }
@@ -928,7 +946,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var htick_id = item.Value;
                 int tick_dt = Math.Abs(htick_id - tick_id);
 
-                if (tick_dt * tickrate / 1000 > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                if (tick_dt * ticktime > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
                 {
                     registeredHEQueue.Remove(hurtevent); // Check timeout
                     continue;
@@ -957,7 +975,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var wftick_id = item.Value;
 
                 int tick_dt = Math.Abs(wftick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT)
+                if (tick_dt * ticktime > PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT)
                 {
                     pendingWFEQueue.Remove(weaponfireevent); //Check timeout
                     continue;
@@ -1072,7 +1090,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     if (player.flashedduration >= 0)
                     {
-                        float dtime = (tickdt * tickrate) / 1000.0f;
+                        float dtime = tickdt * ticktime;
                         player.flashedduration -= dtime; // Count down time
                     }
                     else
@@ -1183,7 +1201,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var htick_id = item.Value;
 
                 int tick_dt = Math.Abs(htick_id - tick_id);
-                if (tick_dt * tickrate / 1000 > WEAPONFIRE_VICTIMSEARCH_TIMEOUT) // 20 second timeout for hurt events
+                if (tick_dt * ticktime > WEAPONFIRE_VICTIMSEARCH_TIMEOUT) // 20 second timeout for hurt events
                 {
                     registeredHEQueue.Remove(hurtevent);
                     continue;
@@ -1191,7 +1209,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 // Watch out for teamdamage -> create wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor)) 
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor))
                 {
                     // Test if an enemy can see our actor
                     if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.Yaw, hurtevent.victim.position))
@@ -1340,7 +1358,7 @@ namespace CSGO_Analytics.src.encounterdetect
             }
             else
             {
-                Console.WriteLine("Could not map unkown CS-ID: " + updateid + " of Player " +player.playername +" on Analytics-ID. CS-ID change occured -> Key needs update");
+                Console.WriteLine("Could not map unkown CS-ID: " + updateid + " of Player " + player.playername + " on Analytics-ID. CS-ID change occured -> Key needs update");
 #if Debug
                 foreach (KeyValuePair<long, int> pair in playerID_dictionary)
                     Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);

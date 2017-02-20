@@ -45,13 +45,13 @@ namespace CSGO_Analytics.src.json.parser
         //
         // Helping variables
         //
-        static List<Player> steppers;
+        static List<Player> alreadytracked;
 
         static bool hasMatchStarted = false;
         static bool hasRoundStarted = false;
         static bool hasFreeezEnded = false;
 
-        static int positioninterval = 8;
+        static int positioninterval; // in ms
 
         static int tick_id = 0;
         static int round_id = 0;
@@ -80,7 +80,7 @@ namespace CSGO_Analytics.src.json.parser
             tick = new Tick();
             gs = new Gamestate();
 
-            steppers = new List<Player>();
+            alreadytracked = new List<Player>();
 
             hasMatchStarted = false;
             hasRoundStarted = false;
@@ -176,6 +176,8 @@ namespace CSGO_Analytics.src.json.parser
             return parser.Map;
         }
 
+        static bool printenable = false;
+        static int rcount = 0;
         /// <summary>
         /// Assembles the gamestate object from data given by the demoparser.
         /// </summary>
@@ -303,7 +305,7 @@ namespace CSGO_Analytics.src.json.parser
                     if (e.Stepper != null && parser.PlayingParticipants.Contains(e.Stepper))
                     { //Prevent spectating players from producing steps 
                         tick.tickevents.Add(jsonparser.assemblePlayerStepped(e));
-                        steppers.Add(e.Stepper);
+                        alreadytracked.Add(e.Stepper);
                     }
                 }
 
@@ -317,8 +319,8 @@ namespace CSGO_Analytics.src.json.parser
                     if (e.Killer != null)
                     {
                         tick.tickevents.Add(jsonparser.assemblePlayerKilled(e));
-                        steppers.Add(e.Killer);
-                        steppers.Add(e.Victim);
+                        alreadytracked.Add(e.Killer);
+                        alreadytracked.Add(e.Victim);
                     }
                 }
 
@@ -331,8 +333,8 @@ namespace CSGO_Analytics.src.json.parser
                     if (e.Attacker != null)
                     {
                         tick.tickevents.Add(jsonparser.assemblePlayerHurt(e));
-                        steppers.Add(e.Attacker);
-                        steppers.Add(e.Victim);
+                        alreadytracked.Add(e.Attacker);
+                        alreadytracked.Add(e.Victim);
                     }
             };
             #endregion
@@ -447,23 +449,34 @@ namespace CSGO_Analytics.src.json.parser
 
             #region Serverevents
 
+            parser.PlayerBind += (sender, e) =>
+            {
+                if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
+                {
+                    Console.WriteLine("Tickid: " + tick_id);
+                    tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
+                }
+            };
+
             parser.PlayerDisconnect += (sender, e) =>
             {
                 if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
+                {
+                    Console.WriteLine("Tickid: " + tick_id);
                     tick.tickevents.Add(jsonparser.assemblePlayerDisconnected(e.Player));
+                }
             };
 
             parser.BotTakeOver += (sender, e) =>
             {
                 if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Taker))
+                {
+                    Console.WriteLine("Tickid: " + tick_id);
                     tick.tickevents.Add(jsonparser.assemblePlayerTakeOver(e));
+                    printenable = true;
+                }
             };
 
-            parser.PlayerBind += (sender, e) =>
-            {
-                if (hasMatchStarted && parser.PlayingParticipants.Contains(e.Player))
-                    tick.tickevents.Add(jsonparser.assemblePlayerBind(e.Player));
-            };
             #endregion
 
             #region Futureevents
@@ -488,26 +501,28 @@ namespace CSGO_Analytics.src.json.parser
             #region Tickevent / Ticklogic
             //Assemble a tick object with the above gameevents
             parser.TickDone += (sender, e) =>
+            {
+                if (!hasMatchStarted) //Dont count ticks if the game has not started already (dismissing warmup and knife-phase for official matches)
+                    return;
+
+                // 8 = 250ms, 16 = 500ms usw
+                var updaterate = 8 * ((int)Math.Ceiling(parser.TickRate) / 32);
+                // Dump playerpositions every at a given updaterate according to the tickrate
+                if ((tick_id % updaterate == 0) && hasFreeezEnded)
                 {
-                    if (!hasMatchStarted) //Dont count ticks if the game has not started already (dismissing warmup and knife-phase for official matches)
-                        return;
-
-
-                    // Dump playerpositions every positioninterval-ticks when freezetime has ended
-                    if ((tick_id % 8 == 0) && hasFreeezEnded)
+                    foreach (var player in parser.PlayingParticipants.Where(player => !alreadytracked.Contains(player)))
                     {
-                        foreach (var player in parser.PlayingParticipants.Where(player => !steppers.Contains(player)))
-                        {
-                            tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
-                        }
+                        tick.tickevents.Add(jsonparser.assemblePlayerPosition(player));
                     }
+                }
 
+                tick_id++;
+                alreadytracked.Clear();
+            };
 
-                    tick_id++;
-                    steppers.Clear();
-                };
-
-
+            //
+            // MAIN PARSING LOOP
+            //
             try
             {
                 //Parse tickwise and add the resulting tick to the round object
@@ -515,7 +530,6 @@ namespace CSGO_Analytics.src.json.parser
                 {
                     if (hasMatchStarted)
                     {
-
                         tick.tick_id = tick_id;
                         //Tickevents were registered
                         if (tick.tickevents.Count != 0)

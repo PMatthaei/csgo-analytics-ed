@@ -64,6 +64,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="src\data\exceptions\PlayerBindingException.cs" />
+    <Compile Include="src\data\exceptions\PlayerDisconnectException.cs" />
     <Compile Include="src\data\gameevents\BombEvents.cs" />
     <Compile Include="src\data\gameevents\CombatEvents.cs" />
     <Compile Include="src\data\gameevents\Event.cs" />
