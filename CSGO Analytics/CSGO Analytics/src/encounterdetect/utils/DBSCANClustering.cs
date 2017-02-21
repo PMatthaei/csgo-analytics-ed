@@ -13,11 +13,11 @@ namespace FastDBScan
     /// <summary>
     /// Main Codeparts from http://codereview.stackexchange.com/questions/108965/implementing-a-fast-dbscan-in-c
     /// </summary>
-    public class FasterDbscanAlgorithm
+    public class KD_DBSCANClustering
     {
         private readonly Func<EDVector3D, EDVector3D, double> _metricFunc;
 
-        public FasterDbscanAlgorithm(Func<EDVector3D, EDVector3D, double> metricFunc)
+        public KD_DBSCANClustering(Func<EDVector3D, EDVector3D, double> metricFunc)
         {
             _metricFunc = metricFunc;
         }

@@ -283,7 +283,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             #region QuadTree Approach
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            var dbscan = new FasterDbscanAlgorithm((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
 
             clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
             points = null; //Collect points for garbage

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,22 +35,19 @@ namespace csgo_mapdatacollector
         {
             foreach (string file in Directory.EnumerateFiles(PATH, "*.dem"))
             {
-                var data = readFile(file);
-                var path = PATH + mapname + ".json";
-                if (!File.Exists(path))
-                    createMapdataFile(path, data);
-                else
-                    AddDataToFile(path, data);
+                readDemoFile(file);
+
                 count++;
             }
 
         }
 
         private static int tickcount = 0;
-        private static HashSet<EDVector3D> readFile(string path)
+        private static void readDemoFile(string path)
         {
             Console.WriteLine("Reading: " + Path.GetFileName(path));
             HashSet<EDVector3D> mappositions = new HashSet<EDVector3D>();
+            Hashtable hurtpairs = new Hashtable();
 
             using (var parser = new DemoParser(File.OpenRead(path)))
             {
@@ -57,6 +55,24 @@ namespace csgo_mapdatacollector
 
                 mapname = parser.Map;
                 Console.WriteLine("Map: " + mapname);
+
+                parser.PlayerKilled += (object sender, PlayerKilledEventArgs e) =>
+                {
+                    if (e.Killer == null || e.Victim == null) return;
+                    var attackerpos = new EDVector3D((float)Math.Round(e.Killer.Position.X), (float)Math.Round(e.Killer.Position.Y), (float)Math.Round(e.Killer.Position.Z)).ResetZ();
+                    var victimpos = new EDVector3D((float)Math.Round(e.Victim.Position.X), (float)Math.Round(e.Victim.Position.Y), (float)Math.Round(e.Victim.Position.Z)).ResetZ();
+
+                    hurtpairs[attackerpos] = victimpos;
+                };
+
+                parser.PlayerHurt += (object sender, PlayerHurtEventArgs e) =>
+                {
+                    if (e.Attacker == null || e.Victim == null) return;
+                    var attackerpos = new EDVector3D((float)Math.Round(e.Attacker.Position.X), (float)Math.Round(e.Attacker.Position.Y), (float)Math.Round(e.Attacker.Position.Z)).ResetZ();
+                    var victimpos = new EDVector3D((float)Math.Round(e.Victim.Position.X), (float)Math.Round(e.Victim.Position.Y), (float)Math.Round(e.Victim.Position.Z)).ResetZ();
+
+                    hurtpairs[attackerpos] = victimpos;
+                };
 
                 parser.TickDone += (sender, e) =>
                 {
@@ -94,12 +110,52 @@ namespace csgo_mapdatacollector
             }
 
             Console.WriteLine("Positions found in this file: " + mappositions.Count + "\n");
+            Console.WriteLine("Hurtevents found in this file: " + hurtpairs.Count + "\n");
 
-            return mappositions;
+            var pospath = PATH + mapname + "_positions.json";
+            if (!File.Exists(pospath))
+                writeMapdataFile(pospath, mappositions);
+            else
+                AddMapData(pospath, mappositions);
+
+            var hurtpath = PATH + mapname + "_hurtevents.json";
+            if (!File.Exists(hurtpath))
+                writeHurtdataFile(hurtpath, hurtpairs);
+            else
+                AddHurtData(hurtpath, hurtpairs);
 
         }
 
-        private static void createMapdataFile(string path, HashSet<EDVector3D> mappos)
+
+        private static void writeHurtdataFile(string hurtpath, Hashtable hurtpairs)
+        {
+            string json = JsonConvert.SerializeObject(hurtpairs, settings);
+            using (var outputStream = new StreamWriter(hurtpath))
+            {
+                outputStream.Write(json);
+                outputStream.Close();
+            }
+        }
+
+        private static void AddHurtData(string hurtpath, Hashtable hurtpairs)
+        {
+            Hashtable deserializedmapdata;
+            using (var reader = new StreamReader(hurtpath))
+            {
+                deserializedmapdata = JsonConvert.DeserializeObject<Hashtable>(reader.ReadToEnd(), settings);
+            }
+            Console.WriteLine("Hurtevents found before adding new ones: " + deserializedmapdata.Count + "\n");
+            foreach(var key in hurtpairs.Keys)
+            {
+                var vic = (EDVector3D)hurtpairs[key];
+                var att = (EDVector3D)key;
+                deserializedmapdata.Add(att, vic);
+            }
+            Console.WriteLine("Hurtevents found after adding new ones: " + deserializedmapdata.Count + "\n");
+            writeHurtdataFile(hurtpath, deserializedmapdata);
+        }
+
+        private static void writeMapdataFile(string path, HashSet<EDVector3D> mappos)
         {
             string json = JsonConvert.SerializeObject(mappos, settings);
             using (var outputStream = new StreamWriter(path))
@@ -107,10 +163,9 @@ namespace csgo_mapdatacollector
                 outputStream.Write(json);
                 outputStream.Close();
             }
-
         }
 
-        private static void AddDataToFile(string path, HashSet<EDVector3D> mappos)
+        private static void AddMapData(string path, HashSet<EDVector3D> mappos)
         {
             HashSet<EDVector3D> deserializedmapdata;
             using (var reader = new StreamReader(path))
@@ -120,7 +175,7 @@ namespace csgo_mapdatacollector
             Console.WriteLine("Positions found before adding new ones: " + deserializedmapdata.Count + "\n");
             HashSet<EDVector3D> newdata = new HashSet<EDVector3D>(deserializedmapdata.Union(mappos));
             Console.WriteLine("Positions found after adding new ones: " + newdata.Count() + "\n");
-            createMapdataFile(path, newdata);
+            writeMapdataFile(path, newdata);
         }
     }
 }

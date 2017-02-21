@@ -9,71 +9,7 @@ using System.Collections;
 
 namespace CSGO_Analytics.src.encounterdetect.utils
 {
-    public class Cluster
-    {
-        public HashSet<EDVector3D> data;
-        public int[] clusterdata { get; set; }
-        public bool IsValueData { get; set; }
-        public double cluster_attackrange { get; set; }
-
-        public Cluster(bool isValueData)
-        {
-            IsValueData = isValueData;
-            data = new HashSet<EDVector3D>();
-        }
-
-        public void calculateClusterAttackrange(Hashtable ht)
-        {
-            double[] distances = new double[data.Count];
-            int arr_ptr = 0;
-            if (data.Count == 0) return;
-            foreach (var pos in data)
-            {
-                if (!IsValueData)
-                {
-                    EDVector3D value = (EDVector3D)ht[pos]; // No Z variable no hashtable entry -> null -.-
-                    distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, value);
-                    arr_ptr++;
-                }
-                else
-                {
-                    EDVector3D key = searchKey(pos, ht);
-                    distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, key);
-                    arr_ptr++;
-                }
-            }
-
-            cluster_attackrange = distances.Average();
-            Console.WriteLine("Attackrange for this cluster is: " + cluster_attackrange);
-        }
-
-        public EDRect getBoundings()
-        {
-            var min_x = data.Min(point => point.X);
-            var min_y = data.Min(point => point.Y);
-            var max_x = data.Max(point => point.X);
-            var max_y = data.Max(point => point.Y);
-            var dx = max_x - min_x;
-            var dy = max_y - min_y;
-            return new EDRect { X = min_x, Y = max_y, Width = dx, Height = dy };
-        }
-
-        private EDVector3D searchKey(EDVector3D value, Hashtable ht)
-        {
-            foreach (DictionaryEntry p in ht)
-            {
-                if (((EDVector3D)p.Value).Equals(value))
-                    return (EDVector3D)p.Key;
-            }
-            return null;
-        }
-
-        public void AddPosition(EDVector3D p)
-        {
-            data.Add(p);
-        }
-    }
-
+   
     /// <summary>
     /// Code by : https://visualstudiomagazine.com/articles/2013/12/01/k-means-data-clustering-using-c.aspx?admgarea=features
     /// K-means clustering('Lloyd's algorithm')
@@ -96,7 +32,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             Cluster[] clusters = new Cluster[numClusters];
             for (int i = 0; i < clusters.Length; i++)
             {
-                clusters[i] = new Cluster(isValueData);
+                clusters[i] = new Cluster();
             }
 
             for (int tupleid = 0; tupleid < clusters_data.Length; tupleid++)
@@ -105,7 +41,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
                 clusters[clusterid].AddPosition(new EDVector3D(posdata[tupleid]));
             }
 
-            return clusters;
+            return null;
         }
 
         /// <summary>

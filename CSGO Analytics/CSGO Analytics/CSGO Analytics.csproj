@@ -64,6 +64,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="src\data\exceptions\InsufficientPlayersException.cs" />
     <Compile Include="src\data\exceptions\PlayerBindingException.cs" />
     <Compile Include="src\data\exceptions\PlayerDisconnectException.cs" />
     <Compile Include="src\data\gameevents\BombEvents.cs" />
@@ -76,13 +77,15 @@
     <Compile Include="src\data\gameobjects\Map.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
+    <Compile Include="src\encounterdetect\utils\Cluster.cs" />
     <Compile Include="src\encounterdetect\utils\KMeanClustering.cs" />
     <Compile Include="src\encounterdetect\Encounter.cs" />
     <Compile Include="src\encounterdetect\EncounterDetection.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
     <Compile Include="src\encounterdetect\MatchEDReplay.cs" />
-    <Compile Include="src\encounterdetect\utils\FastDBScanAlgorithm.cs" />
+    <Compile Include="src\encounterdetect\utils\DBSCANClustering.cs" />
+    <Compile Include="src\encounterdetect\utils\LEADERClustering.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
     <Compile Include="src\export\CSVExporter.cs" />
     <Compile Include="src\math\EDMathLibrary.cs" />

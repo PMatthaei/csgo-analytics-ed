@@ -26,8 +26,8 @@ namespace csgo_analytics_console
 
         static void Main(string[] args)
         {
-            readFilesFromCommandline(args);
-            //readAllFiles();
+            //readFilesFromCommandline(args);
+            readAllFiles();
             Console.ReadLine();
         }
 

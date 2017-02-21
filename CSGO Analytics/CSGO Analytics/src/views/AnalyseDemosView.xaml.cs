@@ -151,7 +151,7 @@ namespace CSGO_Analytics.src.views
         private void ReadDemofiledata()
         {
             var path = "match_0.dem";
-            using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
             {
                 ParseTask ptask = new ParseTask
                 {
@@ -165,7 +165,7 @@ namespace CSGO_Analytics.src.views
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-            }
+            }*/
 
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
@@ -379,20 +379,45 @@ namespace CSGO_Analytics.src.views
                             drawPos(vp, Color.FromRgb(0, 255, 0));
                         }));
                     }
-                    var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
+                    var ar = EDM.EDMathLibrary.getPointCloudBoundings(c.data.ToList());
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        drawHollowRect(r, Color.FromRgb(255,0,0));
+                        drawHollowRect(ar, Color.FromRgb(255,0,0));
                     }));
                     var vr = EDM.EDMathLibrary.getPointCloudBoundings(victimpos);
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
                         drawHollowRect(vr, Color.FromRgb(0, 255, 0));
                     }));
-                    Thread.Sleep(4000);
+                    //Thread.Sleep(4000);
 
                 }
 
+            };
+            _renderbw.RunWorkerAsync();
+
+            _renderbw.RunWorkerCompleted += (sender, args) =>
+            {
+                if (args.Error != null)
+                    MessageBox.Show(args.Error.ToString());
+            };
+        }
+
+        public void renderHurtEvents()
+        {
+            Console.WriteLine("Render Hurtevents");
+            _renderbw.DoWork += (sender, args) =>
+            {
+                foreach(var key in this.EDAlgorithm.hit_hashtable.Keys)
+                {
+                    var vic = (math.EDVector3D)this.EDAlgorithm.hit_hashtable[key];
+                    var att = (math.EDVector3D)key;
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        drawPos(att, Color.FromRgb(255, 0, 0));
+                        //drawPos(vic, Color.FromRgb(0, 255, 0));
+                    }));
+                }
             };
             _renderbw.RunWorkerAsync();
 
@@ -857,12 +882,13 @@ namespace CSGO_Analytics.src.views
         private void Button_play(object sender, RoutedEventArgs e)
         {
             //renderMapLevelClusters();
-            //renderMapLevels();
+            renderMapLevels();
             //renderHurtClusters();
-            if (paused)
+            //renderHurtEvents();
+            /*if (paused)
                 _busy.Set();
             else
-                playMatch();
+                playMatch();*/
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)

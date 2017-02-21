@@ -46,7 +46,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
         }
 
         /// <summary>
-        /// Get position at index. index is the tick_id
+        /// Get position at time index (tick_id)
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>

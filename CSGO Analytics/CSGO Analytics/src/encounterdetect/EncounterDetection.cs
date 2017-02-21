@@ -12,6 +12,7 @@ using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.export;
 using System.Collections;
+using FastDBScan;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -30,7 +31,7 @@ namespace CSGO_Analytics.src.encounterdetect
         // Timeouts in seconds.
         private const float TAU = 20;
         private const float ENCOUNTER_TIMEOUT = 20;
-        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 20; // Time after which a Hurt Event has no relevance to a weaponfire event
+        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 5; // Time after which a Hurt Event has no relevance to a weaponfire event
         private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
         private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;
 
@@ -203,8 +204,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public MatchEDReplay run()
         {
-            Console.ReadLine();
-            return null;
             MatchEDReplay replay = new MatchEDReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -214,13 +213,12 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
-                    Console.WriteLine("Serverevents in this tick");
+
                     foreach (var sevent in tick.getServerEvents())
                         Console.WriteLine(sevent.gameevent + " " + sevent.actor);
 
-                    handleServerEvents(tick);
+                    handleServerEvents(tick); // Check if disconnects or reconnects happend in this tick
 
-                    //Check player binded in this tick before updating
                     handleBindedPlayers();
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
@@ -230,8 +228,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         updatePosition(id, updatedPlayer.position.getAsArray3D()); // Update position first then distance!!
                         updateDistance(id);
                     }
-
-                    //Check player disconnects in this tick after updating
                     handleDisconnectedPlayers();
 
 
@@ -262,7 +258,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     if (predecessors.Count > 1)
                     {
                         // Remove all predecessor encounters from open encounters because we re-add them as joint_encounter
-                        open_encounters.RemoveAll((Encounter e) => { return predecessors.Contains(e); });
+                        open_encounters.RemoveAll(encounter => { return predecessors.Contains(encounter); });
                         var joint_encounter = join(predecessors); // Merge encounters holding these predecessors
                         joint_encounter.update(component);
                         open_encounters.Add(joint_encounter);
@@ -275,7 +271,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     for (int i = open_encounters.Count - 1; i >= 0; i--)
                     {
                         Encounter e = open_encounters[i];
-                        if (Math.Abs(e.tick_id - tick.tick_id) * ticktime > ENCOUNTER_TIMEOUT)
+                        if (Math.Abs(e.tick_id - tick.tick_id) * (ticktime / 1000) > ENCOUNTER_TIMEOUT)
                         {
                             open_encounters.Remove(e);
                             closed_encounters.Add(e);
@@ -345,21 +341,48 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
-        private void handleBindedPlayers()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void handleDisconnectedPlayers()
-        {
-            throw new NotImplementedException();
-        }
         private HashSet<Player> illegalplayer = new HashSet<Player>();
         private HashSet<Player> disconnectedplayers = new HashSet<Player>();
         private HashSet<Player> bindedplayers = new HashSet<Player>();
         private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
-        private long lastdisconnect_id = 0;
+        private Queue<long> disconnected_ids = new Queue<long>();
 
+
+        /// <summary>
+        /// Handles each player who was binded in that tick
+        /// </summary>
+        private void handleBindedPlayers()
+        {
+            foreach (var player in bindedplayers)
+                if (player.player_id == 0) // Player is a bot -> map his id on a disconnectedplayer -> we update the player with the botdata
+                {
+                    botid_to_steamid.Add(player.playername, disconnected_ids.Dequeue());
+                    continue;
+                }
+            bindedplayers.Clear();
+        }
+
+        /// <summary>
+        /// Handles each player who disconnected in that tick
+        /// </summary>
+        private void handleDisconnectedPlayers()
+        {
+            foreach (var player in disconnectedplayers)
+                if (player.player_id == 0) // Player is a bot -> when a bot disconnects remove his binding to the players steamid
+                {
+                    botid_to_steamid.Remove(player.playername);
+                    continue;
+                }
+                else // For disconnected players save their id
+                {
+                    disconnected_ids.Enqueue(player.player_id);
+                }
+        }
+
+        /// <summary>
+        /// Registeres players that have to be handled that tick
+        /// </summary>
+        /// <param name="tick"></param>
         private void handleServerEvents(Tick tick)
         {
             foreach (var sevent in tick.getServerEvents())
@@ -370,26 +393,12 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "player_bind":
                         bindedplayers.Add(player);
 
-                        if (player.player_id == 0) // Player is a bot -> map his id on a disconnectedplayer -> we update the player with the botdata
-                        {
-                            botid_to_steamid.Add(player.playername, lastdisconnect_id);
-                            continue;
-                        }
                         if (disconnectedplayers.Contains(player))
                             disconnectedplayers.Remove(player);
-                        
                         break;
                     case "player_disconnected":
                         disconnectedplayers.Add(player);
 
-                        if (player.player_id == 0) // Player is a bot -> when a bot disconnects remove his binding to the players steamid
-                        {
-                            botid_to_steamid.Remove(player.playername);
-                            continue;
-                        } else // For disconnected players save their id
-                        {
-                            lastdisconnect_id = player.player_id;
-                        }
                         break;
                     default: throw new Exception("Unkown ServerEvent");
                 }
@@ -508,10 +517,24 @@ namespace CSGO_Analytics.src.encounterdetect
 
             // Generate Map
             this.map = MapCreator.createMap(ps);
+
             // Generate Hurteventclusters
-            this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
+            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+            var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
+            this.attacker_clusters = new Cluster[clusterset.Count];
+            int ind = 0;
+            foreach (var clusterdata in clusterset)
+            {
+                attacker_clusters[ind] = new Cluster(clusterdata);
+                ind++;
+            }
+
+
             foreach (var a in attacker_clusters)
                 a.calculateClusterAttackrange(hit_hashtable);
+            /*this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
+            foreach (var a in attacker_clusters)
+                a.calculateClusterAttackrange(hit_hashtable);*/
 
             ATTACKRANGE_AVERAGE = hurt_ranges.Average();
             SUPPORTRANGE_AVERAGE = support_ranges.Average();
@@ -549,7 +572,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     if (intersectPlayers.Count < 2)
                         continue;
 
-                    var knownteam = intersectPlayers[0].getTeam(); //TODO: kürzer
+                    var knownteam = intersectPlayers[0].getTeam(); //TODO: Shorten
                     foreach (var p in intersectPlayers)
                     {
                         // Team different to one we know -> this encounter e is a predecessor of the component comp
@@ -573,7 +596,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         /// <param name="predecessors"></param>
         /// <returns></returns>
-        private Encounter join(List<Encounter> predecessors) //TODO: Problem: high tau increases concated merged encounters and therefore memory. where is the problem?
+        private Encounter join(List<Encounter> predecessors) //TODO: Problem: High Tau increases concated merged encounters -> one big encounter
         {
             List<CombatComponent> cs = new List<CombatComponent>();
             foreach (var e in predecessors)
@@ -946,7 +969,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var htick_id = item.Value;
                 int tick_dt = Math.Abs(htick_id - tick_id);
 
-                if (tick_dt * ticktime > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
+                if (tick_dt * (ticktime / 1000) > PLAYERHURT_DAMAGEASSIST_TIMEOUT)
                 {
                     registeredHEQueue.Remove(hurtevent); // Check timeout
                     continue;
@@ -975,7 +998,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var wftick_id = item.Value;
 
                 int tick_dt = Math.Abs(wftick_id - tick_id);
-                if (tick_dt * ticktime > PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT)
+                if (tick_dt * (ticktime / 1000) > PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT)
                 {
                     pendingWFEQueue.Remove(weaponfireevent); //Check timeout
                     continue;
@@ -1090,7 +1113,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     if (player.flashedduration >= 0)
                     {
-                        float dtime = tickdt * ticktime;
+                        float dtime = tickdt * (ticktime / 1000);
                         player.flashedduration -= dtime; // Count down time
                     }
                     else
@@ -1201,7 +1224,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 var htick_id = item.Value;
 
                 int tick_dt = Math.Abs(htick_id - tick_id);
-                if (tick_dt * ticktime > WEAPONFIRE_VICTIMSEARCH_TIMEOUT) // 20 second timeout for hurt events
+                if (tick_dt * (ticktime / 1000) > WEAPONFIRE_VICTIMSEARCH_TIMEOUT) // 20 second timeout for hurt events
                 {
                     registeredHEQueue.Remove(hurtevent);
                     continue;

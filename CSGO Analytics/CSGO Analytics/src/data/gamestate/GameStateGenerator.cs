@@ -176,8 +176,7 @@ namespace CSGO_Analytics.src.json.parser
             return parser.Map;
         }
 
-        static bool printenable = false;
-        static int rcount = 0;
+
         /// <summary>
         /// Assembles the gamestate object from data given by the demoparser.
         /// </summary>
@@ -473,9 +472,14 @@ namespace CSGO_Analytics.src.json.parser
                 {
                     Console.WriteLine("Tickid: " + tick_id);
                     tick.tickevents.Add(jsonparser.assemblePlayerTakeOver(e));
-                    printenable = true;
                 }
             };
+
+            /*parser.PlayerTeam += (sender, e) =>
+            {
+                if (e.Swapped != null)
+                    Console.WriteLine("Player swapped: " + e.Swapped.Name + " " + e.Swapped.SteamID + " Oldteam: "+ e.OldTeam + " Newteam: " + e.NewTeam +  "IsBot: " + e.IsBot + "Silent: " + e.Silent);
+            };*/
 
             #endregion
 
