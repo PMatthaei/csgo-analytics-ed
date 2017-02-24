@@ -9,27 +9,72 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 {
     class LEADERClustering
     {
-        public static float DELTA = 0.0f;
+        public float delta { get; set; }
 
-        private List<Cluster> clusters;
+        private List<Cluster> clusters = new List<Cluster>();
 
-        public LEADERClustering(List<EDVector3D> pos, float delta)
+        private List<EDVector3D> leaders = new List<EDVector3D>();
+
+        public LEADERClustering(List<EDVector3D> pos)
         {
-            DELTA = delta;
-            clusters = new List<Cluster>();
+            //var sorted_pos = pos.OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
+            var sorted_pos = pos.OrderBy(p => p.Y).ThenBy(p => p.X).ToList();
+            clusterData(sorted_pos);
         }
 
-        public List<Cluster> clusterData(List<EDVector3D> pos) 
+        public LEADERClustering(float delta)
         {
-            foreach(var p in pos)
+            this.delta = delta;
+        }
+
+        /// <summary>
+        /// Probleme: Reihenfolge der Punkte
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <returns></returns>
+        public Cluster[] clusterData(List<EDVector3D> pos)
+        {
+            clusters.Clear();
+            Cluster start_cluster = new Cluster(pos[0]);
+            int leader_ind = 0;
+            leaders.Add(pos.First());
+
+            clusters.Add(start_cluster);
+
+            for (int i = 1; i < pos.Count; i++)
             {
-                var cluster = getClostestCluster(p);
-                if (EDMathLibrary.getEuclidDistance2D(cluster.centroid, p) < DELTA)
-                    cluster.assignToCluster(p);
+                var datapoint = pos[i];
+
+                var min_dist = 0.0;
+                var min_dist_leader_index = 0;
+                for (int index = 0; index < leaders.Count; index++)
+                {
+                    var leader_distance = EDMathLibrary.getEuclidDistance2D(leaders[index], datapoint);
+                    if (index == 0) {
+                        min_dist = leader_distance;
+                        continue;
+                    }
+                    if (leader_distance < min_dist)
+                    {
+                        min_dist = leader_distance;
+                        min_dist_leader_index = index;
+                    }
+                }
+
+                if (min_dist < delta)
+                {
+                    clusters[min_dist_leader_index].AddPosition(datapoint);
+                }
                 else
-                    clusters.Add(new Cluster(p));
+                {
+                    Cluster new_cluster = new Cluster(datapoint);
+                    clusters.Add(new_cluster);
+                    leader_ind++;
+                    leaders.Add(datapoint);
+                }
             }
-            return clusters;
+            leaders.Clear();
+            return clusters.ToArray();
         }
 
         private Cluster getClostestCluster(EDVector3D p)

@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastDBScan;
-using KDTree;
+using KdTree;
+using KdTree.Math;
 using CSGO_Analytics.src.math;
 
 
@@ -26,10 +27,10 @@ namespace FastDBScan
         {
             var allPointsDbscan = allPoints.Select(x => new DbscanPoint(x)).ToArray();
 
-            var tree = new KDTree.KDTree<DbscanPoint>(2);
+            var tree = new KdTree<double, DbscanPoint>(2, new DoubleMath());
             for (var i = 0; i < allPointsDbscan.Length; ++i)
             {
-                tree.AddPoint(new double[] { allPointsDbscan[i].ClusterPoint.X, allPointsDbscan[i].ClusterPoint.Y }, allPointsDbscan[i]);
+                tree.Add(new double[] { allPointsDbscan[i].ClusterPoint.X, allPointsDbscan[i].ClusterPoint.Y }, allPointsDbscan[i]);
             }
 
             var C = 0;
@@ -57,7 +58,7 @@ namespace FastDBScan
                 );
         }
 
-        private static void ExpandCluster(KDTree<DbscanPoint> tree, DbscanPoint p, DbscanPoint[] neighborPts, int c, double epsilon, int minPts)
+        private static void ExpandCluster(KdTree<double, DbscanPoint> tree, DbscanPoint p, DbscanPoint[] neighborPts, int c, double epsilon, int minPts)
         {
             p.ClusterId = c;
 
@@ -87,14 +88,18 @@ namespace FastDBScan
             }
         }
 
-        private static DbscanPoint[] RegionQuery(KDTree<DbscanPoint> tree, EDVector3D p, double epsilon)
+        private static DbscanPoint[] RegionQuery(KdTree<double, DbscanPoint> tree, EDVector3D p, double epsilon)
         {
             var neighbors = new List<DbscanPoint>();
-            var e = tree.NearestNeighbors(p.getAsDoubleArray2D(), 10, epsilon);
-            while (e.MoveNext())
+            var e = tree.RadialSearch(p.getAsDoubleArray2D(), epsilon, 10);
+            foreach(var entry in e)
+            {
+                neighbors.Add(entry.Value);
+            }
+            /*while (e.MoveNext())
             {
                 neighbors.Add(e.GetEnumerator().Current);
-            }
+            }*/
 
             return neighbors.ToArray();
         }

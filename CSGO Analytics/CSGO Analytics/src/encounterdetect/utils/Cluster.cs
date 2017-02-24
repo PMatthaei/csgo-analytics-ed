@@ -22,6 +22,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 
         public Cluster()
         {
+            this.data = new List<EDVector3D>();
 
         }
 

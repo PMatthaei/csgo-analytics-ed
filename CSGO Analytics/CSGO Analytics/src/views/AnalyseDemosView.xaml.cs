@@ -43,7 +43,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// The replay returned by the algorithm
         /// </summary>
-        private MatchEDReplay matchreplay;
+        private EDMatchReplay matchreplay;
 
         /// <summary>
         /// Metadata about the map played in the match
@@ -196,12 +196,13 @@ namespace CSGO_Analytics.src.views
                 time_slider.Maximum = gamestate.match.rounds.Last().ticks.Last().tick_id;
             }));
 
-            foreach(var p in gamestate.meta.players)
+            foreach (var p in gamestate.meta.players)
             {
-                if(p.getTeam() == Team.CT)
+                if (p.getTeam() == Team.CT)
                 {
 
-                } else
+                }
+                else
                 {
 
                 }
@@ -277,7 +278,7 @@ namespace CSGO_Analytics.src.views
                         last_tickid = tick.tick_id;
                     int dt = tick.tick_id - last_tickid;
 
-                    int passedTime = (int)(dt * 1000/tickrate);// + 2000;
+                    int passedTime = (int)(dt * 1000 / tickrate);// + 2000;
 
                     //Jump out of background to update UI
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
@@ -322,6 +323,14 @@ namespace CSGO_Analytics.src.views
             {
                 foreach (var link in comp.links)
                 {
+                    if (link.coll != null)
+                    {
+                        if (link.getActor().getTeam() == Team.T)
+                            drawPos(link.coll, Color.FromRgb(255, 0, 0));
+                        else
+                            drawPos(link.coll, Color.FromRgb(0, 0, 255));
+                        continue;
+                    }
                     if (hasActiveLinkShape(link)) // Old link -> update else draw new
                         updateLink(link);
                     else
@@ -369,7 +378,7 @@ namespace CSGO_Analytics.src.views
                     //var r = this.EDAlgorithm.attacker_clusters[i].getBoundings();
                     var c = this.EDAlgorithm.attacker_clusters[i];
                     var victimpos = new List<EDM.EDVector3D>();
-                    foreach(var p in c.data)
+                    foreach (var p in c.data)
                     {
                         var vp = (math.EDVector3D)this.EDAlgorithm.hit_hashtable[p];
                         victimpos.Add(vp);
@@ -382,12 +391,12 @@ namespace CSGO_Analytics.src.views
                     var ar = EDM.EDMathLibrary.getPointCloudBoundings(c.data.ToList());
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        drawHollowRect(ar, Color.FromRgb(255,0,0));
+                        drawHollowRect(ar, Color.FromRgb(255, 0, 0));
                     }));
                     var vr = EDM.EDMathLibrary.getPointCloudBoundings(victimpos);
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        drawHollowRect(vr, Color.FromRgb(0, 255, 0));
+                        //drawHollowRect(vr, Color.FromRgb(0, 255, 0));
                     }));
                     //Thread.Sleep(4000);
 
@@ -408,7 +417,7 @@ namespace CSGO_Analytics.src.views
             Console.WriteLine("Render Hurtevents");
             _renderbw.DoWork += (sender, args) =>
             {
-                foreach(var key in this.EDAlgorithm.hit_hashtable.Keys)
+                foreach (var key in this.EDAlgorithm.hit_hashtable.Keys)
                 {
                     var vic = (math.EDVector3D)this.EDAlgorithm.hit_hashtable[key];
                     var att = (math.EDVector3D)key;
@@ -530,11 +539,15 @@ namespace CSGO_Analytics.src.views
                     }
 
 
-                    foreach (var r in this.EDAlgorithm.map.maplevels[i].qlevel_walls)
+                    foreach (var r in this.EDAlgorithm.map.maplevels[i].cells_tree.ToList())
                     {
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                         {
-                            drawRect(r, color);
+                            if (r.Value.blocked == true)
+                                drawRect(r.Value, color);
+                            else
+                                drawRect(r.Value, Color.FromRgb(255, 255, 255));
+
                         }));
                     }
 
@@ -573,7 +586,7 @@ namespace CSGO_Analytics.src.views
             time_slider.Value = tick.tick_id;
             tick_label.Content = "Tick: " + tick.tick_id;
 
-            double ticks = (double)(tick.tick_id * 1000/tickrate);
+            double ticks = (double)(tick.tick_id * 1000 / tickrate);
             TimeSpan time = TimeSpan.FromMilliseconds(ticks);
             DateTime startdate = new DateTime(1970, 1, 1) + time;
             time_label.Content = startdate.Minute + ":" + startdate.Second + ":" + startdate.Millisecond;
@@ -703,9 +716,9 @@ namespace CSGO_Analytics.src.views
             ps.Margin = new Thickness(vector.X, vector.Y, 0, 0);
             ps.Width = rect.Width * (Math.Min(mappanel_width, mapdata_width) / Math.Max(mappanel_width, mapdata_width));
             ps.Height = rect.Height * (Math.Min(mappanel_height, mapdata_height) / Math.Max(mappanel_height, mapdata_height));
-           
+
             ps.Fill = new SolidColorBrush(color);
-            ps.Stroke = new SolidColorBrush(Color.FromRgb(0,0,0));
+            ps.Stroke = new SolidColorBrush(Color.FromRgb(0, 0, 0));
             ps.StrokeThickness = 0.5;
 
             mapPanel.Children.Add(ps);
@@ -739,6 +752,7 @@ namespace CSGO_Analytics.src.views
                 color = Color.FromArgb(255, 255, 0, 0);
             else
                 color = Color.FromArgb(255, 0, 0, 255);
+            //ps.Playerlevel = ""+EDAlgorithm.playerlevels[p.player_id].height;
 
             ps.Fill = new SolidColorBrush(color);
             ps.Stroke = new SolidColorBrush(color);
@@ -796,6 +810,7 @@ namespace CSGO_Analytics.src.views
                 else
                     ps.Fill = new SolidColorBrush(Color.FromArgb(255, 0, 0, 255));
             }
+            //ps.Playerlevel = "" + EDAlgorithm.playerlevels[p.player_id].height;
 
             var vector = CSPositionToUIPosition(p.position);
             ps.X = vector.X;
@@ -882,8 +897,8 @@ namespace CSGO_Analytics.src.views
         private void Button_play(object sender, RoutedEventArgs e)
         {
             //renderMapLevelClusters();
-            renderMapLevels();
-            //renderHurtClusters();
+            //renderMapLevels();
+            renderHurtClusters();
             //renderHurtEvents();
             /*if (paused)
                 _busy.Set();

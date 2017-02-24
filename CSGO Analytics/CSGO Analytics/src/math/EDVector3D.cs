@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using QuadTrees.QTreePoint;
 using FastDBScan;
+using KdTree;
 
 namespace CSGO_Analytics.src.math
 {
@@ -233,5 +234,99 @@ namespace CSGO_Analytics.src.math
         {
             return new EDVector3D(X,Y,Z+v);
         }
+    }
+
+    public class EDVector3DMath : ITypeMath<EDVector3D>
+    {
+        public EDVector3D MaxValue
+        {
+            get
+            {
+                return new EDVector3D(float.MaxValue, float.MaxValue,float.MaxValue);
+            }
+        }
+
+        public EDVector3D MinValue
+        {
+            get
+            {
+                return new EDVector3D(float.MinValue, float.MinValue, float.MinValue);
+            }
+        }
+
+        public EDVector3D NegativeInfinity
+        {
+            get
+            {
+                return new EDVector3D(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity);
+            }
+        }
+
+        public EDVector3D PositiveInfinity
+        {
+            get
+            {
+                return new EDVector3D(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            }
+        }
+
+        public EDVector3D Zero
+        {
+            get
+            {
+                return new EDVector3D(0, 0,0);
+            }
+        }
+
+        public EDVector3D Add(EDVector3D a, EDVector3D b)
+        {
+            return a + b;
+        }
+
+        public bool AreEqual(EDVector3D[] a, EDVector3D[] b)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool AreEqual(EDVector3D a, EDVector3D b)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Compare(EDVector3D a, EDVector3D b)
+        {
+            throw new NotImplementedException();
+        }
+
+        public EDVector3D DistanceSquaredBetweenPoints(EDVector3D[] a, EDVector3D[] b)
+        {
+            throw new NotImplementedException();
+        }
+
+        public EDVector3D Max(EDVector3D a, EDVector3D b)
+        {
+            if (a.Absolute() > b.Absolute())
+                return a;
+            else
+                return b;
+        }
+
+        public EDVector3D Min(EDVector3D a, EDVector3D b)
+        {
+            if (a.Absolute() < b.Absolute())
+                return a;
+            else
+                return b;
+        }
+
+        public EDVector3D Multiply(EDVector3D a, EDVector3D b)
+        {
+            return new EDVector3D(a.X * b.X, a.Y*b.Y, a.Z*b.Z);
+        }
+
+        public EDVector3D Subtract(EDVector3D a, EDVector3D b)
+        {
+            return a-b;
+      }
     }
 }

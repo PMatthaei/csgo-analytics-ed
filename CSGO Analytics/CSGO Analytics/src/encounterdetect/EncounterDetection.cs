@@ -11,6 +11,7 @@ using CSGO_Analytics.src.math;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.export;
+using CSGO_Analytics.src.data.exceptions;
 using System.Collections;
 using FastDBScan;
 
@@ -63,8 +64,8 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// All living players with the latest data.(position health etc)
         /// </summary>
-        private HashSet<Player> livingplayers;
-        private HashSet<Player> deadplayers;
+        //private HashSet<Player> players;
+        //private HashSet<Player> deadplayers;
 
         private float[][] position_table;
         private float[][] distance_table;
@@ -90,7 +91,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Dictionary holding the level of player
         /// </summary>
-        Dictionary<Player, MapLevel> playerlevels = new Dictionary<Player, MapLevel>();
+        public Dictionary<long, MapLevel> playerlevels = new Dictionary<long, MapLevel>();
 
 
         /// <summary>
@@ -107,14 +108,15 @@ namespace CSGO_Analytics.src.encounterdetect
             this.ticktime = 1000 / tickrate;
             this.players = gamestate.meta.players.ToArray();
             Console.WriteLine("Start with " + players.Count() + " players.");
-            this.livingplayers = new HashSet<Player>(players.ToList());
-            printLivingPlayers();
-            this.deadplayers = new HashSet<Player>();
+            //this.players = new HashSet<Player>(players.ToList());
+            printplayers();
+            //this.deadplayers = new HashSet<Player>();
 
             int ownid = 0;
             foreach (var player in players) // Map all CS Entity IDs to our own table-ids
             {
                 playerID_dictionary.Add(player.player_id, ownid);
+                if (player.player_id == 0) throw new InsufficientPlayersException();
                 ownid++;
             }
 
@@ -202,9 +204,9 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// 
         /// </summary>
-        public MatchEDReplay run()
+        public EDMatchReplay run()
         {
-            MatchEDReplay replay = new MatchEDReplay();
+            EDMatchReplay replay = new EDMatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var round in match.rounds)
@@ -213,13 +215,24 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
+                    //Console.WriteLine("Tick: " + tickCount);
 
                     foreach (var sevent in tick.getServerEvents())
                         Console.WriteLine(sevent.gameevent + " " + sevent.actor);
 
                     handleServerEvents(tick); // Check if disconnects or reconnects happend in this tick
 
-                    handleBindedPlayers();
+                    try
+                    {
+                        handleBindings();
+                    }
+                    catch (PlayerBindingException pe)
+                    {
+                        Console.WriteLine(pe.Message);
+                        Console.ReadLine();
+                        return null;
+                    }
+
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
                         if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
@@ -228,20 +241,19 @@ namespace CSGO_Analytics.src.encounterdetect
                         updatePosition(id, updatedPlayer.position.getAsArray3D()); // Update position first then distance!!
                         updateDistance(id);
                     }
-                    handleDisconnectedPlayers();
 
+                    handleDisconnects();
 
                     CombatComponent component = buildComponent(tick);
 
                     replay.insertData(tick, component); // Save the tick with its component for later replaying. 
 
+                    if (component == null) // No component in this tick
+                        continue;
 
                     //
                     // Everything after here is just sorting components into encounters (use component.parent to identify to which encounter it belongs)
                     //
-                    if (component == null) // No component in this tick
-                        continue;
-
                     predecessors = searchPredecessors(component); // Check if this component has predecessors
 
                     if (predecessors.Count == 0)
@@ -305,8 +317,10 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Encounter Updates occured: " + updateEncounterCount);
 
             Console.WriteLine("\nWeaponfire-Events total: " + wfCount);
-            Console.WriteLine("Weaponfire-Event with matched victims: " + wf_matchedVictimCount);
-            Console.WriteLine("Weaponfire-Events inserted into existing components: " + wf_insertCount);
+            Console.WriteLine("Total Weaponfire-Events matched: " + (wf_matchedVictimCount + wf_insertCount));
+
+            Console.WriteLine("Weaponfire-Event first time matched victims: " + wf_matchedVictimCount);
+            Console.WriteLine("Weaponfire-Events victims inserted into existing components: " + wf_insertCount);
 
             Console.WriteLine("\nSpotted-Events occured: " + spotteventsCount);
             Console.WriteLine("\nPlayer is spotted in: " + ticks_with_spotted_playersCount + " ticks");
@@ -314,6 +328,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks");
 
             Console.WriteLine("Sightbased Combatlinks: " + sighttestCLinksCount);
+            Console.WriteLine("Sightbased Combatlinks Error: " + errorcount);
             Console.WriteLine("Distance (clustered) Combatlinks: " + clustered_average_distancetestCLinksCount);
             Console.WriteLine("Distance (averaged) Combatlinks: " + (distancetestCLinksCount + distancetestSLinksCount));
 
@@ -341,42 +356,40 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
-        private HashSet<Player> illegalplayer = new HashSet<Player>();
+
         private HashSet<Player> disconnectedplayers = new HashSet<Player>();
         private HashSet<Player> bindedplayers = new HashSet<Player>();
         private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
         private Queue<long> disconnected_ids = new Queue<long>();
 
-
-        /// <summary>
-        /// Handles each player who was binded in that tick
-        /// </summary>
-        private void handleBindedPlayers()
+        private void handleBindings()
         {
             foreach (var player in bindedplayers)
+            {
                 if (player.player_id == 0) // Player is a bot -> map his id on a disconnectedplayer -> we update the player with the botdata
                 {
+                    if (disconnected_ids.Count == 0) throw new PlayerBindingException();
                     botid_to_steamid.Add(player.playername, disconnected_ids.Dequeue());
                     continue;
                 }
+
+                if (disconnectedplayers.Contains(player))
+                    disconnectedplayers.Remove(player);
+                else throw new PlayerBindingException(); // The player did not disconnect before. -> he missed the first round
+            }
             bindedplayers.Clear();
         }
 
-        /// <summary>
-        /// Handles each player who disconnected in that tick
-        /// </summary>
-        private void handleDisconnectedPlayers()
+        private void handleDisconnects()
         {
             foreach (var player in disconnectedplayers)
+            {
                 if (player.player_id == 0) // Player is a bot -> when a bot disconnects remove his binding to the players steamid
                 {
                     botid_to_steamid.Remove(player.playername);
                     continue;
                 }
-                else // For disconnected players save their id
-                {
-                    disconnected_ids.Enqueue(player.player_id);
-                }
+            }
         }
 
         /// <summary>
@@ -393,12 +406,11 @@ namespace CSGO_Analytics.src.encounterdetect
                     case "player_bind":
                         bindedplayers.Add(player);
 
-                        if (disconnectedplayers.Contains(player))
-                            disconnectedplayers.Remove(player);
                         break;
                     case "player_disconnected":
                         disconnectedplayers.Add(player);
-
+                        if (player.player_id != 0)
+                            disconnected_ids.Enqueue(player.player_id);
                         break;
                     default: throw new Exception("Unkown ServerEvent");
                 }
@@ -415,8 +427,9 @@ namespace CSGO_Analytics.src.encounterdetect
             if (toUpdate.position == null) throw new Exception("Cannot update with null position");
             if (toUpdate.velocity == null) throw new Exception("Cannot update with null velocity");
             int count = 0;
+            int idcount = 0;
 
-            foreach (var player in players.ToArray())
+            foreach (var player in players)
             {
                 var updateid = toUpdate.player_id;
                 if (updateid == 0) // We want to update data from a bot in the name of a disconnected player
@@ -424,38 +437,47 @@ namespace CSGO_Analytics.src.encounterdetect
 
                 if (player.player_id == updateid) // We found the player with a matching id -> update all changeable values
                 {
-                    if (toUpdate.isDead() && !deadplayers.Contains(player)) //This player is dead but not in removed from the living -> do so
+                    idcount++;
+                    if (toUpdate.isDead()) // && !deadplayers.Contains(player)) //This player is dead but not in removed from the living -> do so
                     {
-                        livingplayers.Remove(player);
+                        player.HP = toUpdate.HP;
+                        /*players.Remove(player);
                         deadplayers.Add(player);
+                        count++;
+                        //Console.WriteLine("Player died." + player.playername + " Alive players: " + players.Count);
+                        //Console.WriteLine("Dead players: " + deadplayers.Count);*/
+
                     }
                     else //Player is alive -> make sure hes in the living list and update him
                     {
-                        if (deadplayers.Contains(player) && !livingplayers.Contains(player)) // Player was dead but lives now -> make sure hes in the right list
-                        {
-                            deadplayers.Remove(player);
-                            livingplayers.Add(player);
-                        }
-
                         player.facing = toUpdate.facing;
                         player.position = toUpdate.position;
                         player.velocity = toUpdate.velocity;
                         player.HP = toUpdate.HP;
                         player.isSpotted = toUpdate.isSpotted;
+
+                        /*if (deadplayers.Contains(player) && !players.Contains(player)) // Player was dead but lives now -> make sure hes in the right list
+                        {
+                            deadplayers.Remove(player);
+                            players.Add(player);
+                            //Console.WriteLine("Player revived."+player.playername+ " Alive players: " + players.Count);
+                           //Console.WriteLine("Dead players: " + deadplayers.Count);
+                        }*/
                         count++;
                     }
                 }
 
                 if (count > 1)
                 {
-                    printLivingPlayers();
+                    printplayers();
                     throw new Exception("More than one player with id living or revive is invalid: " + toUpdate.player_id);
                 }
             }
 
+            if (idcount == 0) throw new Exception("No player with id: " + toUpdate.player_id);
             if (count == 0 && !toUpdate.isDead())
             {
-                printLivingPlayers();
+                printplayers();
                 throw new Exception("Player :" + toUpdate + " could not be updated.");
             }
 
@@ -486,7 +508,7 @@ namespace CSGO_Analytics.src.encounterdetect
                                 // Remove Z-Coordinate because we later get keys from clusters with points in 2D space -> hashtable needs keys with 2d data
                                 hit_hashtable[ph.actor.position.ResetZ()] = ph.victim.position.ResetZ();
                                 hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(ph.actor.position, ph.victim.position));
-                                break;
+                                continue;
                             case "player_killed":
                                 PlayerKilled pk = (PlayerKilled)gevent;
                                 hit_hashtable[pk.actor.position.ResetZ()] = pk.victim.position.ResetZ();
@@ -497,7 +519,7 @@ namespace CSGO_Analytics.src.encounterdetect
                                     assist_hashtable[pk.actor.position.ResetZ()] = pk.assister.position.ResetZ();
                                     support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
                                 }
-                                break;
+                                continue;
                         }
 
                         foreach (var player in gevent.getPlayers())
@@ -505,8 +527,8 @@ namespace CSGO_Analytics.src.encounterdetect
                             var vz = player.velocity.VZ;
                             if (vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
                                 ps.Add(player.position);
-                            else
-                                ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
+                            //else
+                            //ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
                         }
 
                     }
@@ -518,16 +540,23 @@ namespace CSGO_Analytics.src.encounterdetect
             // Generate Map
             this.map = MapCreator.createMap(ps);
 
+            ATTACKRANGE_AVERAGE = hurt_ranges.Average();
+            SUPPORTRANGE_AVERAGE = support_ranges.Average();
+
             // Generate Hurteventclusters
-            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
-            var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
+            //var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+            /*var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
+
             this.attacker_clusters = new Cluster[clusterset.Count];
             int ind = 0;
             foreach (var clusterdata in clusterset)
             {
                 attacker_clusters[ind] = new Cluster(clusterdata);
                 ind++;
-            }
+            } */
+            var leader = new LEADERClustering((float)ATTACKRANGE_AVERAGE);
+            this.attacker_clusters = leader.clusterData(hit_hashtable.Keys.Cast<EDVector3D>().ToList());
+            //this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
 
 
             foreach (var a in attacker_clusters)
@@ -536,21 +565,8 @@ namespace CSGO_Analytics.src.encounterdetect
             foreach (var a in attacker_clusters)
                 a.calculateClusterAttackrange(hit_hashtable);*/
 
-            ATTACKRANGE_AVERAGE = hurt_ranges.Average();
-            SUPPORTRANGE_AVERAGE = support_ranges.Average();
-
         }
 
-        /// <summary>
-        /// Adds an encounter and sorts the list to improve later iteration.
-        /// </summary>
-        /// <param name="es"></param>
-        /// <param name="e"></param>
-        private void AddEncounter(List<Encounter> es, Encounter e)
-        {
-            es.Add(e);
-            es.OrderByDescending(encounter => encounter.tick_id);
-        }
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -585,9 +601,9 @@ namespace CSGO_Analytics.src.encounterdetect
                         }
                     }
                     if (registered) break;
-
                 }
             }
+
             return predecessors;
         }
 
@@ -681,14 +697,14 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             List<Link> links = new List<Link>();
 
-            searchEventbasedSightCombatLinks(tick, links);
-            searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
+            //searchEventbasedSightCombatLinks(tick, links);
+            //searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
             //searchClusterDistancebasedLinks(links);
             //searchDistancebasedLinks(links);
 
-            searchEventbasedLinks(tick, links);
-            searchEventbasedNadeSupportlinks(tick, links);
+            //searchEventbasedLinks(tick, links);
+            //searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
             if (links.Count != 0) //If links have been found
@@ -712,7 +728,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchEventbasedSightCombatLinks(Tick tick, List<Link> links)
         {
-            foreach (var uplayer in livingplayers)
+            foreach (var uplayer in players.Where(p => !p.isDead()))
             {
                 if (uplayer.isSpotted) //If the player is spotted search the spotter
                 {
@@ -740,18 +756,18 @@ namespace CSGO_Analytics.src.encounterdetect
         private void searchSightbasedSightCombatLinks(Tick tick, List<Link> links)
         {
             // Update playerlevels before we start using them to search links
-            foreach (var p in livingplayers)
+            foreach (var p in players.Where(counterplayer => !counterplayer.isDead()))
             {
-                if (playerlevels.ContainsKey(p))
-                    playerlevels[p] = map.findPlayerLevel(p);
+                if (playerlevels.ContainsKey(p.player_id))
+                    playerlevels[p.player_id] = map.findLevelFromPlayer(p);
                 else
-                    playerlevels.Add(p, map.findPlayerLevel(p));
+                    playerlevels.Add(p.player_id, map.findLevelFromPlayer(p));
             }
 
             // Check for each team if a player can see a player of the other team
-            foreach (var player in livingplayers.Where(player => player.getTeam() == Team.CT))
+            foreach (var player in players.Where(player => !player.isDead() && player.getTeam() == Team.CT))
             {
-                foreach (var counterplayer in livingplayers.Where(counterplayer => counterplayer.getTeam() != player.getTeam()))
+                foreach (var counterplayer in players.Where(counterplayer => !counterplayer.isDead() && counterplayer.getTeam() != Team.CT))
                 {
                     var playerlink = checkVisibility(player, counterplayer);
                     var counterplayerlink = checkVisibility(counterplayer, player);
@@ -761,6 +777,8 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
+
+        private int errorcount = 0;
         /// <summary>
         /// Checks if p1 can see p2 considering obstacles between them: !! this method can only be used when playerlevels get updated see sightbasedsightcombatlinks
         /// </summary>
@@ -770,56 +788,68 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="p2"></param>
         private Link checkVisibility(Player p1, Player p2)
         {
+            // Console.WriteLine("new test");
             bool p1FOVp2 = EDMathLibrary.isInFOV(p1.position, p1.facing.Yaw, p2.position); // p2 is in fov of p1
             if (!p1FOVp2) return null; // If false -> no sight from p1 to p2 possible because p2 is not even in the fov of p1 -> no link
 
             //Level height of p1 and p2
-            var p1Height = playerlevels[p1].height;
-            var p2Height = playerlevels[p2].height;
+            var p1Height = playerlevels[p1.player_id].height;
+            var p2Height = playerlevels[p2.player_id].height;
+            //Console.WriteLine(p1Height+ " to " + p2Height);
 
-            var current_ml = playerlevels[p1];
+            var current_ml = playerlevels[p1.player_id];
+
             var coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, current_ml); // Check if the p1`s view is blocked on his level
+            //if(coll_pos == null)Console.WriteLine("Start coll: " + coll_pos);
 
             //Both players are on same level and a collision with a rect was found -> No free sight -> no link
-            if (p1Height == p2Height && coll_pos != null) return null;
+            if (p1Height == p2Height && coll_pos != null) { return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT, coll_pos); }
 
             //Both players are on same level and no collision with a rect was found -> Free sight -> no wall no obstacle and no other level obstructs the LOS
             if (p1Height == p2Height && coll_pos == null) { sighttestCLinksCount++; return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT); }
 
+            // Check for tunnels
+            var p2coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p2.position, p1.position, playerlevels[p2.player_id]); // Check if the p2`s view is blocked on his level
+            if (p2coll_pos == null && coll_pos == null && p1Height != p2Height) // Both players on different levels claim to have free sight on the other one but no level transition was registered -> p1 or p2 is in a tunnel
+                return null;
 
             //
             // Case: p1 and p2 stand on different levels and p2 is in the FOV of p1
             //
+            throw new Exception("Shit cannot happen");
+            //Error occuring -> a gridcell registers two points with different level assigning -> the cell is free on both level -> collision can be null although player is standing in a differnt level
+            if (coll_pos == null && p1Height != p2Height) { errorcount++; return null; }
 
-            // Check for tunnels
-            var p2coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p2.position, p1.position, playerlevels[p2]); // Check if the p2`s view is blocked on his level
-            if (p2coll_pos == null && coll_pos == null) // Both players on different levels claim to have free sight on the other one but no level transition was registered -> p1 or p2 is in a tunnel
-                return null;
+            if (coll_pos == null) throw new Exception("Shit cannot happen");
 
             // All levels that have to see from p1 to p2 -> p1`s LOS clips these levels if he wants to see him
             MapLevel[] clipped_levels = map.getClippedLevels(p1Height, p2Height);
-            int current_ml_index = 0;
 
-            while (current_ml_index < clipped_levels.Length)
+            for (int i = 0; i < clipped_levels.Length; i++) // Check next levels: p1Height+1, p1Height+2
             {
-                var nextlevel = clipped_levels[current_ml_index];
+                if (coll_pos == null) // No collision -> check next level with same line
+                    throw new Exception("No null collision alloweed for further testing. Tunnel must have occured");
 
-                if (coll_pos == null)
+                var nextlevel = clipped_levels[i];
+
+                if (coll_pos != null) // collision ->  check if a new level is beginning or if there is wall
                 {
-                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, nextlevel); // TODO: Richtiges maplevel gewählt für test?
-                    current_ml_index++;
-                }
-                else if (coll_pos != null)
-                {
-                    EDVector3D coll_posn = coll_pos;
-                    if (coll_posn == null) throw new Exception("Collision point cannot be null");
-                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(coll_posn, p2.position, nextlevel); // TODO: Richtiges maplevel gewählt für test?
-                    if (coll_pos == null) // Transition between levels -> search next level
-                        current_ml_index++;
-                    else
+                    EDVector3D last_coll_pos = coll_pos;
+                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(last_coll_pos, p2.position, nextlevel); // New line from last collision
+                    // Free sight before level of p2 was entered through transition -> tunnel
+                    if (coll_pos == null && nextlevel.height != p2Height) return null;
+                    // Free sight on the last level -> sight was free
+                    if (coll_pos == null && nextlevel.height == p2Height) continue;
+
+                    // If a collision was found in the new level which is not our startpoint from the new line -> Transition between levels -> search next level
+                    if (coll_pos != null && !coll_pos.Equals(last_coll_pos))
+                        continue;
+                    // If a collision was found in the new level which is equals to our startpoint from the new line -> Next level has obstacle at same position -> No free sight
+                    else if (coll_pos != null && coll_pos.Equals(last_coll_pos))
                         return null; // Obstacle found -> abort link search
                 }
             }
+
             // Sight has been free from p1 to p2 so add a combatlink
             sighttestCLinksCount++;
             return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT);
@@ -832,9 +862,9 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchDistancebasedLinks(List<Link> links)
         {
-            foreach (var player in livingplayers)
+            foreach (var player in players.Where(p => !p.isDead()))
             {
-                foreach (var other in livingplayers.Where(p => !p.Equals(player)))
+                foreach (var other in players.Where(p => !p.Equals(player) && !p.isDead()))
                 {
                     var distance = distance_table[GetTableID(player)][GetTableID(other)];
 
@@ -858,9 +888,9 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchClusterDistancebasedLinks(List<Link> links)
         {
-            foreach (var player in livingplayers)
+            foreach (var player in players.Where(p => !p.isDead()))
             {
-                foreach (var other in livingplayers.Where(p => !p.Equals(player)))
+                foreach (var other in players.Where(p => !p.Equals(player) && !p.isDead()))
                 {
                     var distance = distance_table[GetTableID(player)][GetTableID(other)];
                     Cluster playercluster = null;
@@ -919,7 +949,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                         if (pk.assister != null)
                         {
-                            links.Add(new Link(pk.assister, pk.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
+                            //links.Add(new Link(pk.assister, pk.actor, LinkType.SUPPORTLINK, Direction.DEFAULT));
                             killAssistCount++;
                         }
                         eventtestCLinksCount++;
@@ -1004,7 +1034,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     continue;
                 }
 
-                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && livingplayers.Contains(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
+                if (ph.actor.Equals(weaponfireevent.actor) && !ph.actor.isDead() && players.Where(p => !p.isDead()).Contains(weaponfireevent.actor)) // We found a weaponfire event that matches the new playerhurt event
                 {
                     Link insertlink = new Link(weaponfireevent.actor, ph.victim, LinkType.COMBATLINK, Direction.DEFAULT);
                     eventtestCLinksCount++;
@@ -1058,44 +1088,9 @@ namespace CSGO_Analytics.src.encounterdetect
 
             searchFlashes(links);
             searchSupportSmokes(links);
-            searchSupportDecoys(links);
-            searchSupportFires(links);
+
         }
 
-
-        #region Decoys and Firenades - NICE TO HAVE!
-
-
-        private List<Player> registeredNearFire = new List<Player>();
-
-        private List<Player> registeredNearDecoy = new List<Player>();
-
-
-
-        private void searchSupportFires(List<Link> links)
-        {
-            foreach (var fireitem in activeNades.Where(item => item.Key.gameevent == "fire_exploded"))
-            {
-                // Every player coming closer than a certain range gets registered for potential supportlink activities
-                var fireevent = fireitem.Key;
-                registeredNearFire.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(fireevent.position, player.position) < FIRE_ATTRACTION_RANGE && fireevent.actor.getTeam() != player.getTeam()));
-            }
-        }
-
-
-
-        private void searchSupportDecoys(List<Link> links)
-        {
-            foreach (var decoyitem in activeNades.Where(item => item.Key.gameevent == "decoy_exploded"))
-            {
-                var decoyevent = decoyitem.Key;
-                // Register all enemy players that walked near the grenade -> maybe they thought its a real player
-                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getEuclidDistance2D(decoyitem.Key.position, player.position) < DECOY_ATTRACTION_RANGE && decoyevent.actor.getTeam() != player.getTeam()));
-                // Register all enemy players that looked at the grenade in a certain angle -> maybe they thought its a real player
-                registeredNearDecoy.AddRange(livingplayers.Where(player => EDMathLibrary.getLoSOffset(player.position, player.facing.Yaw, decoyitem.Key.position) < DECOY_ATTRACTION_ANGLE && decoyevent.actor.getTeam() != player.getTeam()));
-            }
-        }
-        #endregion
 
         /// <summary>
         /// Updates all active flashes. If within a flash is no player which has flashtime(time this player is flashed - flashduration in data) left. The flash has ended.
@@ -1146,7 +1141,7 @@ namespace CSGO_Analytics.src.encounterdetect
                     eventtestCLinksCount++;
                     flashCLinkCount++;
 
-                    foreach (var teammate in livingplayers.Where(teamate => teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
+                    foreach (var teammate in players.Where(teamate => !teamate.isDead() && teamate.getTeam() == flash.actor.getTeam() && flash.actor != teamate))
                     {
                         //TODO: better sight test
                         // Test if a flashed player can see a counterplayer -> create supportlink from nade thrower to counterplayer
@@ -1176,13 +1171,13 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var smokeitem in activeNades.Where(item => item.Key.gameevent == "smoke_exploded"))
             {
-                foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != smokeitem.Key.actor.getTeam()))
+                foreach (var counterplayer in players.Where(player => !player.isDead() && player.getTeam() != smokeitem.Key.actor.getTeam()))
                 {
                     //If a player from the opposing team of the smoke thrower saw into the smoke
                     if (EDMathLibrary.vectorIntersectsSphere2D(smokeitem.Key.position.X, smokeitem.Key.position.Y, 250, counterplayer.position, counterplayer.facing.Yaw))
                     {
                         // Check if he could have seen a player from the thrower team
-                        foreach (var teammate in livingplayers.Where(teammate => teammate.getTeam() == smokeitem.Key.actor.getTeam()))
+                        foreach (var teammate in players.Where(teammate => !teammate.isDead() && teammate.getTeam() == smokeitem.Key.actor.getTeam()))
                         {
                             if (checkVisibility(counterplayer, teammate) != null)
                             {
@@ -1232,7 +1227,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 // Watch out for teamdamage -> create wrong combatlinks !!
                 // If we find a actor that hurt somebody. this weaponfireevent is likely to be a part of his burst and is therefore a combatlink
                 //TODO: problem: event players might not be dead in the event but shortly after and then there are links between dead players
-                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && livingplayers.Contains(hurtevent.victim) && livingplayers.Contains(wf.actor))
+                if (wf.actor.Equals(hurtevent.actor) && hurtevent.victim.getTeam() != wf.actor.getTeam() && players.Where(player => !player.isDead()).Contains(hurtevent.victim) && players.Where(player => !player.isDead()).Contains(wf.actor))
                 {
                     // Test if an enemy can see our actor
                     if (EDMathLibrary.isInFOV(wf.actor.position, wf.actor.facing.Yaw, hurtevent.victim.position))
@@ -1272,7 +1267,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             if (actor.isDead()) return null;
 
-            foreach (var counterplayer in livingplayers.Where(player => player.getTeam() != actor.getTeam()))
+            foreach (var counterplayer in players.Where(player => !player.isDead() && player.getTeam() != actor.getTeam()))
             {
                 // Test if an enemy can see our actor
                 if (EDMathLibrary.isInFOV(counterplayer.position, counterplayer.facing.Yaw, actor.position))
@@ -1448,8 +1443,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private void clearRoundData()
         {
-            registeredNearDecoy.Clear();
-            registeredNearFire.Clear();
             activeNades.Clear();
             registeredHEQueue.Clear();
             pendingWFEQueue.Clear();
@@ -1464,7 +1457,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <returns></returns>
         private Player getLivingPlayer(Player p)
         {
-            var players = livingplayers.Where(player => player.player_id == p.player_id);
+            var players = this.players.Where(player => player.player_id == p.player_id);
 
             if (players.Count() == 1)
                 return players.First();
@@ -1472,9 +1465,9 @@ namespace CSGO_Analytics.src.encounterdetect
                 return null;
         }
 
-        private void printLivingPlayers()
+        private void printplayers()
         {
-            foreach (var p in livingplayers)
+            foreach (var p in players)
                 Console.WriteLine(p);
 
             foreach (KeyValuePair<long, int> pair in playerID_dictionary)

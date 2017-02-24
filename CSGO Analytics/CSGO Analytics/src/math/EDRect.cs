@@ -15,13 +15,24 @@ namespace CSGO_Analytics.src.math
     {
         public double X { get; set; }
         public double Y { get; set; }
+        public int index_X { get; set; }
+        public int index_Y { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
 
         /// <summary>
-        /// Is this rect already occupied as grid cell
+        /// Is this rect already occupied as grid cell -> it has not been walked by a player
         /// </summary>
-        public bool occupied { get; set; }
+        public bool blocked { get; set; }
+
+        public EDVector3D Center
+        {
+            get
+            {
+                return new EDVector3D((float)(X+Width/2), (float)(Y + Height / 2), 0);
+            }
+        }
+
 
         public System.Drawing.Rectangle Rect
         {
@@ -33,13 +44,26 @@ namespace CSGO_Analytics.src.math
 
         public bool Contains(EDVector3D v)
         {
-            return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.X,v.Y));
+            return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.X, v.Y));
         }
 
- 
+        public EDRect Copy()
+        {
+            return new  EDRect
+                    {
+                        index_X = index_X,
+                        index_Y = index_Y,
+                        X = X,
+                        Y = Y,
+                        Width = Width,
+                        Height = Height,
+                        blocked = false
+                    };
+        }
+
         public override string ToString()
         {
-            return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height;
+            return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height+ " index x: "+index_X + " index y: "+index_Y;
         }
 
         public override bool Equals(object obj)
@@ -67,7 +91,8 @@ namespace CSGO_Analytics.src.math
 
         public System.Drawing.Rectangle getAsQuadTreeRect()
         {
-            return new System.Drawing.Rectangle {
+            return new System.Drawing.Rectangle
+            {
                 X = (int)X,
                 Y = (int)Y,
                 Width = (int)Width,

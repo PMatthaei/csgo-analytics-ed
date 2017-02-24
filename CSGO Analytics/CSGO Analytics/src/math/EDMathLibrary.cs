@@ -134,6 +134,91 @@ namespace CSGO_Analytics.src.math
             return false;
         }
 
+        private static float STEP_SIZE_FACTOR = 45.0f;
+        /// <summary>
+        /// Code see wikipedia.
+        /// </summary>
+        /// <param name="actorpos"></param>
+        /// <param name="recieverpos"></param>
+        /// <param name="maplevel"></param>
+        /// <returns></returns>
+        public static EDVector3D BresenhamLineStepping(EDVector3D actorpos, EDVector3D recieverpos, MapLevel maplevel)
+        {
+            int stepcount = 0;
+
+            var dx = recieverpos.X - actorpos.X;
+            var dy = recieverpos.Y - actorpos.Y;
+
+            var adx = Math.Abs(dx);
+            var ady = Math.Abs(dy);
+
+            var sdx = Math.Sign(dx) * STEP_SIZE_FACTOR;
+            var sdy = Math.Sign(dy) * STEP_SIZE_FACTOR;
+
+            float pdx, pdy, ddx, ddy, es, el;
+            if (adx > ady)
+            {
+                pdx = sdy; pdy = 0;
+                ddx = sdx; ddy = sdy;
+                es = ady; el = adx;
+            }
+            else
+            {
+                pdx = 0; pdy = sdy;
+                ddx = sdx; ddy = sdy;
+                es = adx; el = ady;
+            }
+
+            var x = actorpos.X;
+            var y = actorpos.Y;
+
+            var error = el / 2;
+
+            for (int i = 1; i < el; i++) // Iterate every point on the LOS
+            {
+                error -= es;
+                if (error < 0)
+                {
+                    error += el;
+                    x += ddx; y += ddy;
+                }
+                else
+                {
+                    x += pdx; y += pdy;
+                }
+                stepcount++;
+
+                var bres_point = new EDVector3D(x, y, 0);
+                EDVector3D closest_intersection = null;
+                double dist = 0;
+                foreach (var neighbor in maplevel.cells_tree.GetNearestNeighbours(bres_point.getAsDoubleArray2D(), 8).Where(neighbor => neighbor.Value.blocked))
+                {
+                    var intersection_point = LineIntersectsRect(actorpos, bres_point, neighbor.Value);
+                    if (intersection_point != null)
+                    {
+                        if (closest_intersection == null)
+                        {
+                            closest_intersection = intersection_point;
+                            dist = getEuclidDistance2D(closest_intersection, bres_point);
+                        }
+                        else
+                        {
+                            var ndist = getEuclidDistance2D(closest_intersection, bres_point);
+
+                            if (ndist < dist)
+                            {
+                                closest_intersection = intersection_point;
+                                dist = ndist;
+                            }
+                        }
+                    }
+                }
+                return closest_intersection;
+            }
+            return null;
+        }
+
+        private static long count = 0;
         /// <summary>
         /// Test if a vetor from actor to reciever collides with a rect representing a wall or obstacle.
         /// </summary>
@@ -141,10 +226,12 @@ namespace CSGO_Analytics.src.math
         /// <param name="recieverpos"></param>
         /// <param name="level_cells"></param>
         /// <returns></returns>
-        public static EDVector3D vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel m)
+        public static EDVector3D vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel maplevel)
         {
-            //TODO: check if test is correct
-            if (m == null) throw new Exception("Maplevel cannot be null");
+            //count++;
+            //Console.WriteLine("Perform Linestepping: " + count);
+            //return BresenhamLineStepping(actorpos, recieverpos, maplevel);
+            if (maplevel == null) throw new Exception("Maplevel cannot be null");
             var min_x = Math.Min(actorpos.X, recieverpos.X);
             var max_x = Math.Max(actorpos.X, recieverpos.X);
             var min_y = Math.Min(actorpos.Y, recieverpos.Y);
@@ -153,8 +240,8 @@ namespace CSGO_Analytics.src.math
             var dy = max_y - min_y;
             var searchrect = new EDRect { X = min_x, Y = min_y, Width = dx, Height = dy };
             //Quadtree reduces cells to test depending on the rectangle formed by actorps and recieverpos -> players are close -> far less cells
-            var queriedRects = m.qlevel_walls.GetObjects(searchrect.getAsQuadTreeRect());
-            foreach (var qr in queriedRects)
+            var queriedRects = maplevel.qtree.GetObjects(searchrect.getAsQuadTreeRect());
+            foreach (var qr in queriedRects.OrderBy(r => Math.Abs(r.X-actorpos.X)).ThenBy(r => Math.Abs(r.Y - actorpos.Y)))
             {
                 var intersection_point = LineIntersectsRect(actorpos, recieverpos, qr);
                 if (intersection_point != null)
@@ -164,6 +251,31 @@ namespace CSGO_Analytics.src.math
             }
 
             return null;
+            /*
+            EDVector3D closest_intersection = null; // Get closest collisions of all neigbors
+            double closest_distance = 0;
+            foreach (var cell in m.kdwalls.GetNearestNeighbours(actorpos.getAsDoubleArray2D(), 8))
+            {
+                var intersection_point = LineIntersectsRect(actorpos, recieverpos, cell.Value);
+                if (intersection_point != null)
+                {
+                    if (closest_intersection == null)
+                    {
+                        closest_intersection = intersection_point;
+                        closest_distance = getEuclidDistance2D(intersection_point, actorpos);
+                    }
+                    else
+                    {
+                        var distance = getEuclidDistance2D(intersection_point, actorpos);
+                        if (distance < closest_distance)
+                        {
+                            closest_distance = distance;
+                            closest_intersection = intersection_point;
+                        }
+                    }
+                }
+            }
+            return closest_intersection;*/
         }
 
 
@@ -248,8 +360,8 @@ namespace CSGO_Analytics.src.math
             if (l3 != null) ps.Add(l3);
             if (l4 != null) ps.Add(l4);
             if (ps.Count == 0) return null;
-            ps.OrderBy(point => getEuclidDistance2D(p1, point)); // Collisionpoint with closesest distance to our start is the one we want 
-            return ps.OrderBy(point => getEuclidDistance2D(p1, point)).ToArray()[0];
+            if (ps.Count > 2) throw new Exception("Too many collisions");
+            return ps.OrderBy(point => getEuclidDistance2D(p1, point)).First(); // Return point with lowest distance to p1
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ namespace CSGO_Analytics.src.data.exceptions
         /// </summary>
         /// <param name="message">String message of exception.</param>
         public InsufficientPlayersException()
-        : base("Insufficient amount of players ( < 10) to beginn encounter detection. Maybe a player did not connect at all")
+        : base("Insufficient amount of players ( < 10) to beginn encounter detection. Maybe a player did not connect at all or a bot was choosen instead.")
         {
         }
     }

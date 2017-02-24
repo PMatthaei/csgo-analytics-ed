@@ -41,7 +41,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
                 clusters[clusterid].AddPosition(new EDVector3D(posdata[tupleid]));
             }
 
-            return null;
+            return clusters;
         }
 
         /// <summary>

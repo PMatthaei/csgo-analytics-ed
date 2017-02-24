@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.math;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -19,23 +20,48 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private Direction dir;
 
+        public EDVector3D coll;
+
+        private static int deadcount = 0;
+
         public Link()
         {
 
         }
-
         public Link(Player actor, Player reciever, LinkType type, Direction dir)
         {
             if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
                 Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
             if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
                 Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
-
+            if (actor.isDead() && reciever.isDead())
+            {
+                deadcount++;
+                throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
+            }
             players = new Player[2];
             players[0] = actor;
             players[1] = reciever;
             this.type = type;
             this.dir = dir;
+        }
+
+        public Link(Player actor, Player reciever, LinkType type, Direction dir, EDVector3D coll)
+        {
+            if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
+                Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
+            if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
+                Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
+            if(actor.isDead() && reciever.isDead()) {
+                deadcount++;
+                throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
+            }
+            players = new Player[2];
+            players[0] = actor;
+            players[1] = reciever;
+            this.type = type;
+            this.dir = dir;
+            this.coll = coll;
         }
 
         public bool isUndirected()

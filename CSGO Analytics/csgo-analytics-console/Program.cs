@@ -26,8 +26,8 @@ namespace csgo_analytics_console
 
         static void Main(string[] args)
         {
-            //readFilesFromCommandline(args);
-            readAllFiles();
+           readFilesFromCommandline(args);
+           //readAllFiles();
             Console.ReadLine();
         }
 
@@ -87,7 +87,16 @@ namespace csgo_analytics_console
                     {
                         var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
                         reader.Close();
+                        /* try
+                        {
+                            ed_algorithm = new EncounterDetection(deserializedGamestate);
+                        }
+                        catch (Exception e){
+                            Console.WriteLine(e.Message);
+                            return;
+                        }  */
                         ed_algorithm = new EncounterDetection(deserializedGamestate);
+
 
                     }
                     ed_algorithm.run();

@@ -15,7 +15,7 @@ namespace CSGO_Analytics.src.encounterdetect
     /// Class to save all relevant data to replay the entire match with its encounters and events.
     /// Tick is holding all the events to draw while component is holding all links to draw between players
     /// </summary>
-    public class MatchEDReplay : IDisposable
+    public class EDMatchReplay : IDisposable
     {
         Dictionary<Tick, CombatComponent> ticksdata = new Dictionary<Tick, CombatComponent>();
 

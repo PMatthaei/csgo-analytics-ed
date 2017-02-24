@@ -12,6 +12,8 @@ using System.Collections;
 using QuadTrees;
 using QuadTrees.Common;
 using FastDBScan;
+using KdTree;
+using KdTree.Math;
 
 namespace CSGO_Analytics.src.data.gameobjects
 {
@@ -43,17 +45,23 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// Returns if this player is standing on the level
         /// </summary>
         /// <returns></returns>
-        public MapLevel findPlayerLevel(Player p)
+        public MapLevel findLevelFromPlayer(Player p)
         {
             var vz = p.velocity.VZ;
-            var pz = p.position.Z;
+            float pz = p.position.Z;
             if (vz != 0)
                 pz -= Player.PLAYERMODELL_JUMPHEIGHT; // Substract jumpheight to get real z coordinate(see process data)
             foreach (var level in maplevels)
-                if (pz <= level.max_z && pz >= level.min_z)
+            {
+                if (pz <= level.max_z && pz >= level.min_z || (pz == level.max_z || pz == level.min_z))
                     return level;
+            }
 
-
+            foreach (var level in maplevels)
+            {
+                Console.WriteLine(level.max_z + " " + level.min_z);
+            }
+            throw new Exception("Could not find Level for: " + p + " " + pz);
             return null;
             // This problem occurs because: Positions where player had z-velocity had been sorted out
             // Then we built the levels. If now such a player wants to know his level but current levels dont capture
@@ -83,6 +91,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <returns></returns>
         internal MapLevel[] getClippedLevels(int starth, int endh)
         {
+            //Console.WriteLine("Start level: "+starth + " Endlevel: "+endh);
             var level_diff = Math.Abs(starth - endh);
             if (level_diff == 1) return new MapLevel[] { maplevels[endh] };
 
@@ -104,7 +113,11 @@ namespace CSGO_Analytics.src.data.gameobjects
             if (clipped_levels.Count() == 0) throw new Exception("Clipped Maplevel List cannot be empty");
 
             foreach (var m in clipped_levels)
+            {
                 if (m == null) throw new Exception("Clipped Maplevel cannot be null");
+                //Console.WriteLine("Clipped Level: " + m.height);
+            }
+
 
             return clipped_levels;
         }
@@ -121,133 +134,15 @@ namespace CSGO_Analytics.src.data.gameobjects
                 Console.WriteLine("Could not find next level");
                 return null;
             }
-
         }
 
     }
 
-    public class MapCreator
-    {
-        /// <summary>
-        /// Defines the height of a level. Meaning all points starting from lowest till lowest+levelheight are included.
-        /// </summary>
-        private const int LEVELHEIGHT = 120;
 
-        private const int mapdata_width = 4500;
-        private const int mapdata_height = 4500;
-        private const int pos_x = -2400;
-        private const int pos_y = 3383;
-
-        private static HashSet<EDRect> map_grid;
-
-        private const int cellwidth = 60;
-
-        /// <summary>
-        /// This function takes a list of all registered points on the map and tries to
-        /// reconstruct a polygonal represenatation of the map with serveral levels
-        /// </summary>
-        /// <param name="ps"></param>
-        public static Map createMap(HashSet<EDVector3D> ps)
-        {
-            // Deploy a grid over the map
-            var count = 0;
-            var currentx = pos_x;
-            var currenty = pos_y;
-            map_grid = new HashSet<EDRect>();
-            var cells = (mapdata_height / cellwidth) * (mapdata_width / cellwidth);
-            for (int i = 0; i < cells; i++)
-            {
-                map_grid.Add(new EDRect
-                {
-                    X = currentx,
-                    Y = currenty,
-                    Width = cellwidth,
-                    Height = cellwidth,
-                    occupied = false
-                });
-                count++;
-
-                if (count % (mapdata_width / cellwidth) != 0)// new linesegment
-                {
-                    currentx += cellwidth;
-                }
-                else if (count % (mapdata_width / cellwidth) == 0) //new line
-                {
-                    currentx = pos_x;
-                    currenty -= cellwidth;
-                    count = 0;
-                }
-            }
-
-            // Create the map levels 
-            MapLevel[] maplevels = createMapLevels(ps);
-            var map_width_x = ps.Max(point => point.X) - ps.Min(point => point.X);
-            var map_width_y = ps.Max(point => point.Y) - ps.Min(point => point.Y);
-            Console.WriteLine("Max x: " + ps.Max(point => point.X) + " Min x: " + ps.Min(point => point.X));
-            Console.WriteLine("Mapwidth in x-Range: " + map_width_x + " Mapwidth in y-Range: " + map_width_y);
-
-            return new Map(map_width_x, map_width_y, maplevels);
-        }
-
-        /// <summary>
-        /// Create a maplevel according to its walkable space.
-        /// </summary>
-        /// <param name="ps"></param>
-        /// <returns></returns>
-        private static MapLevel[] createMapLevels(HashSet<EDVector3D> ps)
-        {
-            MapLevel[] maplevels;
-            int levelamount = (int)Math.Ceiling((getZRange(ps) / LEVELHEIGHT));
-            maplevels = new MapLevel[levelamount];
-
-            Console.WriteLine("Levels to create: " + levelamount);
-            var min_z = ps.Min(point => point.Z);
-            var max_z = ps.Max(point => point.Z);
-            Console.WriteLine("From Min Z: " + min_z + " to Max Z: " + max_z);
-
-            for (int i = 0; i < levelamount; i++)
-            {
-                var upperbound = min_z + (i + 1) * LEVELHEIGHT;
-                var lowerbound = min_z + i * LEVELHEIGHT;
-                var levelps = new HashSet<EDVector3D>(ps.Where(point => point.Z >= lowerbound && point.Z <= upperbound).OrderBy(point => point.Z));
-                Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
-
-                if (levelps.Count() == 0)
-                {
-                    Console.WriteLine("No points on level:" + i);
-                    continue;
-                }
-
-                Console.WriteLine("Level " + i + ": " + levelps.Count() + " points");
-                //Console.WriteLine("Level " + i + " starts: " + levelps.First().ToString());
-                //Console.WriteLine("Level " + i + " ends: " + levelps.Last().ToString());
-                var ml = new MapLevel(levelps, i, lowerbound, upperbound);
-                ml.assignLevelcells(map_grid);
-                maplevels[i] = ml;
-            }
-
-            return maplevels;
-        }
-
-
-        /// <summary>
-        /// Returns Range of Z for this set of points
-        /// </summary>
-        /// <returns></returns>
-        public static float getZRange(HashSet<EDVector3D> ps)
-        {
-            return ps.Max(point => point.Z) - ps.Min(point => point.Z);
-        }
-    }
 
     public class MapLevel
     {
-        private const int MIN_CELL_QUERY = 1;
 
-        /// <summary>
-        /// points describing this level
-        /// </summary>
-        public EDVector3D[] points;
 
         /// <summary>
         /// Clusters containing the points describing this level
@@ -255,77 +150,40 @@ namespace CSGO_Analytics.src.data.gameobjects
         public HashSet<EDVector3D[]> clusters;
 
         /// <summary>
-        /// Height of this level on the map - > 0 lowest level 
+        /// Array holding all grid cells 
         /// </summary>
-        public int height;
+        public EDRect[][] level_grid;
+        //public EDRect[][] walkable_grid;
 
         /// <summary>
         /// All map cells representing obstacles and walls on this level
         /// </summary>
-        public QuadTreeRect<EDRect> qlevel_walls = new QuadTreeRect<EDRect>();
+        public KdTree<double, EDRect> cells_tree = new KdTree<double, EDRect>(2, new DoubleMath());
+        public QuadTreeRect<EDRect> qtree = new QuadTreeRect<EDRect>();
+
+        /// <summary>
+        /// Height of this level on the map - > 0 lowest level 
+        /// </summary>
+        public int height;
 
         /// <summary>
         /// Min and Max z-Koordinate occuring in levelpoints
         /// </summary>
         public float min_z, max_z;
 
-        public MapLevel(HashSet<EDVector3D> nps, int height, float min_z, float max_z)
+        public MapLevel(int height, float min_z, float max_z)
         {
-            points = nps.ToArray();
             this.max_z = max_z;
             this.min_z = min_z;
             this.height = height;
+
+
         }
 
-        public void assignLevelcells(HashSet<EDRect> map_grid) //TODO: maybe move to map creator
+        public override string ToString()
         {
-            HashSet<EDRect> level_cells = new HashSet<EDRect>();
-            #region QuadTree Approach
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-
-            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
-
-            clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
-            points = null; //Collect points for garbage
-            QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
-            foreach (var cl in clusters)
-                foreach (var p in cl)
-                    qtree.Add(p);
-
-            foreach (var cell in map_grid)
-            {
-                var rectps = qtree.GetObjects(cell.getAsQuadTreeRect()); //Get points in a cell
-                if (rectps.Count >= MIN_CELL_QUERY)
-                    level_cells.Add(cell);
-            }
-
-            qlevel_walls.AddRange(map_grid.Except(level_cells));
-
-            // TODO: Solve maximal rectangle problem
-            // TODO: Fill holes cells with more than 2 or 3 neighbors -> prevent obstacles which are not there just because nobody has walked at this cell
-            Console.WriteLine("Occupied cells by this level: " + level_cells.Count);
-            level_cells.Clear(); //We dont need them all the time
-            watch.Stop();
-            var sec = watch.ElapsedMilliseconds / 1000.0f;
-            Console.WriteLine("Time to assign cells: " + sec);
-            #endregion
+            return "Level: " + height + " From: " + min_z + " To " + max_z;
         }
-
-
-
-        public List<EDRect> getWallcellNeighbors(EDRect cell)
-        {
-            var neighbors = qlevel_walls.GetObjects(new System.Drawing.Rectangle
-            {
-                X = (int)(cell.X - cell.Width),
-                Y = (int)(cell.Y - cell.Height),
-                Width = (int)(3 * cell.Width),
-                Height = (int)(3 * cell.Height),
-            });
-            return neighbors;
-        }
-
-
     }
 
     public class MapMetaData
