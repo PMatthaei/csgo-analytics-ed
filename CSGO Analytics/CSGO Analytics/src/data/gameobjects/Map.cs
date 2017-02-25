@@ -41,6 +41,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             this.maplevels = maplevels;
         }
 
+
         /// <summary>
         /// Returns if this player is standing on the level
         /// </summary>
@@ -62,11 +63,11 @@ namespace CSGO_Analytics.src.data.gameobjects
                 Console.WriteLine(level.max_z + " " + level.min_z);
             }
             throw new Exception("Could not find Level for: " + p + " " + pz);
-            return null;
             // This problem occurs because: Positions where player had z-velocity had been sorted out
             // Then we built the levels. If now such a player wants to know his level but current levels dont capture
             // This position because it was sorted out -> no suitable level found
         }
+
 
         /// <summary>
         /// Returns a bounding box of the map with root at 0,0
@@ -82,6 +83,7 @@ namespace CSGO_Analytics.src.data.gameobjects
                 Height = this.width_y
             };
         }
+
 
         /// <summary>
         /// Returns arry of indices maplevel of all maplevels this players aimvector has clipped
@@ -122,6 +124,13 @@ namespace CSGO_Analytics.src.data.gameobjects
             return clipped_levels;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ml_height"></param>
+        /// <param name="dir"></param>
+        /// <returns></returns>
         public MapLevel nextLevel(int ml_height, int dir)
         {
             if (dir != 1 || dir != -1) throw new Exception("Direction not matching");
@@ -140,6 +149,8 @@ namespace CSGO_Analytics.src.data.gameobjects
 
 
 
+
+
     public class MapLevel
     {
 
@@ -153,13 +164,16 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// Array holding all grid cells 
         /// </summary>
         public EDRect[][] level_grid;
-        //public EDRect[][] walkable_grid;
 
         /// <summary>
         /// All map cells representing obstacles and walls on this level
         /// </summary>
         public KdTree<double, EDRect> cells_tree = new KdTree<double, EDRect>(2, new DoubleMath());
-        public QuadTreeRect<EDRect> qtree = new QuadTreeRect<EDRect>();
+
+        /// <summary>
+        /// All cells representing walls in a quadtree
+        /// </summary>
+        public QuadTreeRect<EDRect> walls_tree = new QuadTreeRect<EDRect>();
 
         /// <summary>
         /// Height of this level on the map - > 0 lowest level 
@@ -176,8 +190,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             this.max_z = max_z;
             this.min_z = min_z;
             this.height = height;
-
-
         }
 
         public override string ToString()
@@ -186,62 +198,5 @@ namespace CSGO_Analytics.src.data.gameobjects
         }
     }
 
-    public class MapMetaData
-    {
-        public string mapname { get; set; }
-        public double mapcenter_x { get; set; }
-        public double mapcenter_y { get; set; }
-        public double scale;
-        public int rotate { get; set; }
-        public double zoom { get; set; }
-    }
 
-    public class MapMetaDataPropertyReader
-    {
-        /// <summary>
-        /// Reads a map info file "<mapname>".txt and extracts the relevant data about the map
-        /// </summary>
-        /// <param name="path"></param>
-        public static MapMetaData readProperties(string path)
-        {
-            string line;
-
-            var fmt = new NumberFormatInfo();
-            fmt.NegativeSign = "-";
-
-            MapMetaData metadata = new MapMetaData();
-            using (var file = new StreamReader(path))
-            {
-                while ((line = file.ReadLine()) != null)
-                {
-                    var resultString = Regex.Match(line, @"-?\d+").Value; //Match negative and positive int numbers
-
-                    if (line.Contains("pos_x"))
-                    {
-                        metadata.mapcenter_x = double.Parse(resultString, fmt);
-                    }
-                    else if (line.Contains("pos_y"))
-                    {
-                        metadata.mapcenter_y = double.Parse(resultString, fmt);
-                    }
-                    else if (line.Contains("scale"))
-                    {
-                        metadata.scale = Double.Parse(resultString);
-                    }
-                    else if (line.Contains("rotate"))
-                    {
-                        metadata.rotate = Int32.Parse(resultString);
-                    }
-                    else if (line.Contains("zoom"))
-                    {
-                        metadata.zoom = Double.Parse(resultString);
-                    }
-                }
-
-                file.Close();
-            }
-            return metadata;
-        }
-
-    }
 }

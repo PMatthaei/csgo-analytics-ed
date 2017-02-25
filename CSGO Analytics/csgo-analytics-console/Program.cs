@@ -18,7 +18,9 @@ namespace csgo_analytics_console
 {
     class Program
     {
-        private const string PATH = "E:/LRZ Sync+Share/Bacheloarbeit/Demofiles/downloaded valle";
+        private const string TEST_PATH = "E:/LRZ Sync+Share/Bacheloarbeit/Demofiles/downloaded valle";
+        private const string DUST_ESPORT_PATH = "E:/Demofiles/dust2/";
+        private const string PATH = "E:/Demofiles/";
 
         private static EncounterDetection ed_algorithm;
 
@@ -26,19 +28,19 @@ namespace csgo_analytics_console
 
         static void Main(string[] args)
         {
-           readFilesFromCommandline(args);
-           //readAllFiles();
+            readFilesFromCommandline(args);
+            //readAllFiles();
             Console.ReadLine();
         }
 
         private static void readAllFiles()
         {
-            foreach (string file in Directory.EnumerateFiles(PATH, "*.dem"))
+            foreach (string file in Directory.EnumerateFiles(TEST_PATH, "*.dem"))
             {
                 readFile(file);
             }
 
-            foreach(string invalidfile in invalidfiles)
+            foreach (string invalidfile in invalidfiles)
             {
                 System.IO.File.Move(invalidfile, invalidfile.Replace(".dem", "_nondust2.dem"));
                 Console.WriteLine("Replay not supported yet. Please use only dust2");
@@ -57,7 +59,8 @@ namespace csgo_analytics_console
         private static void readFile(string path)
         {
             Console.WriteLine("Reading: " + Path.GetFileName(path));
-            bool skipfile = false;
+
+            var skipfile = false;
             using (var demoparser = new DemoParser(File.OpenRead(path)))
             {
                 ParseTask ptask = new ParseTask
@@ -72,12 +75,8 @@ namespace csgo_analytics_console
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
 
-                /*var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
-                Console.WriteLine("Map: " + mapname);
-                if (mapname != "de_dust2")
-                    skipfile = true;
-                
-                GameStateGenerator.cleanUp();*/
+                skipfile = skipFile(demoparser, ptask);
+
                 var newdemoparser = new DemoParser(File.OpenRead(path));
                 if (!skipfile)
                 {
@@ -87,19 +86,18 @@ namespace csgo_analytics_console
                     {
                         var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
                         reader.Close();
-                        /* try
+                        try
                         {
                             ed_algorithm = new EncounterDetection(deserializedGamestate);
+                            ed_algorithm.detectEncounters();
                         }
-                        catch (Exception e){
+                        catch (Exception e)
+                        {
                             Console.WriteLine(e.Message);
                             return;
-                        }  */
-                        ed_algorithm = new EncounterDetection(deserializedGamestate);
-
-
+                        }
                     }
-                    ed_algorithm.run();
+
                 }
                 GameStateGenerator.cleanUp();
 
@@ -111,6 +109,17 @@ namespace csgo_analytics_console
                 Console.WriteLine("Skip file. Check for invalidity");
             }
 
+        }
+
+        private static bool skipFile(DemoParser demoparser, ParseTask ptask)
+        {
+            var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
+            Console.WriteLine("Map: " + mapname);
+            if (mapname != "de_dust2")
+                return true;
+
+            GameStateGenerator.cleanUp();
+            return false;
         }
 
         private void readFromDB(string[] args)

@@ -37,7 +37,8 @@ namespace CSGO_Analytics.src.encounterdetect
             if (actor.isDead() && reciever.isDead())
             {
                 deadcount++;
-                throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
+                //throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
+                Console.WriteLine("Deadlinks: "+deadcount);
             }
             players = new Player[2];
             players[0] = actor;

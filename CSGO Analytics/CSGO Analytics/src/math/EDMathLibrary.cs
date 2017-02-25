@@ -10,6 +10,7 @@ namespace CSGO_Analytics.src.math
 {
     class EDMathLibrary
     {
+
         private const float FOVVertical = 106; // 106 Degress Vertical Field of View for CS:GO
 
 
@@ -128,13 +129,14 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.Y;
 
             double theta = ScalarProductAngle(new EDVector3D(aimdx, aimdy, 0), new EDVector3D((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-                                                                                                                         //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
+            //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
             if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2) // No max sight distance to restrict FOV
                 return true;
             return false;
         }
 
         private static float STEP_SIZE_FACTOR = 45.0f;
+
         /// <summary>
         /// Code see wikipedia.
         /// </summary>
@@ -218,64 +220,49 @@ namespace CSGO_Analytics.src.math
             return null;
         }
 
-        private static long count = 0;
         /// <summary>
         /// Test if a vetor from actor to reciever collides with a rect representing a wall or obstacle.
         /// </summary>
-        /// <param name="actorpos"></param>
-        /// <param name="recieverpos"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
         /// <param name="level_cells"></param>
         /// <returns></returns>
-        public static EDVector3D vectorIntersectsMapLevelRect(EDVector3D actorpos, EDVector3D recieverpos, MapLevel maplevel)
+        public static EDVector3D LOSIntersectsMap(EDVector3D start, EDVector3D end, MapLevel maplevel)
         {
-            //count++;
-            //Console.WriteLine("Perform Linestepping: " + count);
-            //return BresenhamLineStepping(actorpos, recieverpos, maplevel);
+            //return BresenhamLineStepping(start, end, maplevel);
             if (maplevel == null) throw new Exception("Maplevel cannot be null");
-            var min_x = Math.Min(actorpos.X, recieverpos.X);
-            var max_x = Math.Max(actorpos.X, recieverpos.X);
-            var min_y = Math.Min(actorpos.Y, recieverpos.Y);
-            var max_y = Math.Max(actorpos.Y, recieverpos.Y);
-            var dx = max_x - min_x;
-            var dy = max_y - min_y;
-            var searchrect = new EDRect { X = min_x, Y = min_y, Width = dx, Height = dy };
+
             //Quadtree reduces cells to test depending on the rectangle formed by actorps and recieverpos -> players are close -> far less cells
-            var queriedRects = maplevel.qtree.GetObjects(searchrect.getAsQuadTreeRect());
-            foreach (var qr in queriedRects.OrderBy(r => Math.Abs(r.X-actorpos.X)).ThenBy(r => Math.Abs(r.Y - actorpos.Y)))
+            var searchrect = getRectFromPoints(start, end);
+
+            var queriedRects = maplevel.walls_tree.GetObjects(searchrect.getAsQuadTreeRect());
+            EDVector3D closest_intersection = null;
+            double dist = 0;
+            foreach (var wallcell in queriedRects.OrderBy(r => Math.Abs(r.Center.X - start.X)).ThenBy(r => Math.Abs(r.Center.Y - start.Y))) //Order Rectangles by distance to the actor. 
             {
-                var intersection_point = LineIntersectsRect(actorpos, recieverpos, qr);
+                var intersection_point = LineIntersectsRect(start, end, wallcell);
                 if (intersection_point != null)
                 {
                     return intersection_point;
                 }
-            }
+            }   
+            return closest_intersection;
 
-            return null;
-            /*
-            EDVector3D closest_intersection = null; // Get closest collisions of all neigbors
-            double closest_distance = 0;
-            foreach (var cell in m.kdwalls.GetNearestNeighbours(actorpos.getAsDoubleArray2D(), 8))
+            /*if (closest_intersection == null)
             {
-                var intersection_point = LineIntersectsRect(actorpos, recieverpos, cell.Value);
-                if (intersection_point != null)
-                {
-                    if (closest_intersection == null)
-                    {
-                        closest_intersection = intersection_point;
-                        closest_distance = getEuclidDistance2D(intersection_point, actorpos);
-                    }
-                    else
-                    {
-                        var distance = getEuclidDistance2D(intersection_point, actorpos);
-                        if (distance < closest_distance)
-                        {
-                            closest_distance = distance;
-                            closest_intersection = intersection_point;
-                        }
-                    }
-                }
+                closest_intersection = intersection_point;
+                dist = getEuclidDistance2D(intersection_point, start);
             }
-            return closest_intersection;*/
+            else
+            {
+                var ndist = getEuclidDistance2D(intersection_point, start);
+
+                if (ndist < dist)
+                {
+                    closest_intersection = intersection_point;
+                    dist = ndist;
+                }
+            }*/
         }
 
 
@@ -300,7 +287,7 @@ namespace CSGO_Analytics.src.math
             var dy = (actorpos.Y - aimY) / distanceActorAim;
 
             // Now the line equation is x = dx*t + aimX, y = dy*t + aimY with 0 <= t <= 1.
-            // compute the value t of the closest point to the circle center (Cx, Cy)
+            // compute the value t of the closest point to the circle center C(sphereCenterX, sphereCenterY)
             var t = dx * (sphereCenterX - aimX) + dy * (sphereCenterY - aimY);
 
             // This is the projection of C on the line from actor to aim.
@@ -347,6 +334,13 @@ namespace CSGO_Analytics.src.math
             return getEuclidDistance2D(new EDVector3D(cx, cy, 0), p) <= r;
         }
 
+        /// <summary>
+        /// Intersection of a line with a rect. -> perform 4 line tests.
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="r"></param>
+        /// <returns></returns>
         public static EDVector3D LineIntersectsRect(EDVector3D p1, EDVector3D p2, EDRect r)
         {
             var l1 = LineLineIntersectionPoint(p1, p2, new EDVector3D((float)r.X, (float)r.Y, 0), new EDVector3D((float)(r.X + r.Width), (float)r.Y, 0));
@@ -364,39 +358,9 @@ namespace CSGO_Analytics.src.math
             return ps.OrderBy(point => getEuclidDistance2D(p1, point)).First(); // Return point with lowest distance to p1
         }
 
-        /// <summary>
-        /// Deprecated
-        /// </summary>
-        /// <param name="l1p1"></param>
-        /// <param name="l1p2"></param>
-        /// <param name="l2p1"></param>
-        /// <param name="l2p2"></param>
-        /// <returns></returns>
-        private static bool LineIntersectsLine(EDVector3D l1p1, EDVector3D l1p2, EDVector3D l2p1, EDVector3D l2p2)
-        {
-            float q = (float)((l1p1.Y - l2p1.Y) * (l2p2.X - l2p1.X) - (l1p1.X - l2p1.X) * (l2p2.Y - l2p1.Y));
-            float d = (float)((l1p2.X - l1p1.X) * (l2p2.Y - l2p1.Y) - (l1p2.Y - l1p1.Y) * (l2p2.X - l2p1.X));
-
-            if (d == 0)
-            {
-                return false;
-            }
-
-            float r = q / d;
-
-            q = (float)((l1p1.Y - l2p1.Y) * (l1p2.X - l1p1.X) - (l1p1.X - l2p1.X) * (l1p2.Y - l1p1.Y));
-            float s = q / d;
-
-            if (r < 0 || r > 1 || s < 0 || s > 1)
-            {
-                return false;
-            }
-
-            return true;
-        }
 
         /// <summary>
-        /// Get Intersection point
+        /// Get Intersection point between to lines. line A from a1 to a2 and line B from b1 to b2
         /// </summary>
         /// <param name="a1">a1 is line1 start</param>
         /// <param name="a2">a2 is line1 end</param>
@@ -429,6 +393,11 @@ namespace CSGO_Analytics.src.math
             return a1 + t * b;
         }
 
+        /// <summary>
+        /// Get the bounding rectangle of a pointset
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public static EDRect getPointCloudBoundings(List<EDVector3D> data)
         {
             var min_x = data.Min(point => point.X);
@@ -440,6 +409,22 @@ namespace CSGO_Analytics.src.math
             return new EDRect { X = min_x, Y = max_y, Width = dx, Height = dy };
         }
 
+        /// <summary>
+        /// Get the bounding rectangle between to positions.
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static EDRect getRectFromPoints(EDVector3D v1, EDVector3D v2)
+        {
+            var min_x = Math.Min(v1.X, v2.X);
+            var max_x = Math.Max(v1.X, v2.X);
+            var min_y = Math.Min(v1.Y, v2.Y);
+            var max_y = Math.Max(v1.Y, v2.Y);
+            var dx = max_x - min_x;
+            var dy = max_y - min_y;
+            return new EDRect { X = min_x, Y = min_y, Width = dx, Height = dy };
+        }
         //
         //
         // BASICS
@@ -481,21 +466,6 @@ namespace CSGO_Analytics.src.math
             var aimZ = (float)(pos.Y + Math.Sin(toRadian(-facing.Pitch))); //TODO: check if valid?!?!
 
             return new EDVector3D(aimX, aimY, aimZ);
-        }
-
-        /// <summary>
-        /// Alternative for cantor pairing function: http://stackoverflow.com/questions/919612/mapping-two-integers-to-one-in-a-unique-and-deterministic-way
-        /// Used to distinct links with their participants ids
-        /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
-        /// <returns></returns>
-        public int SzudzikFunction(int a, int b)
-        {
-            if (a >= 0 && b >= 0)
-                return a >= b ? a * a + a + b : a + b * b;
-            else
-                return -1;
         }
 
     }

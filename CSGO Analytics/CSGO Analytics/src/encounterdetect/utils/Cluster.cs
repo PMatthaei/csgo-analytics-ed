@@ -17,8 +17,6 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 
         public EDVector3D centroid;
 
-        public double cluster_attackrange { get; set; }
-
 
         public Cluster()
         {
@@ -37,21 +35,6 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             assignToCluster(datapoint);
         }
 
-        internal void calculateClusterAttackrange(Hashtable ht)
-        {
-            double[] distances = new double[data.Count];
-            int arr_ptr = 0;
-            if (data.Count == 0) return;
-            foreach (var pos in data)
-            {
-                EDVector3D value = (EDVector3D)ht[pos]; // No Z variable no hashtable entry -> null -.-
-                distances[arr_ptr] = EDMathLibrary.getEuclidDistance2D(pos, value);
-                arr_ptr++;
-            }
-
-            cluster_attackrange = distances.Average();
-            Console.WriteLine("Attackrange for this cluster is: " + cluster_attackrange);
-        }
 
         internal void assignToCluster(EDVector3D p)
         {

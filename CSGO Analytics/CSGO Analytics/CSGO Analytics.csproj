@@ -39,6 +39,10 @@
       <HintPath>..\packages\KdTree.1.3.0\lib\net45\KdTreeLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="log4net, Version=2.0.7.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -79,9 +83,11 @@
     <Compile Include="src\data\gameevents\ServerEvents.cs" />
     <Compile Include="src\data\gameobjects\GameObject.cs" />
     <Compile Include="src\data\gameobjects\Map.cs" />
-    <Compile Include="src\data\gameobjects\MapCreator.cs" />
+    <Compile Include="src\data\utils\MapCreator.cs" />
     <Compile Include="src\data\gameobjects\Player.cs" />
     <Compile Include="src\data\gameobjects\Weapon.cs" />
+    <Compile Include="src\data\utils\MapMetaReader.cs" />
+    <Compile Include="src\encounterdetect\utils\AttackerCluster.cs" />
     <Compile Include="src\encounterdetect\utils\BresenhamGridCollision.cs" />
     <Compile Include="src\encounterdetect\utils\Cluster.cs" />
     <Compile Include="src\encounterdetect\utils\KMeanClustering.cs" />
@@ -160,6 +166,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <None Include="log4.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

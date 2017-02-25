@@ -23,6 +23,7 @@ using DP = DemoInfoModded;
 using Newtonsoft.Json;
 using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
+using CSGO_Analytics.src.data.utils;
 using System.ComponentModel;
 
 namespace CSGO_Analytics.src.views
@@ -83,7 +84,7 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// All players drawn on the minimap
         /// </summary>
-        private PlayerShape[] playershapes;
+        private Dictionary<long, PlayerShape> playershapes = new Dictionary<long, PlayerShape>();
 
         /// <summary>
         /// All links between players that are currently drawn
@@ -188,7 +189,6 @@ namespace CSGO_Analytics.src.views
         {
 
             this.tickrate = gamestate.meta.tickrate;
-            playershapes = new PlayerShape[gamestate.meta.players.Count];
             //Jump out of Background to update UI
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
@@ -244,7 +244,7 @@ namespace CSGO_Analytics.src.views
 
         public void InitializeEncounterDetection()
         {
-            this.matchreplay = this.EDAlgorithm.run(); // Run the algorithm
+            this.matchreplay = this.EDAlgorithm.detectEncounters(); // Run the algorithm
 
             Console.WriteLine("Initialized ED");
         }
@@ -388,10 +388,9 @@ namespace CSGO_Analytics.src.views
                             drawPos(vp, Color.FromRgb(0, 255, 0));
                         }));
                     }
-                    var ar = EDM.EDMathLibrary.getPointCloudBoundings(c.data.ToList());
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        drawHollowRect(ar, Color.FromRgb(255, 0, 0));
+                        drawHollowRect(c.getBoundings(), Color.FromRgb(255, 0, 0));
                     }));
                     var vr = EDM.EDMathLibrary.getPointCloudBoundings(victimpos);
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
@@ -641,11 +640,11 @@ namespace CSGO_Analytics.src.views
         {
             LinkShape ls = new LinkShape(actor, reciever);
 
-            PlayerShape aps = playershapes[EDAlgorithm.GetTableID(actor)];
+            PlayerShape aps = playershapes[actor.player_id];
             ls.X1 = aps.X;
             ls.Y1 = aps.Y;
 
-            PlayerShape rps = playershapes[EDAlgorithm.GetTableID(reciever)];
+            PlayerShape rps = playershapes[reciever.player_id];
             ls.X2 = rps.X;
             ls.Y2 = rps.Y;
 
@@ -665,31 +664,31 @@ namespace CSGO_Analytics.src.views
         {
             Player actor = link.getActor();
             Player reciever = link.getReciever();
-            var psr = playershapes[EDAlgorithm.GetTableID(reciever)];
-            var psa = playershapes[EDAlgorithm.GetTableID(actor)];
+            PlayerShape rps = playershapes[reciever.player_id];
+            PlayerShape aps = playershapes[actor.player_id];
 
             foreach (var ls in links)
             {
                 if (ls.actor.Equals(actor))
                 {
-                    ls.X1 = psa.X;
-                    ls.Y1 = psa.Y;
+                    ls.X1 = aps.X;
+                    ls.Y1 = aps.Y;
                 }
                 else if (ls.actor.Equals(reciever))
                 {
-                    ls.X1 = psr.X;
-                    ls.Y1 = psr.Y;
+                    ls.X1 = rps.X;
+                    ls.Y1 = rps.Y;
                 }
 
                 if (ls.reciever.Equals(actor))
                 {
-                    ls.X2 = psa.X;
-                    ls.Y2 = psa.Y;
+                    ls.X2 = aps.X;
+                    ls.Y2 = aps.Y;
                 }
                 else if (ls.reciever.Equals(reciever))
                 {
-                    ls.X2 = psr.X;
-                    ls.Y2 = psr.Y;
+                    ls.X2 = rps.X;
+                    ls.Y2 = rps.Y;
                 }
             }
         }
@@ -759,7 +758,7 @@ namespace CSGO_Analytics.src.views
             ps.StrokeThickness = 0.5;
             ps.Active = true;
 
-            playershapes[EDAlgorithm.GetTableID(p)] = ps;
+            playershapes[p.player_id] = ps;
             mapPanel.Children.Add(ps);
         }
 
@@ -767,7 +766,7 @@ namespace CSGO_Analytics.src.views
 
         private void updatePlayer(Player p)
         {
-            PlayerShape ps = playershapes[EDAlgorithm.GetTableID(p)];
+            PlayerShape ps = playershapes[p.player_id];
             if (p.HP <= 0)
                 ps.Active = false;
             if (p.HP > 0)
@@ -900,10 +899,10 @@ namespace CSGO_Analytics.src.views
             //renderMapLevels();
             renderHurtClusters();
             //renderHurtEvents();
-            /*if (paused)
+            if (paused)
                 _busy.Set();
             else
-                playMatch();*/
+                playMatch();
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)

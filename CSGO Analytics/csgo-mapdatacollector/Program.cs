@@ -19,9 +19,13 @@ namespace csgo_mapdatacollector
             Console.ReadLine();
         }
 
-        private const string PATH = "E:/LRZ Sync+Share/Bacheloarbeit/Demofiles/downloaded valle/";
+        private const string PATH = "E:/LRZ Sync+Share/Demofiles/";
 
         private static string mapname;
+
+        private static Dictionary<string, double> all_maps = new Dictionary<string, double>();
+
+        private const string target_map = "de_inferno";
 
         private static JsonSerializerSettings settings = new JsonSerializerSettings
         {
@@ -29,19 +33,21 @@ namespace csgo_mapdatacollector
             Formatting = Formatting.None
         };
 
-        static int count;
+        static double count;
 
         private static void readAllFiles()
         {
             foreach (string file in Directory.EnumerateFiles(PATH, "*.dem"))
             {
                 readDemoFile(file);
-
                 count++;
             }
+            Console.WriteLine(target_map + " occured: " + target_map_count);
+            foreach(var mapname in all_maps)
+                Console.WriteLine(mapname.Key +": "+ mapname.Value+"/"+count + " "+ (int)((mapname.Value / count) * 100)+ "%");
 
         }
-
+        private static int target_map_count = 0;
         private static int tickcount = 0;
         private static void readDemoFile(string path)
         {
@@ -54,8 +60,16 @@ namespace csgo_mapdatacollector
                 parser.ParseHeader();
 
                 mapname = parser.Map;
-                Console.WriteLine("Map: " + mapname);
+                mapname.Trim();
+                if (!all_maps.ContainsKey(mapname))
+                    all_maps.Add(mapname, 0);
+                else
+                    all_maps[mapname]++;
 
+
+                Console.WriteLine("Map: " + mapname);
+                if (mapname == target_map) target_map_count++;
+                return;
                 parser.PlayerKilled += (object sender, PlayerKilledEventArgs e) =>
                 {
                     if (e.Killer == null || e.Victim == null) return;
@@ -106,6 +120,7 @@ namespace csgo_mapdatacollector
                 {
                     Console.WriteLine("Problem with tick-parsing. Is your .dem valid? See this projects github page for more info.\n");
                     Console.WriteLine("Stacktrace: " + e.StackTrace + "\n");
+                    Console.ReadLine();
                 }
             }
 

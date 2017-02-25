@@ -5,6 +5,8 @@
 	"material"	"overviews/de_dust2"	// texture file
 	"pos_x"		"-2400"	// upper left world coordinate
 	"pos_y"		"3383"
+	"width"		"4500"
+	"height"	"4500"
 	"scale"		"4.4" 
 	"rotate"	"1"
 	"zoom"		"1.1"	

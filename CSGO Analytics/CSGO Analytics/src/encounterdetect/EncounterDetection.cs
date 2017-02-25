@@ -14,6 +14,8 @@ using CSGO_Analytics.src.export;
 using CSGO_Analytics.src.data.exceptions;
 using System.Collections;
 using FastDBScan;
+using log4net;
+
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -25,64 +27,66 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         CSVExporter exporter = new CSVExporter();
 
+        /// <summary>
+        /// Logging 
+        /// </summary>
+        ///
+        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         //
         // CONSTANTS
         //
 
         // Timeouts in seconds.
-        private const float TAU = 20;
-        private const float ENCOUNTER_TIMEOUT = 20;
-        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 5; // Time after which a Hurt Event has no relevance to a weaponfire event
-        private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;
-        private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;
-
-        private const float FIRE_ATTRACTION_RANGE = 200;
-        private const float FIRE_SUPPORTRANGE = 200;
-        private const float DECOY_ATTRACTION_RANGE = 200;
-        private const float DECOY_ATTRACTION_ANGLE = 10;
-        private const float DECOY_SUPPORTRANGE = 200;
-
-        private const int CLUSTER_NUM = 6; // TODO: 5-6 seems like a good value-> why? starting from 7 it makes no sense
+        private const float TAU = 20;                                   // Time after which a encounter is not a predecessor anymore
+        private const float ENCOUNTER_TIMEOUT = 20;                     // Time after which a Encounter ends if he is not extended before
+        private const float WEAPONFIRE_VICTIMSEARCH_TIMEOUT = 5;        // Time after which a vicitim is not suitable for a weapon fire event
+        private const float PLAYERHURT_WEAPONFIRESEARCH_TIMEOUT = 4;    // Time after which a a player hurt event is not suitable for a weapon fire event
+        private const float PLAYERHURT_DAMAGEASSIST_TIMEOUT = 4;        // Time after which a player hurt event is not suitable for a damage assist
 
         //
-        // Variable constants. Depend on match
+        // Variables constant for the hole match
         //
+        /// <summary>
+        /// Average of all eventbased supports (player killed events with assister - distance assister and actor)
+        /// </summary>
         private double SUPPORTRANGE_AVERAGE;
+
+        /// <summary>
+        /// Average of all eventbased combats (player killed and hurt events)
+        /// </summary>
         private double ATTACKRANGE_AVERAGE;
 
         /// <summary>
-        /// Tickrate of the demo in Hz this algorithm runs on. 
+        /// Tickrate of the demo this algorithm runs on in Hz. 
         /// </summary>
         public float tickrate;
+
+        /// <summary>
+        /// Ticktime of the demo in ms. 
+        /// </summary>
         public float ticktime;
 
         /// <summary>
-        /// All players - communicated by the meta-data - which are participating in this match.
+        /// All players - communicated by the meta-data - which are participating in this match. Get updated every tick.
         /// </summary>
         private Player[] players;
-
-        /// <summary>
-        /// All living players with the latest data.(position health etc)
-        /// </summary>
-        //private HashSet<Player> players;
-        //private HashSet<Player> deadplayers;
-
-        private float[][] position_table;
-        private float[][] distance_table;
 
         /// <summary>
         /// Holds every (attackerposition, victimposition) pair of a hitevent with the attackerposition as key
         /// </summary>
         public Hashtable hit_hashtable = new Hashtable();
-        private Hashtable assist_hashtable = new Hashtable();
-
-        public Cluster[] attacker_clusters;
 
         /// <summary>
-        /// All data we have from this match.
+        /// Holds every (assister, assisted) pair of a playerdeath event with a assister
         /// </summary>
-        private Match match;
+        public Hashtable assist_hashtable = new Hashtable();
 
+        /// <summary>
+        /// All Clusters of attackpositions
+        /// </summary>
+        public AttackerCluster[] attacker_clusters;
+        
         /// <summary>
         /// Simple representation of the map to do basic sight calculations for players
         /// </summary>
@@ -94,12 +98,14 @@ namespace CSGO_Analytics.src.encounterdetect
         public Dictionary<long, MapLevel> playerlevels = new Dictionary<long, MapLevel>();
 
 
-        /// <summary>
-        /// Dictionary for CSGO IDS to our own. CSGO is using different IDs for their entities every match.
-        /// (Watch out for id changes caused by disconnects/reconnects!!)
-        /// </summary>
-        private Dictionary<long, int> playerID_dictionary = new Dictionary<long, int>();
 
+
+
+
+        /// <summary>
+        /// All data we have from this match.
+        /// </summary>
+        private Match match;
 
         public EncounterDetection(Gamestate gamestate)
         {
@@ -108,35 +114,16 @@ namespace CSGO_Analytics.src.encounterdetect
             this.ticktime = 1000 / tickrate;
             this.players = gamestate.meta.players.ToArray();
             Console.WriteLine("Start with " + players.Count() + " players.");
-            //this.players = new HashSet<Player>(players.ToList());
             printplayers();
-            //this.deadplayers = new HashSet<Player>();
-
-            int ownid = 0;
-            foreach (var player in players) // Map all CS Entity IDs to our own table-ids
-            {
-                playerID_dictionary.Add(player.player_id, ownid);
-                if (player.player_id == 0) throw new InsufficientPlayersException();
-                ownid++;
-            }
-
-            initTables(ownid); // Initalize tables for all players(should be 10 for csgo)
 
             // Gather and prepare data for later 
             preprocessReplayData();
 
-
         }
 
-        public Player[] getPlayers()
-        {
-            return players;
-        }
 
-        public List<Encounter> getEncounters()
-        {
-            return closed_encounters;
-        }
+
+
 
 
 
@@ -147,7 +134,7 @@ namespace CSGO_Analytics.src.encounterdetect
         //
 
         /// <summary>
-        /// All currently running, not timed out, encounters
+        /// All currently active - not timed out - encounters
         /// </summary>
         private List<Encounter> open_encounters = new List<Encounter>();
 
@@ -156,11 +143,17 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private List<Encounter> closed_encounters = new List<Encounter>();
 
+        /// <summary>
+        /// Currently detected predecessors of a encounter
+        /// </summary>
+        private List<Encounter> predecessors = new List<Encounter>();
+
+
 
         //
         // Encounter Detection Stats - For later analysis. Export to CSV
         //
-        #region
+        #region Counters
         int tickCount = 0;
         int eventCount = 0;
 
@@ -184,7 +177,7 @@ namespace CSGO_Analytics.src.encounterdetect
         int eventtestCLinksCount = 0;
         int eventestSightCLinkCount = 0;
         int spotteventsCount = 0;
-        int ticks_with_spotted_playersCount = 0;
+        int isSpotted_playersCount = 0;
         int spotterFoundCount = 0;
         int noSpotterFoundCount = 0;
 
@@ -199,12 +192,12 @@ namespace CSGO_Analytics.src.encounterdetect
         int no_clustered_distanceCount = 0;
         #endregion
 
-        private List<Encounter> predecessors = new List<Encounter>();
+
 
         /// <summary>
         /// 
         /// </summary>
-        public EDMatchReplay run()
+        public EDMatchReplay detectEncounters()
         {
             EDMatchReplay replay = new EDMatchReplay();
 
@@ -215,7 +208,6 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
-                    //Console.WriteLine("Tick: " + tickCount);
 
                     foreach (var sevent in tick.getServerEvents())
                         Console.WriteLine(sevent.gameevent + " " + sevent.actor);
@@ -235,12 +227,10 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
-                        if (updatedPlayer.isSpotted) ticks_with_spotted_playersCount++;
+                        if (updatedPlayer.isSpotted) isSpotted_playersCount++;
                         updatePlayer(updatedPlayer);
-                        int id = GetTableID(updatedPlayer);
-                        updatePosition(id, updatedPlayer.position.getAsArray3D()); // Update position first then distance!!
-                        updateDistance(id);
                     }
+
 
                     handleDisconnects();
 
@@ -323,7 +313,7 @@ namespace CSGO_Analytics.src.encounterdetect
             Console.WriteLine("Weaponfire-Events victims inserted into existing components: " + wf_insertCount);
 
             Console.WriteLine("\nSpotted-Events occured: " + spotteventsCount);
-            Console.WriteLine("\nPlayer is spotted in: " + ticks_with_spotted_playersCount + " ticks");
+            Console.WriteLine("\nPlayer is spotted in: " + isSpotted_playersCount + " ticks");
             Console.WriteLine("No Spotters found in: " + noSpotterFoundCount + " ticks");
             Console.WriteLine("Spotters found in: " + spotterFoundCount + " ticks");
 
@@ -356,10 +346,24 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
-
+        /// <summary>
+        /// All currently disconnected players
+        /// </summary>
         private HashSet<Player> disconnectedplayers = new HashSet<Player>();
+
+        /// <summary>
+        /// All players that await binding
+        /// </summary>
         private HashSet<Player> bindedplayers = new HashSet<Player>();
+
+        /// <summary>
+        /// Matches bot name to the ID of the player this bot is replaceing
+        /// </summary>
         private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
+
+        /// <summary>
+        /// ID-Queue of disconnected players
+        /// </summary>
         private Queue<long> disconnected_ids = new Queue<long>();
 
         private void handleBindings()
@@ -393,7 +397,7 @@ namespace CSGO_Analytics.src.encounterdetect
         }
 
         /// <summary>
-        /// Registeres players that have to be handled that tick
+        /// Registeres players which have to be handled because of a connection problem
         /// </summary>
         /// <param name="tick"></param>
         private void handleServerEvents(Tick tick)
@@ -416,7 +420,6 @@ namespace CSGO_Analytics.src.encounterdetect
                 }
             }
         }
-
 
         /// <summary>
         /// Update a players with his most recent version. Further keeps track of all living players
@@ -441,11 +444,6 @@ namespace CSGO_Analytics.src.encounterdetect
                     if (toUpdate.isDead()) // && !deadplayers.Contains(player)) //This player is dead but not in removed from the living -> do so
                     {
                         player.HP = toUpdate.HP;
-                        /*players.Remove(player);
-                        deadplayers.Add(player);
-                        count++;
-                        //Console.WriteLine("Player died." + player.playername + " Alive players: " + players.Count);
-                        //Console.WriteLine("Dead players: " + deadplayers.Count);*/
 
                     }
                     else //Player is alive -> make sure hes in the living list and update him
@@ -456,13 +454,6 @@ namespace CSGO_Analytics.src.encounterdetect
                         player.HP = toUpdate.HP;
                         player.isSpotted = toUpdate.isSpotted;
 
-                        /*if (deadplayers.Contains(player) && !players.Contains(player)) // Player was dead but lives now -> make sure hes in the right list
-                        {
-                            deadplayers.Remove(player);
-                            players.Add(player);
-                            //Console.WriteLine("Player revived."+player.playername+ " Alive players: " + players.Count);
-                           //Console.WriteLine("Dead players: " + deadplayers.Count);
-                        }*/
                         count++;
                     }
                 }
@@ -483,9 +474,9 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
-
         /// <summary>
         /// Loop through the replay data and collect important data such as positions, hurtevent, averages etc for later calculations.
+        /// Alternatively load a file with this information. TODO
         /// </summary>
         /// <returns></returns>
         private void preprocessReplayData()
@@ -527,8 +518,8 @@ namespace CSGO_Analytics.src.encounterdetect
                             var vz = player.velocity.VZ;
                             if (vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
                                 ps.Add(player.position);
-                            //else
-                            //ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
+                            else
+                                ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
                         }
 
                     }
@@ -544,8 +535,10 @@ namespace CSGO_Analytics.src.encounterdetect
             SUPPORTRANGE_AVERAGE = support_ranges.Average();
 
             // Generate Hurteventclusters
-            //var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
-            /*var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
+            #region Old Cluseralgorithms
+            /*
+            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+            var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
 
             this.attacker_clusters = new Cluster[clusterset.Count];
             int ind = 0;
@@ -553,20 +546,21 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 attacker_clusters[ind] = new Cluster(clusterdata);
                 ind++;
-            } */
+            } 
+
+            this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false); */
+            #endregion
+
             var leader = new LEADERClustering((float)ATTACKRANGE_AVERAGE);
-            this.attacker_clusters = leader.clusterData(hit_hashtable.Keys.Cast<EDVector3D>().ToList());
-            //this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
-
-
-            foreach (var a in attacker_clusters)
-                a.calculateClusterAttackrange(hit_hashtable);
-            /*this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false);
-            foreach (var a in attacker_clusters)
-                a.calculateClusterAttackrange(hit_hashtable);*/
-
+            var attackerclusters = new List<AttackerCluster>();
+            foreach (var cluster in leader.clusterData(hit_hashtable.Keys.Cast<EDVector3D>().ToList()))
+            {
+                var attackcluster = new AttackerCluster(cluster.data.ToArray());
+                attackcluster.calculateClusterAttackrange(hit_hashtable);
+                attackerclusters.Add(attackcluster);
+            }
+            this.attacker_clusters = attackerclusters.ToArray();
         }
-
 
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
@@ -633,10 +627,10 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="insertlink"></param>
         private void insertLinkIntoComponent(int tick_id, Link insertlink)
         {
-            foreach (var en in open_encounters) // Search the component in which this link has to be sorted in 
+            foreach (var en in open_encounters) // Search the component in a encounter in which this link has to be sorted in 
             {
                 bool inserted = false;
-                var valid_comps = en.cs.Where(comp => comp.tick_id == tick_id);
+                var valid_comps = en.cs.Where(comp => comp.tick_id == tick_id); // Get the component with this tickid
                 if (valid_comps.Count() > 1)
                     throw new Exception("More than one component at tick :" + tick_id + " existing. Components have to be unique!");
                 else if (valid_comps.Count() == 0)
@@ -658,19 +652,21 @@ namespace CSGO_Analytics.src.encounterdetect
 
         /// <summary>
         /// Queue of all hurtevents(HE) that where fired. Use these to search for a coressponding weaponfire event.
-        /// Value is the tick_id as int where the event happend
+        /// Value is the tick_id as int where the event happend.
         /// </summary>
         private Dictionary<PlayerHurt, int> registeredHEQueue = new Dictionary<PlayerHurt, int>();
 
 
         /// <summary>
         /// Weaponfire events(WFE) that are waiting for their check.
+        /// Value is the tick_id as int where the event happend.
         /// </summary>
         private Dictionary<WeaponFire, int> pendingWFEQueue = new Dictionary<WeaponFire, int>();
 
 
         /// <summary>
         /// Active nades such as smoke and fire nades which have not ended and need to be tested every tick they are effective
+        /// Value is the tick_id as int where the event happend.
         /// </summary>
         private Dictionary<NadeEvents, int> activeNades = new Dictionary<NadeEvents, int>();
 
@@ -698,7 +694,7 @@ namespace CSGO_Analytics.src.encounterdetect
             List<Link> links = new List<Link>();
 
             //searchEventbasedSightCombatLinks(tick, links);
-            //searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
+            searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
             //searchClusterDistancebasedLinks(links);
             //searchDistancebasedLinks(links);
@@ -797,26 +793,26 @@ namespace CSGO_Analytics.src.encounterdetect
             var p2Height = playerlevels[p2.player_id].height;
             //Console.WriteLine(p1Height+ " to " + p2Height);
 
-            var current_ml = playerlevels[p1.player_id];
+            var current_maplevel = playerlevels[p1.player_id];
 
-            var coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p1.position, p2.position, current_ml); // Check if the p1`s view is blocked on his level
+            var coll_pos = EDMathLibrary.LOSIntersectsMap(p1.position, p2.position, current_maplevel); // Check if the p1`s view is blocked on his level
             //if(coll_pos == null)Console.WriteLine("Start coll: " + coll_pos);
 
             //Both players are on same level and a collision with a rect was found -> No free sight -> no link
             if (p1Height == p2Height && coll_pos != null) { return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT, coll_pos); }
 
             //Both players are on same level and no collision with a rect was found -> Free sight -> no wall no obstacle and no other level obstructs the LOS
-            if (p1Height == p2Height && coll_pos == null) { sighttestCLinksCount++; return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT); }
+            if (p1Height == p2Height && coll_pos == null) { sighttestCLinksCount++; return new Link(p1, p2, LinkType.COMBATLINK, Direction.DEFAULT, coll_pos); }
 
             // Check for tunnels
-            var p2coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(p2.position, p1.position, playerlevels[p2.player_id]); // Check if the p2`s view is blocked on his level
+            var p2coll_pos = EDMathLibrary.LOSIntersectsMap(p2.position, p1.position, playerlevels[p2.player_id]); // Check if the p2`s view is blocked on his level
             if (p2coll_pos == null && coll_pos == null && p1Height != p2Height) // Both players on different levels claim to have free sight on the other one but no level transition was registered -> p1 or p2 is in a tunnel
                 return null;
 
             //
             // Case: p1 and p2 stand on different levels and p2 is in the FOV of p1
             //
-            throw new Exception("Shit cannot happen");
+            throw new Exception("Invalid if just one level");
             //Error occuring -> a gridcell registers two points with different level assigning -> the cell is free on both level -> collision can be null although player is standing in a differnt level
             if (coll_pos == null && p1Height != p2Height) { errorcount++; return null; }
 
@@ -835,7 +831,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 if (coll_pos != null) // collision ->  check if a new level is beginning or if there is wall
                 {
                     EDVector3D last_coll_pos = coll_pos;
-                    coll_pos = EDMathLibrary.vectorIntersectsMapLevelRect(last_coll_pos, p2.position, nextlevel); // New line from last collision
+                    coll_pos = EDMathLibrary.LOSIntersectsMap(last_coll_pos, p2.position, nextlevel); // New line from last collision
                     // Free sight before level of p2 was entered through transition -> tunnel
                     if (coll_pos == null && nextlevel.height != p2Height) return null;
                     // Free sight on the last level -> sight was free
@@ -866,7 +862,7 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var other in players.Where(p => !p.Equals(player) && !p.isDead()))
                 {
-                    var distance = distance_table[GetTableID(player)][GetTableID(other)];
+                    var distance = EDMathLibrary.getEuclidDistance2D(player.position, other.position);
 
                     if (distance <= ATTACKRANGE_AVERAGE && other.getTeam() != player.getTeam())
                     {
@@ -892,8 +888,8 @@ namespace CSGO_Analytics.src.encounterdetect
             {
                 foreach (var other in players.Where(p => !p.Equals(player) && !p.isDead()))
                 {
-                    var distance = distance_table[GetTableID(player)][GetTableID(other)];
-                    Cluster playercluster = null;
+                    var distance = EDMathLibrary.getEuclidDistance2D(player.position, other.position);
+                    AttackerCluster playercluster = null;
                     foreach (var c in attacker_clusters) // TODO: Change this if clustercount gets to high. Very slow
                     {
                         if (c.getBoundings().Contains(player.position))
@@ -1289,47 +1285,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
 
-        //
-        //
-        // INITALIZATION AND UPDATE METHODS FOR TABLES
-        //
-        //
-        #region Init and Update Tables
-        private void initTables(int playeramount)
-        {
-            position_table = new float[playeramount][];
-            for (int i = 0; i < position_table.Length; i++)
-            {
-                position_table[i] = new float[3]; // x, y, z
-            }
 
-            distance_table = new float[playeramount][];
-            for (int i = 0; i < distance_table.Length; i++)
-            {
-                distance_table[i] = new float[playeramount]; // distance between each player
-            }
-        }
-
-
-        private void updatePosition(int entityid, float[] newpos)
-        {
-            for (int i = 0; i < position_table[entityid].Length; i++)
-            {
-                position_table[entityid][i] = newpos[i];
-            }
-        }
-
-
-        private void updateDistance(int entityid)
-        {
-            for (int i = 0; i < distance_table[entityid].Length; i++)
-            {
-                if (entityid != i)
-                    distance_table[entityid][i] = (float)EDMathLibrary.getEuclidDistance2D(new EDVector3D(position_table[entityid]), new EDVector3D(position_table[i]));
-            }
-        }
-        #endregion
-
+  
         //
         //
         // HELPING METHODS AND ID HANDLING
@@ -1363,81 +1320,81 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter.ExportToFile("encounter_detection_results.csv");
         }
 
-        public int GetTableID(Player player)
-        {
-            var updateid = player.player_id;
-            if (updateid == 0) // Check if the player is a bot -> get his mapped id from a disconnected player
-                botid_to_steamid.TryGetValue(player.playername, out updateid);
-
-            int id;
-            if (playerID_dictionary.TryGetValue(updateid, out id))
-            {
-                return id;
-            }
-            else
-            {
-                Console.WriteLine("Could not map unkown CS-ID: " + updateid + " of Player " + player.playername + " on Analytics-ID. CS-ID change occured -> Key needs update");
-#if Debug
-                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
-                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
-#endif
-                handleChangedID(player);
-                return GetTableID(player);
-            }
-
-
-        }
-
-        public void ChangeTableIDKey(long fromKey, long toKey)
-        {
-            try
-            {
-                int value = playerID_dictionary[fromKey];
-                playerID_dictionary.Remove(fromKey);
-                playerID_dictionary[toKey] = value;
-            }
-            catch (Exception e)
-            {
-                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
-                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
-                Console.WriteLine(e.Message);
-                Console.WriteLine(e.StackTrace);
-            }
-            Console.ReadLine();
-
-        }
-
-        /// <summary>
-        /// IDs given from CS:GO can change after certain events -> this kills our table updates
-        /// So we just add a new id for this player to the dictionary. getID is not injective! ( f(a) = f(b) a =/= b )
-        /// </summary>
-        /// <param name="p"></param>
-        private void handleChangedID(Player p)
-        {
-            long changedKey = -99; //Deprecated
-            int value = -99;
-            for (int i = 0; i < players.Count() - 1; i++)
-            {
-                if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
+        /*        public int GetTableID(Player player)
                 {
-                    changedKey = players[i].player_id; // The old key we used but which is not up to date
-                    value = i; // Our value is always the position in the initalisation playerarray
-                    players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
-                    playerID_dictionary.Add(p.player_id, value);
-#if Debug
-                foreach (KeyValuePair<long, int> pair in playerID_dictionary)
-                    Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
-#endif
-                    return;
+                    var updateid = player.player_id;
+                    if (updateid == 0) // Check if the player is a bot -> get his mapped id from a disconnected player
+                        botid_to_steamid.TryGetValue(player.playername, out updateid);
+
+                    int id;
+                    if (playerID_dictionary.TryGetValue(updateid, out id))
+                    {
+                        return id;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Could not map unkown CS-ID: " + updateid + " of Player " + player.playername + " on Analytics-ID. CS-ID change occured -> Key needs update");
+        #if Debug
+                        foreach (KeyValuePair<long, int> pair in playerID_dictionary)
+                            Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+        #endif
+                        handleChangedID(player);
+                        return GetTableID(player);
+                    }
+
+
                 }
-            }
 
-            if (value == -99)
-            {
-                throw new Exception("No suitable ID found in map.");
-            }
-        }
+                public void ChangeTableIDKey(long fromKey, long toKey)
+                {
+                    try
+                    {
+                        int value = playerID_dictionary[fromKey];
+                        playerID_dictionary.Remove(fromKey);
+                        playerID_dictionary[toKey] = value;
+                    }
+                    catch (Exception e)
+                    {
+                        foreach (KeyValuePair<long, int> pair in playerID_dictionary)
+                            Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e.StackTrace);
+                    }
+                    Console.ReadLine();
 
+                }
+
+                /// <summary>
+                /// IDs given from CS:GO can change after certain events -> this kills our table updates
+                /// So we just add a new id for this player to the dictionary. getID is not injective! ( f(a) = f(b) a =/= b )
+                /// </summary>
+                /// <param name="p"></param>
+                private void handleChangedID(Player p)
+                {
+                    long changedKey = -99; //Deprecated
+                    int value = -99;
+                    for (int i = 0; i < players.Count() - 1; i++)
+                    {
+                        if (players[i].playername.Equals(p.playername)) // Find the player in our initalisation array
+                        {
+                            changedKey = players[i].player_id; // The old key we used but which is not up to date
+                            value = i; // Our value is always the position in the initalisation playerarray
+                            players[i].player_id = p.player_id; //update his old id to the new changed one but only here!
+                            playerID_dictionary.Add(p.player_id, value);
+        #if Debug
+                        foreach (KeyValuePair<long, int> pair in playerID_dictionary)
+                            Console.WriteLine("Key: " + pair.Key + " Value: " + pair.Value);
+        #endif
+                            return;
+                        }
+                    }
+
+                    if (value == -99)
+                    {
+                        throw new Exception("No suitable ID found in map.");
+                    }
+                }
+                */
         /// <summary>
         /// Clear all lists and queues that loose relevance at the end of the round to prevent events from carrying over to the next round
         /// </summary>
@@ -1469,9 +1426,16 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var p in players)
                 Console.WriteLine(p);
+        }
 
-            foreach (KeyValuePair<long, int> pair in playerID_dictionary)
-                Console.WriteLine("CS ID Key: " + pair.Key + " TableID Value: " + pair.Value);
+        public Player[] getPlayers()
+        {
+            return players;
+        }
+
+        public List<Encounter> getEncounters()
+        {
+            return closed_encounters;
         }
         #endregion
     }

@@ -42,7 +42,6 @@ namespace CSGO_Analytics.src.data.gameobjects
             // Deploy a grid over the map
             var currentx = pos_x;
             var currenty = pos_y;
-            //map_grid = new HashSet<EDRect>();
             var cells = (mapdata_height / cellwidth) * (mapdata_width / cellwidth);
 
             map_grid = new EDRect[mapdata_height / cellwidth][];
@@ -105,14 +104,9 @@ namespace CSGO_Analytics.src.data.gameobjects
                 Console.WriteLine("Z Range for Level " + i + " between " + lowerbound + " and " + upperbound);
 
                 if (levelps.Count() == 0)
-                {
-                    Console.WriteLine("No points on level:" + i);
-                    continue;
-                }
-
+                    throw new Exception("No points on level:" + i);
+                
                 Console.WriteLine("Level " + i + ": " + levelps.Count() + " points");
-                //Console.WriteLine("Level " + i + " starts: " + levelps.First().ToString());
-                //Console.WriteLine("Level " + i + " ends: " + levelps.Last().ToString());
                 var ml = new MapLevel(i, lowerbound, upperbound);
                 assignLevelcells(ml, levelps.ToArray());
                 maplevels[i] = ml;
@@ -144,8 +138,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
             foreach (var cl in ml.clusters)
-                foreach (var p in cl)
-                    qtree.Add(p);
+                    qtree.AddRange(cl);
 
             for (int k = 0; k < map_grid.Length; k++)
                 for (int l = 0; l < map_grid[k].Length; l++)
@@ -158,7 +151,7 @@ namespace CSGO_Analytics.src.data.gameobjects
                     }
                     else
                     {
-                        ml.qtree.Add(cell);
+                        ml.walls_tree.Add(cell);
                         cell.blocked = true;
                     }
 
