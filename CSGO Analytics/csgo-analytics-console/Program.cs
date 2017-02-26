@@ -13,6 +13,8 @@ using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
 using DemoInfoModded;
 using Newtonsoft.Json;
+using log4net;
+
 
 namespace csgo_analytics_console
 {
@@ -26,8 +28,11 @@ namespace csgo_analytics_console
 
         private static List<string> invalidfiles = new List<string>();
 
+        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         static void Main(string[] args)
         {
+
             readFilesFromCommandline(args);
             //readAllFiles();
             Console.ReadLine();
@@ -42,7 +47,7 @@ namespace csgo_analytics_console
 
             foreach (string invalidfile in invalidfiles)
             {
-                System.IO.File.Move(invalidfile, invalidfile.Replace(".dem", "_nondust2.dem"));
+                Console.WriteLine("Could not parse: " + invalidfile);
                 Console.WriteLine("Replay not supported yet. Please use only dust2");
             }
         }
@@ -56,11 +61,13 @@ namespace csgo_analytics_console
             }
         }
 
+        private static bool skipfile = false;
+
+
         private static void readFile(string path)
         {
-            Console.WriteLine("Reading: " + Path.GetFileName(path));
+            log.Error("Reading: " + Path.GetFileName(path));
 
-            var skipfile = false;
             using (var demoparser = new DemoParser(File.OpenRead(path)))
             {
                 ParseTask ptask = new ParseTask
@@ -76,29 +83,31 @@ namespace csgo_analytics_console
                 };
 
                 skipfile = skipFile(demoparser, ptask);
-
-                var newdemoparser = new DemoParser(File.OpenRead(path));
-                if (!skipfile)
+                try
                 {
-                    GameStateGenerator.GenerateJSONFile(newdemoparser, ptask);
-
-                    using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                    var newdemoparser = new DemoParser(File.OpenRead(path));
+                    if (!skipfile)
                     {
-                        var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
-                        reader.Close();
-                        try
+                        GameStateGenerator.GenerateJSONFile(newdemoparser, ptask);
+
+                        using (var reader = new StreamReader(path.Replace(".dem", ".json")))
                         {
+                            var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
+                            reader.Close();
+
                             ed_algorithm = new EncounterDetection(deserializedGamestate);
                             ed_algorithm.detectEncounters();
                         }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e.Message);
-                            return;
-                        }
-                    }
 
+                    }
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    log.Error(e.Message);
+                    return;
+                }
+
                 GameStateGenerator.cleanUp();
 
             }

@@ -31,7 +31,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// Logging 
         /// </summary>
         ///
-        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         //
         // CONSTANTS

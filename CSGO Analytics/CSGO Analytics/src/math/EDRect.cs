@@ -15,15 +15,10 @@ namespace CSGO_Analytics.src.math
     {
         public double X { get; set; }
         public double Y { get; set; }
-        public int index_X { get; set; }
-        public int index_Y { get; set; }
+
         public double Width { get; set; }
         public double Height { get; set; }
 
-        /// <summary>
-        /// Is this rect already occupied as grid cell -> it has not been walked by a player
-        /// </summary>
-        public bool blocked { get; set; }
 
         public EDVector3D Center
         {
@@ -47,23 +42,11 @@ namespace CSGO_Analytics.src.math
             return new Rect(X, Y, Width, Height).Contains(new System.Windows.Point(v.X, v.Y));
         }
 
-        public EDRect Copy()
-        {
-            return new  EDRect
-                    {
-                        index_X = index_X,
-                        index_Y = index_Y,
-                        X = X,
-                        Y = Y,
-                        Width = Width,
-                        Height = Height,
-                        blocked = false
-                    };
-        }
+
 
         public override string ToString()
         {
-            return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height+ " index x: "+index_X + " index y: "+index_Y;
+            return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height;
         }
 
         public override bool Equals(object obj)

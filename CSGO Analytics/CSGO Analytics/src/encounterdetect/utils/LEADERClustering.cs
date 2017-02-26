@@ -77,9 +77,5 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             return clusters.ToArray();
         }
 
-        private Cluster getClostestCluster(EDVector3D p)
-        {
-            return clusters.OrderByDescending(cluster => EDMathLibrary.getEuclidDistance2D(cluster.centroid, p)).First();
-        }
     }
 }

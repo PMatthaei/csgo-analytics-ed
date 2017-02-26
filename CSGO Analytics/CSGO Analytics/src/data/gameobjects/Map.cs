@@ -119,8 +119,6 @@ namespace CSGO_Analytics.src.data.gameobjects
                 if (m == null) throw new Exception("Clipped Maplevel cannot be null");
                 //Console.WriteLine("Clipped Level: " + m.height);
             }
-
-
             return clipped_levels;
         }
 
@@ -163,17 +161,17 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Array holding all grid cells 
         /// </summary>
-        public EDRect[][] level_grid;
+        public MapgridCell[][] level_grid;
 
         /// <summary>
         /// All map cells representing obstacles and walls on this level
         /// </summary>
-        public KdTree<double, EDRect> cells_tree = new KdTree<double, EDRect>(2, new DoubleMath());
+        public KdTree<double, MapgridCell> cells_tree = new KdTree<double, MapgridCell>(2, new DoubleMath());
 
         /// <summary>
         /// All cells representing walls in a quadtree
         /// </summary>
-        public QuadTreeRect<EDRect> walls_tree = new QuadTreeRect<EDRect>();
+        public QuadTreeRect<MapgridCell> walls_tree = new QuadTreeRect<MapgridCell>();
 
         /// <summary>
         /// Height of this level on the map - > 0 lowest level 
@@ -195,6 +193,43 @@ namespace CSGO_Analytics.src.data.gameobjects
         public override string ToString()
         {
             return "Level: " + height + " From: " + min_z + " To " + max_z;
+        }
+    }
+
+    public class MapgridCell : EDRect
+    {
+        /// <summary>
+        /// Index x of the mapcell in the map grid
+        /// </summary>
+        public int index_X { get; set; }
+
+        /// <summary>
+        /// Index y of the mapcell in the map grid
+        /// </summary>
+        public int index_Y { get; set; }
+
+        /// <summary>
+        /// Is this rect already occupied as grid cell -> it has not been walked by a player
+        /// </summary>
+        public bool blocked { get; set; }
+
+        public MapgridCell Copy()
+        {
+            return new MapgridCell
+            {
+                index_X = index_X,
+                index_Y = index_Y,
+                X = X,
+                Y = Y,
+                Width = Width,
+                Height = Height,
+                blocked = false
+            };
+        }
+
+        public override string ToString()
+        {
+            return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height + " index x: " + index_X + " index y: " + index_Y;
         }
     }
 

@@ -21,7 +21,7 @@ namespace CSGO_Analytics.src.math
         /// <param name="end"></param>
         /// <param name="steps"></param>
         /// <returns></returns>
-        public static List<EDVector3D> linear_interpolatePositions(EDVector3D start, EDVector3D end, float steps)
+        public static List<EDVector3D> interpolatePositionsLinear(EDVector3D start, EDVector3D end, float steps)
         {
             var ps = new List<EDVector3D>();
             float dx = start.X - end.X;
@@ -236,8 +236,7 @@ namespace CSGO_Analytics.src.math
             var searchrect = getRectFromPoints(start, end);
 
             var queriedRects = maplevel.walls_tree.GetObjects(searchrect.getAsQuadTreeRect());
-            EDVector3D closest_intersection = null;
-            double dist = 0;
+
             foreach (var wallcell in queriedRects.OrderBy(r => Math.Abs(r.Center.X - start.X)).ThenBy(r => Math.Abs(r.Center.Y - start.Y))) //Order Rectangles by distance to the actor. 
             {
                 var intersection_point = LineIntersectsRect(start, end, wallcell);
@@ -246,23 +245,9 @@ namespace CSGO_Analytics.src.math
                     return intersection_point;
                 }
             }   
-            return closest_intersection;
+            return null;
 
-            /*if (closest_intersection == null)
-            {
-                closest_intersection = intersection_point;
-                dist = getEuclidDistance2D(intersection_point, start);
-            }
-            else
-            {
-                var ndist = getEuclidDistance2D(intersection_point, start);
 
-                if (ndist < dist)
-                {
-                    closest_intersection = intersection_point;
-                    dist = ndist;
-                }
-            }*/
         }
 
 

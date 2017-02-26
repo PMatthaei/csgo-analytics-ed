@@ -23,14 +23,34 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// </summary>
         private const int LEVELHEIGHT = 1200;
 
+        /// <summary>
+        /// Map width - width of the grid
+        /// </summary>
         private const int mapdata_width = 4500;
+        /// <summary>
+        /// Map height - height of the grid
+        /// </summary>
         private const int mapdata_height = 4500;
+
+        /// <summary>
+        /// Start Koordinate X from where to begin with grid cell deployment
+        /// </summary>
         private const int pos_x = -2400;
+
+        /// <summary>
+        /// Start Koordinate X from where to begin with grid cell deployment
+        /// </summary>
         private const int pos_y = 3383;
 
-        private static EDRect[][] map_grid;
+        /// <summary>
+        /// The grid deployed over the map
+        /// </summary>
+        private static MapgridCell[][] map_grid;
 
-        private static int cellwidth = 60;
+        /// <summary>
+        /// Lenght of the edges of a square in the mapgrid
+        /// </summary>
+        private static int celledge_length = 60;
 
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to
@@ -39,34 +59,33 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <param name="ps"></param>
         public static Map createMap(HashSet<EDVector3D> ps)
         {
-            // Deploy a grid over the map
             var currentx = pos_x;
             var currenty = pos_y;
-            var cells = (mapdata_height / cellwidth) * (mapdata_width / cellwidth);
+            var cells = (mapdata_height / celledge_length) * (mapdata_width / celledge_length);
 
-            map_grid = new EDRect[mapdata_height / cellwidth][];
+            map_grid = new MapgridCell[mapdata_height / celledge_length][];
 
             for (int k = 0; k < map_grid.Length; k++)
             {
-                map_grid[k] = new EDRect[mapdata_height / cellwidth];
+                map_grid[k] = new MapgridCell[mapdata_height / celledge_length];
 
                 for (int l = 0; l < map_grid[k].Length; l++)
                 {
-                    map_grid[k][l] = new EDRect
+                    map_grid[k][l] = new MapgridCell
                     {
                         index_X = k,
                         index_Y = l,
                         X = currentx,
                         Y = currenty,
-                        Width = cellwidth,
-                        Height = cellwidth,
+                        Width = celledge_length,
+                        Height = celledge_length,
                         blocked = false
                     };
-                    currentx += cellwidth;
+                    currentx += celledge_length;
 
                 }
                 currentx = pos_x;
-                currenty -= cellwidth;
+                currenty -= celledge_length;
             }
 
 
@@ -115,6 +134,9 @@ namespace CSGO_Analytics.src.data.gameobjects
             return maplevels;
         }
 
+        /// <summary>
+        /// Minimal Points that have to be located in a cell to mark it as "walkable" space -> no obstacle
+        /// </summary>
         private const int MIN_CELL_QUERY = 1;
 
         /// <summary>
@@ -129,11 +151,11 @@ namespace CSGO_Analytics.src.data.gameobjects
             var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
 
             ml.clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
-            points = null; //Collect points for garbage
+            points = null; // Collect points for garbage
 
-            ml.level_grid = new EDRect[mapdata_height / cellwidth][];
+            ml.level_grid = new MapgridCell[mapdata_height / celledge_length][];
             for (int k = 0; k < ml.level_grid.Length; k++)
-                ml.level_grid[k] = new EDRect[mapdata_height / cellwidth];
+                ml.level_grid[k] = new MapgridCell[mapdata_height / celledge_length];
 
 
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
@@ -151,7 +173,9 @@ namespace CSGO_Analytics.src.data.gameobjects
                     }
                     else
                     {
+                        if (cell.blocked == true) continue; // Prevent already used cells from being assigned to multiple levels
                         ml.walls_tree.Add(cell);
+                        map_grid[k][l].blocked = true;
                         cell.blocked = true;
                     }
 
