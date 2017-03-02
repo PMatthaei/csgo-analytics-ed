@@ -53,6 +53,15 @@ namespace CSGO_Analytics.src.encounterdetect
             comp.parent= this;
         }
 
+        public int getTickRange()
+        {
+            return cs.Max(c => c.tick_id) - cs.Min(c => c.tick_id);
+        }
+
+        public bool isDamageEncounter()
+        {
+            return cs.TrueForAll(component => component.links.TrueForAll( link => link.getLinkValue() == 0));
+        }
 
         public override string ToString()
         {

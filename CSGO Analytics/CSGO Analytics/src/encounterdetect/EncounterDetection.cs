@@ -12,6 +12,7 @@ using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.export;
 using CSGO_Analytics.src.data.exceptions;
+using CSGO_Analytics.src.data.utils;
 using System.Collections;
 using FastDBScan;
 using log4net;
@@ -22,16 +23,12 @@ namespace CSGO_Analytics.src.encounterdetect
 
     public class EncounterDetection
     {
+        private const bool exportingEnabled = true;
         /// <summary>
         /// Exporter for csv file format
         /// </summary>
-        CSVExporter exporter = new CSVExporter();
+        private CSVExporter exporter = new CSVExporter();
 
-        /// <summary>
-        /// Logging 
-        /// </summary>
-        ///
-        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         //
         // CONSTANTS
@@ -86,11 +83,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// All Clusters of attackpositions
         /// </summary>
         public AttackerCluster[] attacker_clusters;
-        
+
         /// <summary>
         /// Simple representation of the map to do basic sight calculations for players
         /// </summary>
         public Map map;
+        private MapMetaData mapmeta;
 
         /// <summary>
         /// Dictionary holding the level of player
@@ -107,7 +105,7 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private Match match;
 
-        public EncounterDetection(Gamestate gamestate)
+        public EncounterDetection(Gamestate gamestate, MapMetaData mapmeta)
         {
             this.match = gamestate.match;
             this.tickrate = gamestate.meta.tickrate;
@@ -115,6 +113,8 @@ namespace CSGO_Analytics.src.encounterdetect
             this.players = gamestate.meta.players.ToArray();
             Console.WriteLine("Start with " + players.Count() + " players.");
             printplayers();
+
+            this.mapmeta = mapmeta;
 
             // Gather and prepare data for later 
             preprocessReplayData();
@@ -197,9 +197,9 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// 
         /// </summary>
-        public EDMatchReplay detectEncounters()
+        public MatchReplay detectEncounters()
         {
-            EDMatchReplay replay = new EDMatchReplay();
+            MatchReplay replay = new MatchReplay();
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var round in match.rounds)
@@ -209,21 +209,9 @@ namespace CSGO_Analytics.src.encounterdetect
                     tickCount++;
                     eventCount += tick.getTickevents().Count;
 
-                    foreach (var sevent in tick.getServerEvents())
-                        Console.WriteLine(sevent.gameevent + " " + sevent.actor);
-
                     handleServerEvents(tick); // Check if disconnects or reconnects happend in this tick
 
-                    try
-                    {
-                        handleBindings();
-                    }
-                    catch (PlayerBindingException pe)
-                    {
-                        Console.WriteLine(pe.Message);
-                        Console.ReadLine();
-                        return null;
-                    }
+                    handleBindings();
 
                     foreach (var updatedPlayer in tick.getUpdatedPlayers()) // Update tables if player is alive
                     {
@@ -236,7 +224,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
                     CombatComponent component = buildComponent(tick);
 
-                    replay.insertData(tick, component); // Save the tick with its component for later replaying. 
+                    replay.insertReplaydata(tick, component); // Save the tick with its component for later replaying. 
 
                     if (component == null) // No component in this tick
                         continue;
@@ -296,7 +284,14 @@ namespace CSGO_Analytics.src.encounterdetect
             //We are done. -> move open encounters to closed encounters
             closed_encounters.AddRange(open_encounters);
             open_encounters.Clear();
-
+            float totalencountertime = 0;
+            int damageencountercount = 0;
+            foreach(var encounter in closed_encounters)
+            {
+                totalencountertime += (encounter.getTickRange() * ticktime / 1000);
+                if(encounter.isDamageEncounter())
+                    damageencountercount++;
+            }
             // Dump stats to console
             predecessorHandledCount = newEncounterCount + updateEncounterCount + mergeEncounterCount;
             Console.WriteLine("Hashed Hurt Events: " + hit_hashtable.Count);
@@ -340,7 +335,7 @@ namespace CSGO_Analytics.src.encounterdetect
             //
             // Export data to csv
             //
-            if (false)
+            if (exportingEnabled)
                 exportEDDataToCSV(sec);
 
             return replay;
@@ -362,7 +357,7 @@ namespace CSGO_Analytics.src.encounterdetect
         private Dictionary<string, long> botid_to_steamid = new Dictionary<string, long>();
 
         /// <summary>
-        /// ID-Queue of disconnected players
+        /// ID-Queue of disconnected players - just working if players who disconnect first rejoin first!
         /// </summary>
         private Queue<long> disconnected_ids = new Queue<long>();
 
@@ -404,6 +399,8 @@ namespace CSGO_Analytics.src.encounterdetect
         {
             foreach (var sevent in tick.getServerEvents())
             {
+                Console.WriteLine(sevent.gameevent + " " + sevent.actor);
+
                 var player = sevent.actor;
                 switch (sevent.gameevent)
                 {
@@ -444,7 +441,6 @@ namespace CSGO_Analytics.src.encounterdetect
                     if (toUpdate.isDead()) // && !deadplayers.Contains(player)) //This player is dead but not in removed from the living -> do so
                     {
                         player.HP = toUpdate.HP;
-
                     }
                     else //Player is alive -> make sure hes in the living list and update him
                     {
@@ -528,8 +524,12 @@ namespace CSGO_Analytics.src.encounterdetect
             #endregion
             Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
 
-            // Generate Map
-            this.map = MapCreator.createMap(ps);
+            // Generate 
+            MapCreator.mapdata_height = (int)mapmeta.height;
+            MapCreator.mapdata_width = (int)mapmeta.width;
+            MapCreator.pos_x = (int)mapmeta.mapcenter_x;
+            MapCreator.pos_y = (int)mapmeta.mapcenter_y;
+            this.map = MapCreator.createMap(mapmeta,ps);
 
             ATTACKRANGE_AVERAGE = hurt_ranges.Average();
             SUPPORTRANGE_AVERAGE = support_ranges.Average();
@@ -694,12 +694,12 @@ namespace CSGO_Analytics.src.encounterdetect
             List<Link> links = new List<Link>();
 
             //searchEventbasedSightCombatLinks(tick, links);
-            searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
+            //searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
 
             //searchClusterDistancebasedLinks(links);
             //searchDistancebasedLinks(links);
 
-            //searchEventbasedLinks(tick, links);
+            searchEventbasedLinks(tick, links);
             //searchEventbasedNadeSupportlinks(tick, links);
 
             CombatComponent combcomp = null;
@@ -795,6 +795,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             var current_maplevel = playerlevels[p1.player_id];
 
+           // var coll_pos = EDMathLibrary.LOSIntersectsMapBresenham(p1.position, p2.position, current_maplevel); // Check if the p1`s view is blocked on his level
             var coll_pos = EDMathLibrary.LOSIntersectsMap(p1.position, p2.position, current_maplevel); // Check if the p1`s view is blocked on his level
             //if(coll_pos == null)Console.WriteLine("Start coll: " + coll_pos);
 
@@ -1286,7 +1287,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
 
-  
+
         //
         //
         // HELPING METHODS AND ID HANDLING
@@ -1306,6 +1307,7 @@ namespace CSGO_Analytics.src.encounterdetect
             exporter["Observed events"] = eventCount;
             exporter["Hurt/Killed-Events"] = hit_hashtable.Count;
             exporter["Encounters found"] = closed_encounters.Count;
+            exporter["Players spotted in ticks"] = isSpotted_playersCount;
             exporter["Sightcombatlink - Sightbased"] = sighttestCLinksCount;
             exporter["Sightcombatlink - Eventbased"] = eventestSightCLinkCount;
             exporter["Combatlinks - Eventbased"] = eventtestCLinksCount;

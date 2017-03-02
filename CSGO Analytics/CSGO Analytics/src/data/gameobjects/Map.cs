@@ -1,17 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CSGO_Analytics.src.math;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Globalization;
-using System.Windows;
-using System.Collections;
 using QuadTrees;
-using QuadTrees.Common;
-using FastDBScan;
 using KdTree;
 using KdTree.Math;
 
@@ -19,6 +10,8 @@ namespace CSGO_Analytics.src.data.gameobjects
 {
     public class Map
     {
+        public static string[] SUPPORTED_MAPS = new string[]{ "de_dust2", "de_cbble","de_cache","de_mirage","de_inferno", "de_overpass" };
+
         /// <summary>
         /// Array holding the different maplevels ordered from lowest level (f.e. tunnels beneath the ground) to highest (2nd floor etc)
         /// </summary>
@@ -164,7 +157,7 @@ namespace CSGO_Analytics.src.data.gameobjects
         public MapgridCell[][] level_grid;
 
         /// <summary>
-        /// All map cells representing obstacles and walls on this level
+        /// All map cells representing obstacles and walls on this level - maybe use kdtree for nearest neighbors
         /// </summary>
         public KdTree<double, MapgridCell> cells_tree = new KdTree<double, MapgridCell>(2, new DoubleMath());
 

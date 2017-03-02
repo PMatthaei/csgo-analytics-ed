@@ -14,7 +14,8 @@ using CSGO_Analytics.src.json.parser;
 using DemoInfoModded;
 using Newtonsoft.Json;
 using log4net;
-
+using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.data.utils;
 
 namespace csgo_analytics_console
 {
@@ -22,25 +23,27 @@ namespace csgo_analytics_console
     {
         private const string TEST_PATH = "E:/LRZ Sync+Share/Bacheloarbeit/Demofiles/downloaded valle";
         private const string DUST_ESPORT_PATH = "E:/Demofiles/dust2/";
-        private const string PATH = "E:/Demofiles/";
+        private const string PATH = "E:/CS GO Demofiles/";
 
         private static EncounterDetection ed_algorithm;
 
         private static List<string> invalidfiles = new List<string>();
 
-        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static ILog LOG;
 
         static void Main(string[] args)
         {
+            log4net.Config.XmlConfigurator.Configure();
+            LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-            readFilesFromCommandline(args);
-            //readAllFiles();
+            //readFilesFromCommandline(args);
+            readAllFiles();
             Console.ReadLine();
         }
 
         private static void readAllFiles()
         {
-            foreach (string file in Directory.EnumerateFiles(TEST_PATH, "*.dem"))
+            foreach (string file in Directory.EnumerateFiles(PATH, "*.dem"))
             {
                 readFile(file);
             }
@@ -66,57 +69,67 @@ namespace csgo_analytics_console
 
         private static void readFile(string path)
         {
-            log.Error("Reading: " + Path.GetFileName(path));
-
-            using (var demoparser = new DemoParser(File.OpenRead(path)))
+            LOG.Info("Reading: " + Path.GetFileName(path));
+            try
             {
-                ParseTask ptask = new ParseTask
+                using (var demoparser = new DemoParser(File.OpenRead(path)))
                 {
-                    destpath = path,
-                    srcpath = path,
-                    usepretty = true,
-                    showsteps = true,
-                    specialevents = true,
-                    highdetailplayer = true,
-                    positioninterval = 250,
-                    settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
-                };
-
-                skipfile = skipFile(demoparser, ptask);
-                try
-                {
-                    var newdemoparser = new DemoParser(File.OpenRead(path));
-                    if (!skipfile)
+                    ParseTask ptask = new ParseTask
                     {
-                        GameStateGenerator.GenerateJSONFile(newdemoparser, ptask);
+                        destpath = path,
+                        srcpath = path,
+                        usepretty = true,
+                        showsteps = true,
+                        specialevents = true,
+                        highdetailplayer = true,
+                        positioninterval = 250,
+                        settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
+                    };
 
-                        using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                    skipfile = skipFile(demoparser, ptask);
+                    LOG.Info("Parsing .dem file");
+                    using (var newdemoparser = new DemoParser(File.OpenRead(path)))
+                    {
+                        if (!skipfile)
                         {
-                            var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
-                            reader.Close();
+                            GameStateGenerator.GenerateJSONFile(newdemoparser, ptask);
 
-                            ed_algorithm = new EncounterDetection(deserializedGamestate);
-                            ed_algorithm.detectEncounters();
+                            using (var reader = new StreamReader(path.Replace(".dem", ".json")))
+                            {
+                                var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
+                                reader.Close();
+                                LOG.Info("Loading map meta data");
+
+                                string metapath = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + deserializedGamestate.meta.mapname + ".txt";
+                                //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
+                                var mapmeta = MapMetaDataPropertyReader.readProperties(metapath);
+                                LOG.Info("Detecting Encounters");
+                                ed_algorithm = new EncounterDetection(deserializedGamestate, mapmeta);
+                                ed_algorithm.detectEncounters();
+                            }
+
                         }
-
                     }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    log.Error(e.Message);
-                    return;
-                }
 
-                GameStateGenerator.cleanUp();
+                    GameStateGenerator.cleanUp();
 
+                }
+            }
+            catch (Exception e)
+            {
+                LOG.Error(e.Message);
+                LOG.Error(e.StackTrace);
+                LOG.Info("Error occured. Skip file: "+ path);
+                return;
             }
 
             if (skipfile)
             {
                 invalidfiles.Add(path);
-                Console.WriteLine("Skip file. Check for invalidity");
+                LOG.Info("Not supported. Skip file: " + path);
+                return;
             }
+            LOG.Info("----- Parsing and Encounter Detection was sucessful ----- ");
 
         }
 
@@ -124,7 +137,7 @@ namespace csgo_analytics_console
         {
             var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
             Console.WriteLine("Map: " + mapname);
-            if (mapname != "de_dust2")
+            if (!Map.SUPPORTED_MAPS.Contains(mapname))
                 return true;
 
             GameStateGenerator.cleanUp();

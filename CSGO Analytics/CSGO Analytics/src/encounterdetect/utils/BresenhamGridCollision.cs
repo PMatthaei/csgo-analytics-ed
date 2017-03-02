@@ -8,7 +8,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 {
     class BresenhamGridCollision
     {
-        public bool testsight(EDVector3D actorpos, EDVector3D recieverpos, EDRect[][] grid)
+        public bool performBresenhamLineStepping(EDVector3D actorpos, EDVector3D recieverpos, EDRect[][] grid)
         {           
             var x1 = actorpos.X;
             var y1 = actorpos.Y;

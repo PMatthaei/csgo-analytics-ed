@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTree", "..\..\..\Tools, Li
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csgo-mapdatacollector", "csgo-mapdatacollector\csgo-mapdatacollector.csproj", "{54A6A37F-C96B-428B-B2D6-E1C8E28FF9B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csgo-demoverifier", "csgo-demoverifier\csgo-demoverifier.csproj", "{34626B36-C6F0-4CA4-994F-496ABCFFACAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -81,6 +83,14 @@ Global
 		{54A6A37F-C96B-428B-B2D6-E1C8E28FF9B7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{54A6A37F-C96B-428B-B2D6-E1C8E28FF9B7}.Release|x86.ActiveCfg = Release|Any CPU
 		{54A6A37F-C96B-428B-B2D6-E1C8E28FF9B7}.Release|x86.Build.0 = Release|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Debug|x86.Build.0 = Debug|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Release|x86.ActiveCfg = Release|Any CPU
+		{34626B36-C6F0-4CA4-994F-496ABCFFACAF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

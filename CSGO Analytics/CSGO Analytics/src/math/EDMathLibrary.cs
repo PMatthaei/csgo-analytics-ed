@@ -135,7 +135,6 @@ namespace CSGO_Analytics.src.math
             return false;
         }
 
-        private static float STEP_SIZE_FACTOR = 45.0f;
 
         /// <summary>
         /// Code see wikipedia.
@@ -146,18 +145,27 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static EDVector3D BresenhamLineStepping(EDVector3D actorpos, EDVector3D recieverpos, MapLevel maplevel)
         {
+            MapgridCell[][] grid = maplevel.level_grid;
+            // First get Cells of actor and reciever
+            var actorcell = maplevel.cells_tree.FindValueAt(actorpos.getAsDoubleArray2D());
+            var recievercell = maplevel.cells_tree.FindValueAt(recieverpos.getAsDoubleArray2D());
+
+            Console.WriteLine("Actorpos: " + actorpos);
+            Console.WriteLine("Recieverpos: " + recieverpos);
+            Console.WriteLine("actorcell: " + actorcell);
+            Console.WriteLine("recievercell: " + recievercell);
             int stepcount = 0;
 
-            var dx = recieverpos.X - actorpos.X;
-            var dy = recieverpos.Y - actorpos.Y;
+            var dx = recievercell.index_X - actorcell.index_X;
+            var dy = recievercell.index_Y - actorcell.index_Y;
 
             var adx = Math.Abs(dx);
             var ady = Math.Abs(dy);
 
-            var sdx = Math.Sign(dx) * STEP_SIZE_FACTOR;
-            var sdy = Math.Sign(dy) * STEP_SIZE_FACTOR;
+            var sdx = Math.Sign(dx);
+            var sdy = Math.Sign(dy);
 
-            float pdx, pdy, ddx, ddy, es, el;
+            int pdx, pdy, ddx, ddy, es, el;
             if (adx > ady)
             {
                 pdx = sdy; pdy = 0;
@@ -171,8 +179,8 @@ namespace CSGO_Analytics.src.math
                 es = adx; el = ady;
             }
 
-            var x = actorpos.X;
-            var y = actorpos.Y;
+            var x = actorcell.index_X;
+            var y = actorcell.index_Y;
 
             var error = el / 2;
 
@@ -190,34 +198,18 @@ namespace CSGO_Analytics.src.math
                 }
                 stepcount++;
 
-                var bres_point = new EDVector3D(x, y, 0);
-                EDVector3D closest_intersection = null;
-                double dist = 0;
-                foreach (var neighbor in maplevel.cells_tree.GetNearestNeighbours(bres_point.getAsDoubleArray2D(), 8).Where(neighbor => neighbor.Value.blocked))
-                {
-                    var intersection_point = LineIntersectsRect(actorpos, bres_point, neighbor.Value);
-                    if (intersection_point != null)
-                    {
-                        if (closest_intersection == null)
-                        {
-                            closest_intersection = intersection_point;
-                            dist = getEuclidDistance2D(closest_intersection, bres_point);
-                        }
-                        else
-                        {
-                            var ndist = getEuclidDistance2D(closest_intersection, bres_point);
+                var celltest = grid[x][y];
 
-                            if (ndist < dist)
-                            {
-                                closest_intersection = intersection_point;
-                                dist = ndist;
-                            }
-                        }
-                    }
-                }
-                return closest_intersection;
+                var intersectionpoint = LineIntersectsRect(actorpos, recieverpos, celltest);
+                if (intersectionpoint != null)
+                    return intersectionpoint;
             }
             return null;
+        }
+
+        public static EDVector3D LOSIntersectsMapBresenham(EDVector3D start, EDVector3D end, MapLevel maplevel)
+        {
+            return BresenhamLineStepping(start, end, maplevel);
         }
 
         /// <summary>

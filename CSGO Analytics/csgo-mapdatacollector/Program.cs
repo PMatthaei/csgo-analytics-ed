@@ -69,7 +69,7 @@ namespace csgo_mapdatacollector
 
                 Console.WriteLine("Map: " + mapname);
                 if (mapname == target_map) target_map_count++;
-                return;
+
                 parser.PlayerKilled += (object sender, PlayerKilledEventArgs e) =>
                 {
                     if (e.Killer == null || e.Victim == null) return;

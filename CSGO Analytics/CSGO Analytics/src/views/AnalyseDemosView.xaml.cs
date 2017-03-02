@@ -44,12 +44,8 @@ namespace CSGO_Analytics.src.views
         /// <summary>
         /// The replay returned by the algorithm
         /// </summary>
-        private EDMatchReplay matchreplay;
+        private MatchReplay matchreplay;
 
-        /// <summary>
-        /// Metadata about the map played in the match
-        /// </summary>
-        private MapMetaData mapmeta;
 
 
         //
@@ -57,8 +53,8 @@ namespace CSGO_Analytics.src.views
         //
         private string mapname;
         private double scalefactor_map;
-        private double map_width;
-        private double map_height;
+        private double mapimage_width;
+        private double mapimage_height;
 
 
         //
@@ -124,8 +120,6 @@ namespace CSGO_Analytics.src.views
 
                 InitializeGUIData();
 
-                LoadMapData();
-
                 InitalizeMapConstants();
 
                 InitializeMapGraphic();
@@ -171,19 +165,17 @@ namespace CSGO_Analytics.src.views
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
                 this.gamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None });
-                this.EDAlgorithm = new EncounterDetection(gamestate);
+
+                this.mapname = gamestate.meta.mapname;
+                string metapath = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
+                //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
+                Console.WriteLine("Loaded Mapdata");
+                this.mapmeta = MapMetaDataPropertyReader.readProperties(metapath);
+
+                this.EDAlgorithm = new EncounterDetection(gamestate, mapmeta);
             }
         }
 
-        private void LoadMapData()
-        {
-
-            this.mapname = gamestate.meta.mapname;
-            string path = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
-            //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
-            this.mapmeta = MapMetaDataPropertyReader.readProperties(path);
-            Console.WriteLine("Loaded Mapdata");
-        }
 
         private void InitializeGUIData()
         {
@@ -218,11 +210,11 @@ namespace CSGO_Analytics.src.views
             {
                 BitmapImage bi = new BitmapImage(new Uri(@"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
                 //BitmapImage bi = new BitmapImage(new Uri(@"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + "_radar.jpg", UriKind.Relative));
-                map_width = bi.Width; // Save original size to apply scaling
-                map_height = bi.Height;
+                mapimage_width = bi.Width; // Save original size to apply scaling
+                mapimage_height = bi.Height;
                 mapPanel.Background = new ImageBrush(bi);
 
-                scalefactor_map = canvas.Height / map_height;
+                scalefactor_map = canvas.Height / mapimage_height;
                 map.StretchDirection = StretchDirection.Both;
                 map.Stretch = Stretch.Fill;
                 map.Child = mapPanel;
@@ -395,7 +387,7 @@ namespace CSGO_Analytics.src.views
                     var vr = EDM.EDMathLibrary.getPointCloudBoundings(victimpos);
                     Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                     {
-                        //drawHollowRect(vr, Color.FromRgb(0, 255, 0));
+                        drawHollowRect(vr, Color.FromRgb(0, 255, 0));
                     }));
                     //Thread.Sleep(4000);
 
@@ -896,13 +888,13 @@ namespace CSGO_Analytics.src.views
         private void Button_play(object sender, RoutedEventArgs e)
         {
             //renderMapLevelClusters();
-            //renderMapLevels();
-            renderHurtClusters();
+            renderMapLevels();
+            //renderHurtClusters();
             //renderHurtEvents();
-            if (paused)
+            /*if (paused)
                 _busy.Set();
             else
-                playMatch();
+                playMatch();*/
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)
@@ -924,8 +916,8 @@ namespace CSGO_Analytics.src.views
                 scalefactor_map = newscale;
             else return;
 
-            map.Width = map_width * scalefactor_map;
-            map.Height = map_height * scalefactor_map;
+            map.Width = mapimage_width * scalefactor_map;
+            map.Height = mapimage_height * scalefactor_map;
             var mx = current.X;
             var my = current.Y;
             double x = (canvas.Width - map.Width) / 2.0;
@@ -1039,12 +1031,14 @@ namespace CSGO_Analytics.src.views
         private static double mappanel_width;
         private static double mappanel_height;
 
+        private MapMetaData mapmeta;
+
         public void InitalizeMapConstants() //TODO: initalize this with Data read from files about the current maps
         {
 
             map_origin = new EDM.EDVector3D((float)mapmeta.mapcenter_x, (float)mapmeta.mapcenter_y, 0);
-            mapdata_width = 4500;
-            mapdata_height = 4500;
+            mapdata_width = mapmeta.width;
+            mapdata_height = mapmeta.height;
             mappanel_width = 575;
             mappanel_height = 575;
             Console.WriteLine("Initialized Map Constants");

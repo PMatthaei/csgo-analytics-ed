@@ -510,7 +510,10 @@ namespace CSGO_Analytics.src.json.parser
                     return;
 
                 // 8 = 250ms, 16 = 500ms usw
-                var updaterate = 8 * ((int)Math.Ceiling(parser.TickRate) / 32);
+                var updaterate = 8 * (int)(Math.Ceiling(parser.TickRate / 32));
+
+                if (updaterate == 0)
+                   throw new Exception("Updaterate cannot be Zero");
                 // Dump playerpositions every at a given updaterate according to the tickrate
                 if ((tick_id % updaterate == 0) && hasFreeezEnded)
                 {

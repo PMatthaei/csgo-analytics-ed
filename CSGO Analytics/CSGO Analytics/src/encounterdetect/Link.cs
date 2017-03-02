@@ -20,6 +20,8 @@ namespace CSGO_Analytics.src.encounterdetect
 
         private Direction dir;
 
+        private double linkvalue;
+
         public EDVector3D coll;
 
         private static int deadcount = 0;
@@ -28,6 +30,7 @@ namespace CSGO_Analytics.src.encounterdetect
         {
 
         }
+
         public Link(Player actor, Player reciever, LinkType type, Direction dir)
         {
             if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
@@ -83,6 +86,11 @@ namespace CSGO_Analytics.src.encounterdetect
         public LinkType getLinkType()
         {
             return type;
+        }
+
+        public double getLinkValue()
+        {
+            return linkvalue;
         }
 
         override public string ToString()

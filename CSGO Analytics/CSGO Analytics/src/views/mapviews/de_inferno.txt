@@ -5,6 +5,8 @@
 	"material"	"overviews/de_inferno"	// texture file
 	"pos_x"		"-2087"	// upper left world coordinate
 	"pos_y"		"3870"
+	"width"		"5000"
+	"height"	"5000"
 	"scale"		"4.9" 
 
 	// loading screen icons and positions

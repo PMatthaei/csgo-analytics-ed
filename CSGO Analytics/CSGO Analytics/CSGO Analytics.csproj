@@ -73,6 +73,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="src\data\exceptions\InsufficientPlayersException.cs" />
+    <Compile Include="src\data\exceptions\InvalidReplayDataException.cs" />
     <Compile Include="src\data\exceptions\PlayerBindingException.cs" />
     <Compile Include="src\data\exceptions\PlayerDisconnectException.cs" />
     <Compile Include="src\data\gameevents\BombEvents.cs" />
@@ -95,7 +96,7 @@
     <Compile Include="src\encounterdetect\EncounterDetection.cs" />
     <Compile Include="src\encounterdetect\CombatComponent.cs" />
     <Compile Include="src\encounterdetect\Link.cs" />
-    <Compile Include="src\encounterdetect\EDMatchReplay.cs" />
+    <Compile Include="src\encounterdetect\MatchReplay.cs" />
     <Compile Include="src\encounterdetect\utils\DBSCANClustering.cs" />
     <Compile Include="src\encounterdetect\utils\LEADERClustering.cs" />
     <Compile Include="src\encounterdetect\utils\Trajectory.cs" />
@@ -166,9 +167,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <None Include="log4.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -177,7 +175,9 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CS GO Demo Parsers\demoinfo-modded\DemoInfoModded\demoinfo-modded\demoinfo-modded.csproj">

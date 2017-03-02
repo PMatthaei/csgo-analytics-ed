@@ -15,11 +15,12 @@ namespace CSGO_Analytics.src.encounterdetect
     /// Class to save all relevant data to replay the entire match with its encounters and events.
     /// Tick is holding all the events to draw while component is holding all links to draw between players
     /// </summary>
-    public class EDMatchReplay : IDisposable
+    public class MatchReplay : IDisposable
     {
+        // Tick and the component at tick t
         Dictionary<Tick, CombatComponent> ticksdata = new Dictionary<Tick, CombatComponent>();
 
-        public void insertData(Tick tick, CombatComponent comp)
+        public void insertReplaydata(Tick tick, CombatComponent comp)
         {
             ticksdata.Add(tick, comp);
         }
@@ -53,6 +54,14 @@ namespace CSGO_Analytics.src.encounterdetect
         public List<KeyValuePair<Tick,CombatComponent>> getTicksUntil(int tick_id)
         {
             return ticksdata.Where(t => t.Key.tick_id <= tick_id).ToList();
+        }
+
+        /// <summary>
+        /// Check if this replays data has invalid tick/component pairs. f.e. tick t has player A with different data in its component(health not the same etc)
+        /// </summary>
+        private void checkIntegrity()
+        {
+
         }
 
         public Dictionary<Tick, CombatComponent> getReplayData()

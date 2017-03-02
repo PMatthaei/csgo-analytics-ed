@@ -13,34 +13,35 @@ using QuadTrees;
 using QuadTrees.Common;
 using FastDBScan;
 using KdTree.Math;
+using CSGO_Analytics.src.data.gameobjects;
 
-namespace CSGO_Analytics.src.data.gameobjects
+namespace CSGO_Analytics.src.data.utils
 {
     public class MapCreator
     {
         /// <summary>
         /// Defines the height of a level. Meaning all points starting from lowest till lowest+levelheight are included.
         /// </summary>
-        private const int LEVELHEIGHT = 1200;
+        private const int LEVELHEIGHT = (int)(Player.PLAYERMODELL_HEIGHT * 1.5);
 
         /// <summary>
         /// Map width - width of the grid
         /// </summary>
-        private const int mapdata_width = 4500;
+        public static int mapdata_width = 4500;
         /// <summary>
         /// Map height - height of the grid
         /// </summary>
-        private const int mapdata_height = 4500;
+        public static int mapdata_height = 4500;
 
         /// <summary>
         /// Start Koordinate X from where to begin with grid cell deployment
         /// </summary>
-        private const int pos_x = -2400;
+        public static int pos_x = -2400;
 
         /// <summary>
         /// Start Koordinate X from where to begin with grid cell deployment
         /// </summary>
-        private const int pos_y = 3383;
+        public static int pos_y = 3383;
 
         /// <summary>
         /// The grid deployed over the map
@@ -50,15 +51,24 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// <summary>
         /// Lenght of the edges of a square in the mapgrid
         /// </summary>
-        private static int celledge_length = 60;
+        private static int celledge_length;
+
+        private const int cellamount = 75;
 
         /// <summary>
         /// This function takes a list of all registered points on the map and tries to
         /// reconstruct a polygonal represenatation of the map with serveral levels
         /// </summary>
         /// <param name="ps"></param>
-        public static Map createMap(HashSet<EDVector3D> ps)
+        public static Map createMap(MapMetaData mapmeta, HashSet<EDVector3D> ps)
         {
+            pos_x = (int)mapmeta.mapcenter_x;
+            pos_y = (int)mapmeta.mapcenter_y;
+            mapdata_width = (int)mapmeta.width;
+            mapdata_height = (int)mapmeta.height;
+            double length = mapdata_width / cellamount;
+            celledge_length = (int)Math.Ceiling(length);
+
             var currentx = pos_x;
             var currenty = pos_y;
             var cells = (mapdata_height / celledge_length) * (mapdata_width / celledge_length);
@@ -124,7 +134,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
                 if (levelps.Count() == 0)
                     throw new Exception("No points on level:" + i);
-                
+
                 Console.WriteLine("Level " + i + ": " + levelps.Count() + " points");
                 var ml = new MapLevel(i, lowerbound, upperbound);
                 assignLevelcells(ml, levelps.ToArray());
@@ -150,7 +160,7 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
 
-            ml.clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
+            ml.clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 30.0, minPts: 2);
             points = null; // Collect points for garbage
 
             ml.level_grid = new MapgridCell[mapdata_height / celledge_length][];
@@ -160,9 +170,9 @@ namespace CSGO_Analytics.src.data.gameobjects
 
             QuadTreePoint<EDVector3D> qtree = new QuadTreePoint<EDVector3D>();
             foreach (var cl in ml.clusters)
-                    qtree.AddRange(cl);
+                qtree.AddRange(cl);
 
-            for (int k = 0; k < map_grid.Length; k++)
+             for (int k = 0; k < map_grid.Length; k++)
                 for (int l = 0; l < map_grid[k].Length; l++)
                 {
                     var cell = map_grid[k][l].Copy();
@@ -174,17 +184,16 @@ namespace CSGO_Analytics.src.data.gameobjects
                     else
                     {
                         if (cell.blocked == true) continue; // Prevent already used cells from being assigned to multiple levels
-                        ml.walls_tree.Add(cell);
-                        map_grid[k][l].blocked = true;
                         cell.blocked = true;
+                        map_grid[k][l].blocked = true;
+                        ml.walls_tree.Add(cell);
                     }
 
                     ml.cells_tree.Add(cell.Center.getAsDoubleArray2D(), cell);
                     ml.level_grid[k][l] = cell;
                     count++;
                 }
-
-
+            qtree.Clear();
             ml.cells_tree.Balance();
 
             Console.WriteLine("Occupied cells by this level: " + count);
