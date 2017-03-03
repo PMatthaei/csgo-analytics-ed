@@ -10,21 +10,36 @@ namespace CSGO_Analytics.src.encounterdetect
 {
     public enum LinkType { COMBATLINK, SUPPORTLINK };
 
-    public enum Direction { UNDIRECTED, DEFAULT }; // DEFAULT means Link from actor to reciever, UNDIRECTED means to each other
+    public enum Direction { UNDIRECTED, DEFAULT }; // DEFAULT means Link is directed from actor to reciever, UNDIRECTED means to each other
 
     public class Link
     {
+        /// <summary>
+        /// Type of the Link
+        /// </summary>
         private LinkType type;
 
+        /// <summary>
+        /// Players contained in this Link. Use getActor() and getReciever().
+        /// </summary>
         private Player[] players;
 
+        /// <summary>
+        /// Direction of this Link
+        /// </summary>
         private Direction dir;
 
-        private double linkvalue;
+        /// <summary>
+        /// Impact dont by this link. Can either be the amount of damage or heal or buff etc
+        /// </summary>
+        public double impact { get; set; }
+
+        /// <summary>
+        /// Defines if this link was built with a kill event
+        /// </summary>
+        public bool isKill { get; set; }
 
         public EDVector3D coll;
-
-        private static int deadcount = 0;
 
         public Link()
         {
@@ -33,16 +48,16 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public Link(Player actor, Player reciever, LinkType type, Direction dir)
         {
+            if (actor == null || reciever == null) throw new Exception("Players cannot be null");
             if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
-                Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
-            if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
-                Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
-            if (actor.isDead() && reciever.isDead())
             {
-                deadcount++;
-                //throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
-                Console.WriteLine("Deadlinks: "+deadcount);
+                Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
             }
+            if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
+            {
+                Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
+            }
+
             players = new Player[2];
             players[0] = actor;
             players[1] = reciever;
@@ -52,14 +67,12 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public Link(Player actor, Player reciever, LinkType type, Direction dir, EDVector3D coll)
         {
+            if (actor == null || reciever == null) throw new Exception("Players cannot be null");
             if (actor.getTeam() != reciever.getTeam() && type == LinkType.SUPPORTLINK)
                 Console.WriteLine("Cannot create Supportlink between different teams"); // Occurs if a kill occurs where an enemy hit his teammate so hard that he is registered as assister
             if (actor.getTeam() == reciever.getTeam() && type == LinkType.COMBATLINK)
                 Console.WriteLine("Cannot create Combatlink in the same team"); //Can occur if teamdamage happens. Dman antimates
-            if(actor.isDead() && reciever.isDead()) {
-                deadcount++;
-                throw new Exception("Cannot create link with dead players"); //Can occur if teamdamage happens. Dman antimates
-            }
+
             players = new Player[2];
             players[0] = actor;
             players[1] = reciever;
@@ -88,9 +101,9 @@ namespace CSGO_Analytics.src.encounterdetect
             return type;
         }
 
-        public double getLinkValue()
+        public double getImpact()
         {
-            return linkvalue;
+            return impact;
         }
 
         override public string ToString()

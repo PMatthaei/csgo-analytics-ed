@@ -22,7 +22,7 @@ namespace CSGO_Analytics.src.data.utils
         /// <summary>
         /// Defines the height of a level. Meaning all points starting from lowest till lowest+levelheight are included.
         /// </summary>
-        private const int LEVELHEIGHT = (int)(Player.PLAYERMODELL_HEIGHT * 1.5);
+        private const int LEVELHEIGHT = 1200;//(int)(Player.PLAYERMODELL_HEIGHT * 1.5);
 
         /// <summary>
         /// Map width - width of the grid
@@ -160,7 +160,7 @@ namespace CSGO_Analytics.src.data.utils
 
             var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
 
-            ml.clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 30.0, minPts: 2);
+            ml.clusters = dbscan.ComputeClusterDbscan(allPoints: points, epsilon: 60.0, minPts: 2);
             points = null; // Collect points for garbage
 
             ml.level_grid = new MapgridCell[mapdata_height / celledge_length][];

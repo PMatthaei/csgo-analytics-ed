@@ -29,24 +29,24 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public int tick_id;
 
-        public CombatComponent(int tick_id)
+        public CombatComponent(int tick_id, List<Link> links)
         {
             this.tick_id = tick_id;
-            players = new List<Player>();
-            links = new List<Link>();
+            this.players = new List<Player>();
+            this.links = links;
         }
 
         public void assignPlayers()
         {
-            if(links.Count == 0 || links == null)
-            {
+            if (links.Count == 0 || links == null)
                 return;
-            }
-            foreach(var l in links)
+
+            foreach (var l in links)
             {
                 players.Add(l.getActor());
                 players.Add(l.getReciever());
             }
+
         }
 
         public void reset()
@@ -58,7 +58,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
         override public string ToString()
         {
-            string s = "Component-ID: "+ tick_id +"\n";
+            string s = "Component-ID: " + tick_id + "\n";
             foreach (var l in links)
             {
                 s += l.ToString() + "\n";
@@ -77,7 +77,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
             var intersection = links.Intersect(c.links);
 
-            if(intersection.Count() == links.Count && intersection.Count() == c.links.Count)
+            if (intersection.Count() == links.Count && intersection.Count() == c.links.Count)
                 return true;
 
             return false;

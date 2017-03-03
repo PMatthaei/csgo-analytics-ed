@@ -37,10 +37,6 @@ namespace CSGO_Analytics.src.encounterdetect
             cs.AsParallel().ForAll(x => x.parent = this);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="update"></param>
         public void update(CombatComponent update)
         {
             AddComponent(update);
@@ -53,6 +49,11 @@ namespace CSGO_Analytics.src.encounterdetect
             comp.parent= this;
         }
 
+        public int getLatestTick()
+        {
+            return cs.Max(c => c.tick_id);
+        }
+
         public int getTickRange()
         {
             return cs.Max(c => c.tick_id) - cs.Min(c => c.tick_id);
@@ -60,7 +61,12 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public bool isDamageEncounter()
         {
-            return cs.TrueForAll(component => component.links.TrueForAll( link => link.getLinkValue() == 0));
+            return cs.TrueForAll(component => component.links.TrueForAll( link => link.impact == 0));
+        }
+
+        public bool isKillEncounter()
+        {
+            return cs.TrueForAll(component => component.links.TrueForAll(link => link.isKill == false));
         }
 
         public override string ToString()
@@ -78,8 +84,8 @@ namespace CSGO_Analytics.src.encounterdetect
             var en = other as Encounter;
             if (en == null)
                 return false;
-            if (!(this.tick_id == en.tick_id))
-                return false;
+            if (this.tick_id == en.tick_id)
+                return true;
 
             var intersection = cs.Intersect(en.cs);
 

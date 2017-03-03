@@ -23,6 +23,9 @@ namespace CSGO_Analytics.src.json.parser
         /// </summary>
         private static JSONParser jsonparser;
 
+        /// <summary>
+        /// Parser using the demo data
+        /// </summary>
         private static DemoParser parser;
 
         /// <summary>
@@ -30,7 +33,6 @@ namespace CSGO_Analytics.src.json.parser
         /// </summary>
         private static ParseTask ptask;
 
-        private static Stopwatch watch;
 
         //
         //  Objects for JSON-Serialization
@@ -69,6 +71,8 @@ namespace CSGO_Analytics.src.json.parser
         //          11) implement threads?
         //          12) finish new events
         //
+
+        private static Stopwatch watch;
 
         /// <summary>
         /// Initializes the generator or resets it if a demo was parser before

@@ -73,7 +73,7 @@ namespace CSGO_Analytics.src.math
         /// <param name="actorYaw"></param>
         /// <param name="recieverV"></param>
         /// <returns></returns>
-        public static double getLoSOffset(EDVector3D actorV, float actorYaw, EDVector3D recieverV)
+        public static double getLOSOffset(EDVector3D actorV, float actorYaw, EDVector3D recieverV)
         {
             double dx = recieverV.X - actorV.X;
             double dy = recieverV.Y - actorV.Y;
