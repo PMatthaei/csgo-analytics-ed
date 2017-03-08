@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.math;
-using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gamestate;
 using CSGO_Analytics.src.data.gameevents;
 
 namespace CSGO_Analytics.src.encounterdetect

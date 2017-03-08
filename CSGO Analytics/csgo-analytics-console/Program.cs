@@ -9,7 +9,7 @@ using CS = CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.json;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.postgres;
-using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gamestate;
 using CSGO_Analytics.src.json.parser;
 using DemoInfoModded;
 using Newtonsoft.Json;
@@ -36,8 +36,8 @@ namespace csgo_analytics_console
             log4net.Config.XmlConfigurator.Configure();
             LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-            //readFilesFromCommandline(args);
-            readAllFiles();
+            readFilesFromCommandline(args);
+            //readAllFiles();
             LOG.Info("All files on this path parsed. Press enter to quit.");
             Console.WriteLine("All files on this path parsed. Press enter to quit.");
             Console.ReadLine();

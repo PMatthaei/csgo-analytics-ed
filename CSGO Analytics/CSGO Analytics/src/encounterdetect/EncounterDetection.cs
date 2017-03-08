@@ -8,7 +8,7 @@ using CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.encounterdetect;
 using CSGO_Analytics.src.encounterdetect.utils;
 using CSGO_Analytics.src.math;
-using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gamestate;
 using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.export;
 using CSGO_Analytics.src.data.exceptions;
@@ -24,6 +24,7 @@ namespace CSGO_Analytics.src.encounterdetect
     public class EncounterDetection
     {
         private const bool exportingEnabled = true;
+
         /// <summary>
         /// Exporter for csv file format
         /// </summary>
@@ -47,12 +48,12 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <summary>
         /// Average of all eventbased supports (player killed events with assister - distance assister and actor)
         /// </summary>
-        private double SUPPORTRANGE_AVERAGE;
+        private double SUPPORTRANGE_AVERAGE_KILL;
 
         /// <summary>
         /// Average of all eventbased combats (player killed and hurt events)
         /// </summary>
-        private double ATTACKRANGE_AVERAGE;
+        private double ATTACKRANGE_AVERAGE_HURT;
 
         /// <summary>
         /// Tickrate of the demo this algorithm runs on in Hz. 
@@ -80,7 +81,7 @@ namespace CSGO_Analytics.src.encounterdetect
         public Hashtable assist_hashtable = new Hashtable();
 
         /// <summary>
-        /// Holds every (assister, assisted) pair of a playerdeath event with a assister
+        /// Holds every (assister, assisted) pair of a hurt events with assistance character
         /// </summary>
         public Hashtable damage_assist_hashtable = new Hashtable();
 
@@ -132,7 +133,95 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
+        /// <summary>
+        /// Loop through the replay data and collect important data such as positions, hurtevent, averages etc for later calculations.
+        /// Alternatively load a file with this information. TODO
+        /// </summary>
+        /// <returns></returns>
+        private void preprocessReplayData()
+        {
+            var ps = new HashSet<EDVector3D>();
+            List<double> hurt_ranges = new List<double>();
+            List<double> support_ranges = new List<double>();
 
+            #region Collect positions for preprocessing  and build hashtables of events
+            foreach (var round in match.rounds)
+            {
+                foreach (var tick in round.ticks)
+                {
+                    foreach (var gevent in tick.getTickevents())
+                    {
+                        switch (gevent.gameevent) //Build hashtables with events we need later
+                        {
+                            case "player_hurt":
+                                PlayerHurt ph = (PlayerHurt)gevent;
+                                // Remove Z-Coordinate because we later get keys from clusters with points in 2D space -> hashtable needs keys with 2d data
+                                hit_hashtable[ph.actor.position.ResetZ()] = ph.victim.position.ResetZ();
+                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(ph.actor.position, ph.victim.position));
+                                continue;
+                            case "player_killed":
+                                PlayerKilled pk = (PlayerKilled)gevent;
+                                hit_hashtable[pk.actor.position.ResetZ()] = pk.victim.position.ResetZ();
+                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.victim.position));
+
+                                if (pk.assister != null)
+                                {
+                                    assist_hashtable[pk.actor.position.ResetZ()] = pk.assister.position.ResetZ();
+                                    support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
+                                }
+                                continue;
+                        }
+
+                        foreach (var player in gevent.getPlayers())
+                        {
+                            var vz = player.velocity.VZ;
+                            if (vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
+                                ps.Add(player.position);
+                            else
+                                ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
+                        }
+
+                    }
+                }
+            }
+            #endregion
+            Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
+
+            // Generate 
+            this.map = MapCreator.createMap(mapmeta, ps);
+
+            if (support_ranges.Count != 0)
+                ATTACKRANGE_AVERAGE_HURT = hurt_ranges.Average();
+            if (support_ranges.Count != 0)
+                SUPPORTRANGE_AVERAGE_KILL = support_ranges.Average();
+
+            // Generate Hurteventclusters
+            #region Old Clusteralgorithms
+            /*
+            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
+            var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
+
+            this.attacker_clusters = new Cluster[clusterset.Count];
+            int ind = 0;
+            foreach (var clusterdata in clusterset)
+            {
+                attacker_clusters[ind] = new Cluster(clusterdata);
+                ind++;
+            } 
+
+            this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false); */
+            #endregion
+
+            var leader = new LEADERClustering((float)ATTACKRANGE_AVERAGE_HURT);
+            var attackerclusters = new List<AttackerCluster>();
+            foreach (var cluster in leader.clusterData(hit_hashtable.Keys.Cast<EDVector3D>().ToList()))
+            {
+                var attackcluster = new AttackerCluster(cluster.data.ToArray());
+                attackcluster.calculateClusterAttackrange(hit_hashtable);
+                attackerclusters.Add(attackcluster);
+            }
+            this.attacker_clusters = attackerclusters.ToArray();
+        }
 
 
 
@@ -376,6 +465,11 @@ namespace CSGO_Analytics.src.encounterdetect
             return replay;
         }
 
+
+
+
+
+        #region Methods for mainloop - keep updates consistent
         /// <summary>
         /// All currently disconnected players
         /// </summary>
@@ -453,6 +547,28 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
+        private void countEvents(Tick tick)
+        {
+            foreach (var g in tick.getTickevents())
+            {
+                switch (g.gameevent)
+                {
+                    case "player_hurt":
+                        hurteventCount++;
+                        break;
+                    case "player_killed":
+                        killeventCount++;
+                        break;
+                    case "weapon_fire":
+                        wfCount++;
+                        break;
+                    case "player_spotted":
+                        spotteventsCount++;
+                        break;
+                }
+            }
+        }
+
         /// <summary>
         /// Update a players with his most recent version. Further keeps track of all living players
         /// </summary>
@@ -495,97 +611,13 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
-        /// <summary>
-        /// Loop through the replay data and collect important data such as positions, hurtevent, averages etc for later calculations.
-        /// Alternatively load a file with this information. TODO
-        /// </summary>
-        /// <returns></returns>
-        private void preprocessReplayData()
-        {
-            var ps = new HashSet<EDVector3D>();
-            List<double> hurt_ranges = new List<double>();
-            List<double> support_ranges = new List<double>();
-
-            #region Collect positions for preprocessing  and build hashtables of events
-            foreach (var round in match.rounds)
-            {
-                foreach (var tick in round.ticks)
-                {
-                    foreach (var gevent in tick.getTickevents())
-                    {
-                        switch (gevent.gameevent) //Build hashtables with events we need later
-                        {
-                            case "player_hurt":
-                                PlayerHurt ph = (PlayerHurt)gevent;
-                                // Remove Z-Coordinate because we later get keys from clusters with points in 2D space -> hashtable needs keys with 2d data
-                                hit_hashtable[ph.actor.position.ResetZ()] = ph.victim.position.ResetZ();
-                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(ph.actor.position, ph.victim.position));
-                                continue;
-                            case "player_killed":
-                                PlayerKilled pk = (PlayerKilled)gevent;
-                                hit_hashtable[pk.actor.position.ResetZ()] = pk.victim.position.ResetZ();
-                                hurt_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.victim.position));
-
-                                if (pk.assister != null)
-                                {
-                                    assist_hashtable[pk.actor.position.ResetZ()] = pk.assister.position.ResetZ();
-                                    support_ranges.Add(EDMathLibrary.getEuclidDistance2D(pk.actor.position, pk.assister.position));
-                                }
-                                continue;
-                        }
-
-                        foreach (var player in gevent.getPlayers())
-                        {
-                            var vz = player.velocity.VZ;
-                            if (vz == 0) //If player is standing thus not experiencing an acceleration on z-achsis -> TRACK POSITION
-                                ps.Add(player.position);
-                            else
-                                ps.Add(player.position.ChangeZ(-54)); // Player jumped -> Z-Value is false -> correct with jumpheight
-                        }
-
-                    }
-                }
-            }
-            #endregion
-            Console.WriteLine("\nRegistered Positions for Sightgraph: " + ps.Count);
-
-            // Generate 
-            this.map = MapCreator.createMap(mapmeta, ps);
-
-            if (support_ranges.Count != 0)
-                ATTACKRANGE_AVERAGE = hurt_ranges.Average();
-            if (support_ranges.Count != 0)
-                SUPPORTRANGE_AVERAGE = support_ranges.Average();
-
-            // Generate Hurteventclusters
-            #region Old Clusteralgorithms
-            /*
-            var dbscan = new KD_DBSCANClustering((x, y) => Math.Sqrt(((x.X - y.X) * (x.X - y.X)) + ((x.Y - y.Y) * (x.Y - y.Y))));
-            var clusterset = dbscan.ComputeClusterDbscan(allPoints: hit_hashtable.Keys.Cast<EDVector3D>().ToArray(), epsilon: 150, minPts: 3);
-
-            this.attacker_clusters = new Cluster[clusterset.Count];
-            int ind = 0;
-            foreach (var clusterdata in clusterset)
-            {
-                attacker_clusters[ind] = new Cluster(clusterdata);
-                ind++;
-            } 
-
-            this.attacker_clusters = KMeanClustering.createPositionClusters(hit_hashtable.Keys.Cast<EDVector3D>().ToList(), CLUSTER_NUM, false); */
-            #endregion
-
-            var leader = new LEADERClustering((float)ATTACKRANGE_AVERAGE);
-            var attackerclusters = new List<AttackerCluster>();
-            foreach (var cluster in leader.clusterData(hit_hashtable.Keys.Cast<EDVector3D>().ToList()))
-            {
-                var attackcluster = new AttackerCluster(cluster.data.ToArray());
-                attackcluster.calculateClusterAttackrange(hit_hashtable);
-                attackerclusters.Add(attackcluster);
-            }
-            this.attacker_clusters = attackerclusters.ToArray();
-        }
+        #endregion
 
 
+
+
+
+        #region Methods on Encounters and Componentsmanipulation
         /// <summary>
         /// Searches all predecessor encounters of an component. or in other words:
         /// tests if a component is a successor of another encounters component
@@ -678,11 +710,55 @@ namespace CSGO_Analytics.src.encounterdetect
                     break;
             }
         }
+        #endregion
+
+
+
+
+        
+
+
+        /// <summary>
+        /// Main Method to build components in CS:GO
+        /// Feeds the component with a links resulting from the procedure handling this tick
+        /// </summary>
+        /// <param name="component"></param>
+        /// <param name="g"></param>
+        private CombatComponent buildComponent(Tick tick)
+        {
+            List<Link> links = new List<Link>();
+
+            searchEventbasedSightCombatLinks(tick, links);
+            //searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
+
+            //searchClusterDistancebasedLinks(links); // With clusterbased distance
+            //searchDistancebasedLinks(links); // With average distance 
+
+            searchEventbasedLinks(tick, links);
+            //searchEventbasedNadeSupportlinks(tick, links);
+
+            if (links.Count != 0) //If links have been found
+            {
+                CombatComponent combcomp = new CombatComponent();
+                combcomp.tick_id = tick.tick_id;
+                links.RemoveAll(link => link == null); //If illegal links have been built they are null -> remove them
+                combcomp.links = links;
+                combcomp.assignPlayers();
+                combcomp.assignComponentEventcount(tick, players);
+
+                return combcomp;
+            }
+
+            return null;
+
+        }
 
 
 
 
 
+
+        #region Methods to find Encounters in CS:GO
 
         /// <summary>
         /// Queue of all hurtevents(HE) that where fired. Use these to search for a coressponding weaponfire event.
@@ -716,46 +792,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         private List<Player> scandidates = new List<Player>();
 
-
-
-        /// <summary>
-        /// Feeds the component with a links resulting from the procedure handling this tick
-        /// </summary>
-        /// <param name="component"></param>
-        /// <param name="g"></param>
-        private CombatComponent buildComponent(Tick tick)
-        {
-            List<Link> links = new List<Link>();
-
-            //searchEventbasedSightCombatLinks(tick, links);
-            searchSightbasedSightCombatLinks(tick, links); //First update playerlevels
-
-            //searchClusterDistancebasedLinks(links); // With clusterbased distance
-            //searchDistancebasedLinks(links); // With average distance 
-
-            //searchEventbasedLinks(tick, links);
-            //searchEventbasedNadeSupportlinks(tick, links);
-
-            if (links.Count != 0) //If links have been found
-            {
-                CombatComponent combcomp = new CombatComponent();
-                combcomp.tick_id = tick.tick_id;
-                links.RemoveAll(link => link == null); //If illegal links have been built they are null -> remove them
-                combcomp.links = links;
-                combcomp.assignPlayers();
-                assignComponentEventcount(tick, combcomp);
-
-                return combcomp;
-            }
-
-            return null;
-
-        }
-
-
-
-
-
         /// <summary>
         /// Search all potential combatlinks based on sight using a spotted variable from the replay data(equivalent to DOTA2 version: player is in attackrange)
         /// </summary>
@@ -763,21 +799,19 @@ namespace CSGO_Analytics.src.encounterdetect
         /// <param name="links"></param>
         private void searchEventbasedSightCombatLinks(Tick tick, List<Link> links)
         {
-            foreach (var uplayer in players.Where(p => !p.isDead()))
+            foreach (var uplayer in players.Where(p => !p.isDead() && p.isSpotted)) // Search for all spotted players in this tick who spotted them
             {
-                if (uplayer.isSpotted) //If the player is spotted search the spotter
+                var potential_spotter = searchSpotterCandidates(uplayer);
+                // This should not happend because spotted table is correct and somebody must have seen the player!!
+                if (potential_spotter == null)
                 {
-                    var potential_spotter = searchSpotterCandidates(uplayer);
-                    // This should not happend because spotted table is correct and somebody must have seen the player!!
-                    if (potential_spotter == null)
-                    {
-                        noSpotterFoundCount++;
-                        continue;
-                    }
-
-                    links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
-                    eventestSightCLinkCount++;
+                    noSpotterFoundCount++;
+                    continue;
                 }
+
+                links.Add(new Link(potential_spotter, uplayer, LinkType.COMBATLINK, Direction.DEFAULT));
+                eventestSightCLinkCount++;
+                spotterFoundCount++;
             }
 
         }
@@ -870,7 +904,7 @@ namespace CSGO_Analytics.src.encounterdetect
                 {
                     var distance = EDMathLibrary.getEuclidDistance2D(player.position, other.position);
 
-                    if (distance <= ATTACKRANGE_AVERAGE && other.getTeam() != player.getTeam())
+                    if (distance <= ATTACKRANGE_AVERAGE_HURT && other.getTeam() != player.getTeam())
                     {
                         links.Add(new Link(player, other, LinkType.COMBATLINK, Direction.DEFAULT));
                         distancetestCLinksCount++;
@@ -922,55 +956,6 @@ namespace CSGO_Analytics.src.encounterdetect
             }
         }
 
-        private void countEvents(Tick tick)
-        {
-            foreach (var g in tick.getTickevents())
-            {
-                switch (g.gameevent)
-                {
-                    case "player_hurt":
-                        hurteventCount++;
-                        break;
-                    case "player_killed":
-                        killeventCount++;
-                        break;
-                    case "weapon_fire":
-                        wfCount++;
-                        break;
-                    case "player_spotted":
-                        spotteventsCount++;
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Assigns how many events happend in this combatcomponent
-        /// </summary>
-        /// <param name="tick"></param>
-        /// <param name="combcomp"></param>
-        private void assignComponentEventcount(Tick tick, CombatComponent combcomp)
-        {
-            foreach (var p in players.Where(p => !p.isDead())) //Count spotted"events" where combatlinks need to be created
-                if (p.isSpotted)
-                    combcomp.contained_spotted_events++;
-
-            foreach (var g in tick.getTickevents())
-            {
-                switch (g.gameevent)
-                {
-                    case "player_hurt":
-                        combcomp.contained_hurt_events++;
-                        break;
-                    case "player_killed":
-                        combcomp.contained_kill_events++;
-                        break;
-                    case "weapon_fire":
-                        combcomp.contained_weaponfire_events++;
-                        break;
-                }
-            }
-        }
 
         /// <summary>
         /// Algorithm searching links based on CS:GO Replay Events
@@ -1303,8 +1288,7 @@ namespace CSGO_Analytics.src.encounterdetect
 
 
         /// <summary>
-        /// Searches players who have spotted a certain player
-        /// TODO: verify that this method is working
+        /// Searches players who possibly have spotted a certain player
         /// </summary>
         /// <param name="actor"></param>
         /// <returns></returns>
@@ -1331,7 +1315,7 @@ namespace CSGO_Analytics.src.encounterdetect
             return nearestplayer;
         }
 
-
+        #endregion
 
 
 
@@ -1341,7 +1325,7 @@ namespace CSGO_Analytics.src.encounterdetect
         // HELPING METHODS AND ID HANDLING
         //
         //
-        #region Helping Methods and ID Handling
+        #region Helping Methods
         private bool rowset = false;
         private void exportEDDataToCSV(float sec)
         {

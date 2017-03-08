@@ -4,8 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/// <summary>
+/// ----------------------------------------- !! NOT USED ATM!! -------------------------------
+/// </summary>
 namespace CSGO_Analytics.src.data.gameobjects
 {
+
     public enum WeaponType
     {
         Unknown = 0,

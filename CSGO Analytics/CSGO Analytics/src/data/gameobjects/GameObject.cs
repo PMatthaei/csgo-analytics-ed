@@ -24,11 +24,6 @@ namespace CSGO_Analytics.src.data.gameobjects
         /// </summary>
         public EDVector3D position;
 
-        /// <summary>
-        /// Time till the object loses relevance and needs to be destroyed(nades, projectiles etc)
-        /// </summary>
-        private float TTD;
-
         public int getID()
         {
             return entityid;

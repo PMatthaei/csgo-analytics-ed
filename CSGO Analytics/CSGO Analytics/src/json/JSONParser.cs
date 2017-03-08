@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DemoInfoModded;
 using Newtonsoft.Json;
-using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gamestate;
 using CSGO_Analytics.src.data.gameevents;
 using ED = CSGO_Analytics.src.data.gameobjects;
 using CSGO_Analytics.src.math;

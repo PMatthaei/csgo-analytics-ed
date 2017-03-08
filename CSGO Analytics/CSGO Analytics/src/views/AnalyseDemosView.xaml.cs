@@ -21,7 +21,7 @@ using CSGO_Analytics.src.data.gameevents;
 using EDM = CSGO_Analytics.src.math;
 using DP = DemoInfoModded;
 using Newtonsoft.Json;
-using CSGO_Analytics.src.json.jsonobjects;
+using CSGO_Analytics.src.data.gamestate;
 using CSGO_Analytics.src.json.parser;
 using CSGO_Analytics.src.data.utils;
 using System.ComponentModel;

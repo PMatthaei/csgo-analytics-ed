@@ -7,13 +7,12 @@ using System.Reflection;
 using System.IO;
 using DemoInfoModded;
 using Newtonsoft.Json;
-using CSGO_Analytics.src.json.jsonobjects;
 using CSGO_Analytics.src.json.parser;
 using CSGO_Analytics.src.data.gameevents;
 using System.Diagnostics;
 using System.Threading;
 
-namespace CSGO_Analytics.src.json.parser
+namespace CSGO_Analytics.src.data.gamestate
 {
     public class GameStateGenerator
     {

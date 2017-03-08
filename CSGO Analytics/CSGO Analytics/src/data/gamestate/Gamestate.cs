@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
 
-namespace CSGO_Analytics.src.json.jsonobjects
+namespace CSGO_Analytics.src.data.gamestate
 {
     public class Gamestate
     {
@@ -34,6 +34,10 @@ namespace CSGO_Analytics.src.json.jsonobjects
         public string winner { get; set; }
         public List<Tick> ticks { get; set; }
 
+        /// <summary>
+        /// Get range of ticks in a round. Cannot be used for time measure of this round as empty ticks are dissmissed in between!
+        /// </summary>
+        /// <returns></returns>
         public int getRoundTickRange()
         {
             var mintick = ticks.Min(tick => tick.tick_id);

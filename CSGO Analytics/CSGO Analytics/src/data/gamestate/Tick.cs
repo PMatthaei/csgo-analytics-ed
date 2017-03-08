@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameevents;
 using CSGO_Analytics.src.data.gameobjects;
 
-namespace CSGO_Analytics.src.json.jsonobjects
+namespace CSGO_Analytics.src.data.gamestate
 
 {
     public class Tick

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CSGO_Analytics.src.data.gameobjects;
+using CSGO_Analytics.src.data.gamestate;
 
 namespace CSGO_Analytics.src.encounterdetect
 {
@@ -56,6 +57,33 @@ namespace CSGO_Analytics.src.encounterdetect
 
         }
 
+        /// <summary>
+        /// Assigns how many events happend in this combatcomponent
+        /// </summary>
+        /// <param name="tick"></param>
+        /// <param name="combcomp"></param>
+        public void assignComponentEventcount(Tick tick, Player[] players)
+        {
+            foreach (var p in players.Where(p => !p.isDead())) //Count spotted"events" where combatlinks need to be created
+                if (p.isSpotted)
+                    contained_spotted_events++;
+
+            foreach (var g in tick.getTickevents())
+            {
+                switch (g.gameevent)
+                {
+                    case "player_hurt":
+                        contained_hurt_events++;
+                        break;
+                    case "player_killed":
+                        contained_kill_events++;
+                        break;
+                    case "weapon_fire":
+                        contained_weaponfire_events++;
+                        break;
+                }
+            }
+        }
 
         public void reset()
         {
