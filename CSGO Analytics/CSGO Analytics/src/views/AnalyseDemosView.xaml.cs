@@ -146,7 +146,7 @@ namespace CSGO_Analytics.src.views
         private void ReadDemofiledata()
         {
             var path = "match_0.dem";
-            /*using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
+            using (var demoparser = new DP.DemoParser(File.OpenRead(path)))
             {
                 ParseTask ptask = new ParseTask
                 {
@@ -160,7 +160,7 @@ namespace CSGO_Analytics.src.views
                     settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, Formatting = Formatting.None }
                 };
                 GameStateGenerator.GenerateJSONFile(demoparser, ptask);
-            }*/
+            }
 
             using (var reader = new StreamReader(path.Replace(".dem", ".json")))
             {
@@ -535,8 +535,8 @@ namespace CSGO_Analytics.src.views
                         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                         {
                             if (r.Value.blocked == true)
-                                drawRect(r.Value, color);
-                            else
+                                //drawRect(r.Value, color);
+                            //else
                                 drawRect(r.Value, Color.FromRgb(255, 255, 255));
 
                         }));
@@ -888,13 +888,13 @@ namespace CSGO_Analytics.src.views
         private void Button_play(object sender, RoutedEventArgs e)
         {
             //renderMapLevelClusters();
-            renderMapLevels();
+            //renderMapLevels();
             //renderHurtClusters();
             //renderHurtEvents();
-            /*if (paused)
+            if (paused)
                 _busy.Set();
             else
-                playMatch();*/
+                playMatch();
         }
 
         private void Button_stop(object sender, RoutedEventArgs e)

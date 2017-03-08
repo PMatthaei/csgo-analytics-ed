@@ -22,7 +22,6 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public int tick_id;
 
-
         public Encounter(CombatComponent comp)
         {
             this.tick_id = comp.tick_id;
@@ -61,17 +60,60 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public bool isDamageEncounter()
         {
-            return cs.TrueForAll(component => component.links.TrueForAll( link => link.impact == 0));
+            return cs.Any(component => component.links.Any( link => link.impact > 0));
         }
 
         public bool isKillEncounter()
         {
-            return cs.TrueForAll(component => component.links.TrueForAll(link => link.isKill == false));
+            return cs.Any(component => component.links.Any(link => link.isKill));
+        }
+
+        public int getEncounterKillEvents()
+        {
+            return cs.Sum(cs => cs.contained_kill_events);
+        }
+
+        public int getEncounterHurtEvents()
+        {
+            return cs.Sum(cs => cs.contained_hurt_events);
+        }
+
+        public int getEncounterSpottedEvents()
+        {
+            return cs.Sum(cs => cs.contained_spotted_events);
+        }
+
+        public int getEncounterWeaponfireEvents()
+        {
+            return cs.Sum(cs => cs.contained_weaponfire_events);
+        }
+
+        public int getParticipatingPlayerCount()
+        {
+            if (cs.Count == 0) throw new Exception("No components in encounter");
+            List<Player> pplayers = new List<Player>();
+            foreach(var c in cs)
+            {
+                if (c.players.Count == 10) return 10;
+                foreach (var p in c.players)
+                    if (!pplayers.Contains(p))
+                        pplayers.Add(p);
+
+            }
+            var list = pplayers.ToList();
+            list.RemoveAll( p => p.player_id == 0); //Remove bots from encounters
+            var s = "";
+            foreach(var p in pplayers)
+            {
+                s += p.ToString();
+            }
+            if (pplayers.Count > 10 || pplayers.Count == 0) throw new Exception("Too many or to few players in encounter: "+pplayers.Count+s);
+            return pplayers.Count;
         }
 
         public override string ToString()
         {
-            var s = "Encounter-TickID: " + tick_id + "\n";
+            var s = "Encounter-TickID: " + tick_id + " Compcount: " + cs.Count;
             foreach (var c in cs)
             {
                 s += c.ToString() + "\n";
@@ -87,17 +129,17 @@ namespace CSGO_Analytics.src.encounterdetect
             if (this.tick_id == en.tick_id)
                 return true;
 
-            var intersection = cs.Intersect(en.cs);
+            /*var intersection = cs.Intersect(en.cs);
 
             if (intersection.Count() == cs.Count && intersection.Count() == en.cs.Count)
-                return true;
+                return true;*/
 
-            return true;
+            return false;
         }
 
         public override int GetHashCode()
         {
-            return base.GetHashCode();
+            return tick_id;
         }
 
 

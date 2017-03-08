@@ -27,21 +27,21 @@ namespace CSGO_Analytics.src.data.utils
         /// <summary>
         /// Map width - width of the grid
         /// </summary>
-        public static int mapdata_width = 4500;
+        public static int mapdata_width;
         /// <summary>
         /// Map height - height of the grid
         /// </summary>
-        public static int mapdata_height = 4500;
+        public static int mapdata_height;
 
         /// <summary>
         /// Start Koordinate X from where to begin with grid cell deployment
         /// </summary>
-        public static int pos_x = -2400;
+        public static int pos_x;
 
         /// <summary>
         /// Start Koordinate X from where to begin with grid cell deployment
         /// </summary>
-        public static int pos_y = 3383;
+        public static int pos_y;
 
         /// <summary>
         /// The grid deployed over the map
@@ -53,6 +53,9 @@ namespace CSGO_Analytics.src.data.utils
         /// </summary>
         private static int celledge_length;
 
+        /// <summary>
+        /// Amount of squares -> deploy a grid with cellamount X cellamount cells
+        /// </summary>
         private const int cellamount = 75;
 
         /// <summary>
@@ -62,12 +65,12 @@ namespace CSGO_Analytics.src.data.utils
         /// <param name="ps"></param>
         public static Map createMap(MapMetaData mapmeta, HashSet<EDVector3D> ps)
         {
-            pos_x = (int)mapmeta.mapcenter_x;
-            pos_y = (int)mapmeta.mapcenter_y;
-            mapdata_width = (int)mapmeta.width;
-            mapdata_height = (int)mapmeta.height;
+            EDMathLibrary.pos_x = pos_x = (int)mapmeta.mapcenter_x;
+            EDMathLibrary.pos_y = pos_y = (int)mapmeta.mapcenter_y;
+            EDMathLibrary.mapwidth = mapdata_width = (int)mapmeta.width;
+            EDMathLibrary.mapheight = mapdata_height = (int)mapmeta.height;
             double length = mapdata_width / cellamount;
-            celledge_length = (int)Math.Ceiling(length);
+            EDMathLibrary.cell_width = celledge_length = (int)Math.Ceiling(length);
 
             var currentx = pos_x;
             var currenty = pos_y;

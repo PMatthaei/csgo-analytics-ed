@@ -10,12 +10,17 @@ namespace CSGO_Analytics.src.data.gameobjects
 {
     public class Map
     {
-        public static string[] SUPPORTED_MAPS = new string[]{ "de_dust2", "de_cbble","de_cache","de_mirage","de_inferno", "de_overpass" };
+        public static string[] SUPPORTED_MAPS = new string[] { "de_dust2" , "de_cbble","de_cache","de_mirage","de_inferno", "de_overpass" };
 
         /// <summary>
         /// Array holding the different maplevels ordered from lowest level (f.e. tunnels beneath the ground) to highest (2nd floor etc)
         /// </summary>
         public MapLevel[] maplevels;
+
+        /// <summary>
+        /// All obstacles of a map which are dynamic in their appearance and/or position
+        /// </summary>
+        public HashSet<MapObstacle> dynamic_obstacles;
 
         /// <summary>
         /// Width in x range
@@ -32,6 +37,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             this.width_x = width_x;
             this.width_y = width_y;
             this.maplevels = maplevels;
+            this.dynamic_obstacles = new HashSet<MapObstacle>();
         }
 
 
@@ -224,6 +230,11 @@ namespace CSGO_Analytics.src.data.gameobjects
         {
             return "x: " + X + " y: " + Y + " width: " + Width + " height: " + Height + " index x: " + index_X + " index y: " + index_Y;
         }
+    }
+
+    public class MapObstacle
+    {
+
     }
 
 

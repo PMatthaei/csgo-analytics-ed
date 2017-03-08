@@ -12,7 +12,7 @@ namespace CSGO_Analytics.src.encounterdetect
     /// </summary>
     public class CombatComponent
     {
-        public Encounter parent; // "Pointer" to encounter this component is part of
+        public Encounter parent; // "Pointer" to encounter = parent of this component
 
         /// <summary>
         /// Set of players participating in the component
@@ -29,6 +29,13 @@ namespace CSGO_Analytics.src.encounterdetect
         /// </summary>
         public int tick_id;
 
+        public int contained_kill_events, contained_hurt_events, contained_spotted_events, contained_weaponfire_events;
+
+        public CombatComponent()
+        {
+            this.players = new List<Player>();
+        }
+
         public CombatComponent(int tick_id, List<Link> links)
         {
             this.tick_id = tick_id;
@@ -38,16 +45,17 @@ namespace CSGO_Analytics.src.encounterdetect
 
         public void assignPlayers()
         {
-            if (links.Count == 0 || links == null)
-                return;
+            if (links.Count == 0 || links == null) throw new Exception("No links to assign players");
 
             foreach (var l in links)
             {
                 players.Add(l.getActor());
                 players.Add(l.getReciever());
             }
+            if (players.Count == 0) throw new Exception("No players assigned");
 
         }
+
 
         public void reset()
         {
@@ -58,11 +66,11 @@ namespace CSGO_Analytics.src.encounterdetect
 
         override public string ToString()
         {
-            string s = "Component-ID: " + tick_id + "\n";
-            foreach (var l in links)
+            string s = "Component-ID: " + tick_id + " Killevents: "+contained_kill_events+" Hurtevents: "+contained_hurt_events+" Spottedevents: "+contained_spotted_events;
+            /*foreach (var l in links)
             {
                 s += l.ToString() + "\n";
-            }
+            }*/
             return s;
         }
 
@@ -72,20 +80,20 @@ namespace CSGO_Analytics.src.encounterdetect
             if (c == null)
                 return false;
 
-            if (!(this.tick_id == c.tick_id))
-                return false;
+            if (this.tick_id == c.tick_id)
+                return true;
 
-            var intersection = links.Intersect(c.links);
+            /*var intersection = links.Intersect(c.links);
 
             if (intersection.Count() == links.Count && intersection.Count() == c.links.Count)
-                return true;
+                return true;*/
 
             return false;
         }
 
         public override int GetHashCode()
         {
-            return base.GetHashCode();
+            return tick_id;
         }
 
     }

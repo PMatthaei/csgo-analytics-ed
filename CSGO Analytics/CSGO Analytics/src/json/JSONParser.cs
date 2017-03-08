@@ -70,9 +70,9 @@ namespace CSGO_Analytics.src.json.parser
 
         
 
-        public GamestateMeta assembleGamemeta(string mapname, float tickrate, IEnumerable<DemoInfoModded.Player> players)
+        public Meta assembleGamemeta(string mapname, float tickrate, IEnumerable<DemoInfoModded.Player> players)
         {
-            return new GamestateMeta
+            return new Meta
             {
                 gamestate_id = 0,
                 mapname = mapname,

@@ -9,11 +9,11 @@ namespace CSGO_Analytics.src.json.jsonobjects
 {
     public class Gamestate
     {
-        public GamestateMeta meta { get; set; }
+        public Meta meta { get; set; }
         public Match match { get; set; }
     }
 
-    public class GamestateMeta
+    public class Meta
     {
         public int gamestate_id { get; set; }
         public string mapname { get; set; }
@@ -24,6 +24,7 @@ namespace CSGO_Analytics.src.json.jsonobjects
 
     public class Match
     {
+        public Team winnerteam { get; set; }
         public List<Round> rounds { get; set; }
     }
 
@@ -33,5 +34,12 @@ namespace CSGO_Analytics.src.json.jsonobjects
         public string winner { get; set; }
         public List<Tick> ticks { get; set; }
 
+        public int getRoundTickRange()
+        {
+            var mintick = ticks.Min(tick => tick.tick_id);
+            var maxtick = ticks.Max(tick => tick.tick_id);
+
+            return (maxtick - mintick);
+        }
     }
 }

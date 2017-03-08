@@ -17,6 +17,8 @@ namespace CSGO_Analytics.src.encounterdetect.utils
 
         public double min_attackrange { get; set; }
 
+        public EDRect boundings { get; set; }
+
         public AttackerCluster(EDVector3D[] data) : base(data)
         {
         }
@@ -37,6 +39,7 @@ namespace CSGO_Analytics.src.encounterdetect.utils
             max_attackrange = distances.Max();
             min_attackrange = distances.Min();
             Console.WriteLine("Attackrange for this cluster is: " + cluster_attackrange);
+            boundings = getBoundings();
         }
     }
 }

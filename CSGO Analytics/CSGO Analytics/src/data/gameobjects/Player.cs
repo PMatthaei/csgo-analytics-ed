@@ -77,7 +77,7 @@ namespace CSGO_Analytics.src.data.gameobjects
             Player p = obj as Player;
             if (p == null)
                 return false;
-            if (player_id == p.player_id && playername == p.playername && team == p.team)
+            if (player_id == p.player_id)
                 return true;
 
             return false;

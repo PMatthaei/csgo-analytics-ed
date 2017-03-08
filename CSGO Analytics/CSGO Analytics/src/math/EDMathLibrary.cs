@@ -13,6 +13,15 @@ namespace CSGO_Analytics.src.math
 
         private const float FOVVertical = 106; // 106 Degress Vertical Field of View for CS:GO
 
+        public static double cell_width;
+
+        public static int pos_x;
+
+        public static int pos_y;
+
+        public static int mapwidth;
+
+        public static int mapheight;
 
         /// <summary>
         /// Returns a list of interpolated points between start and end in given steps
@@ -75,6 +84,7 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static double getLOSOffset(EDVector3D actorV, float actorYaw, EDVector3D recieverV)
         {
+            //Keep actor as origin of the koordinate system
             double dx = recieverV.X - actorV.X;
             double dy = recieverV.Y - actorV.Y;
 
@@ -85,29 +95,16 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.Y;
 
             double theta = ScalarProductAngle(new EDVector3D(aimdx, aimdy, 0), new EDVector3D((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-            return toDegree(theta);
+            double radian_theta = Math.Acos(theta);
+            double degree_theta = 0;
+            if (radian_theta < 0)
+                degree_theta = 180 - toDegree(degree_theta);
+            else
+                degree_theta = toDegree(degree_theta);
+
+            return degree_theta;
         }
 
-        /// <summary>
-        /// Test if a vector is facing another one -> 
-        /// </summary>
-        /// <param name="v"></param>
-        /// <returns></returns>
-        public bool isFacing(EDVector3D actorV, float actorYaw, EDVector3D recieverV)
-        {
-            double dx = recieverV.X - actorV.X;
-            double dy = recieverV.Y - actorV.Y;
-
-            var aimX = (float)(actorV.X + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw
-            var aimY = (float)(actorV.Y + Math.Sin(toRadian(-actorYaw)));
-
-            //double theta = Math.Atan2(dy, dx);
-            double theta = toDegree(ScalarProductAngle(new EDVector3D(aimX, aimY, 0), new EDVector3D((float)dx, (float)dy, 0)));
-
-            if (theta < 45 || theta > -45)
-                return true;
-            return false;
-        }
 
         /// <summary>
         /// Checks if reciever is within the field of view (FOV-Vertical) of the actor
@@ -119,6 +116,7 @@ namespace CSGO_Analytics.src.math
         /// <returns></returns>
         public static bool isInFOV(EDVector3D actorV, float actorYaw, EDVector3D recieverV)
         {
+            //Keep actor as origin of the koordinate system
             double dx = recieverV.X - actorV.X;
             double dy = recieverV.Y - actorV.Y;
 
@@ -129,12 +127,49 @@ namespace CSGO_Analytics.src.math
             var aimdy = aimY - actorV.Y;
 
             double theta = ScalarProductAngle(new EDVector3D(aimdx, aimdy, 0), new EDVector3D((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
-            //if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2 && getEuclidDistance2D(actorV, recieverV) < 500) // Max sight distance to restrict FOV
-            if (toDegree(theta) <= FOVVertical / 2 && toDegree(theta) >= -FOVVertical / 2) // No max sight distance to restrict FOV
+            double radian_theta = Math.Acos(theta);
+            double degree_theta = 0;
+            if (radian_theta < 0)
+                degree_theta = 180 - toDegree(degree_theta);
+            else
+                degree_theta = toDegree(degree_theta);
+
+            if (degree_theta <= FOVVertical / 2) // No max sight distance to restrict FOV
                 return true;
             return false;
+            /* double dx = recieverV.X - actorV.X;
+             double dy = recieverV.Y - actorV.Y;
+
+             var aimX = (float)(actorV.X + Math.Cos(toRadian(-actorYaw))); // Aim vector from Yaw
+             var aimY = (float)(actorV.Y + Math.Sin(toRadian(-actorYaw)));
+
+             var aimdx = aimX - actorV.X;
+             var aimdy = aimY - actorV.Y;
+
+             double theta = ScalarProductAngle(new EDVector3D(aimdx, aimdy, 0), new EDVector3D((float)dx, (float)dy, 0)); // Angle between line of sight and recievervector
+             double radian_theta = Math.Acos(theta);
+             double degree_theta = 0;
+             if (radian_theta < 0)
+                 degree_theta = 180 - toDegree(degree_theta);
+             else
+                 degree_theta = toDegree(degree_theta);
+
+             if (degree_theta <= FOVVertical / 2) // No max sight distance to restrict FOV
+                 return true;
+             return false;*/
         }
 
+        private static int getGridPosX(float x)
+        {
+            var width = Math.Abs(pos_x - x);
+            return (int)(width / cell_width);
+        }
+
+        private static int getGridPosY(float y)
+        {
+            var height = Math.Abs(pos_y - y);
+            return (int)(height / cell_width);
+        }
 
         /// <summary>
         /// Code see wikipedia.
@@ -146,18 +181,22 @@ namespace CSGO_Analytics.src.math
         public static EDVector3D BresenhamLineStepping(EDVector3D actorpos, EDVector3D recieverpos, MapLevel maplevel)
         {
             MapgridCell[][] grid = maplevel.level_grid;
+            Console.WriteLine(grid.Length);
+            Console.WriteLine(grid[0].Length);
             // First get Cells of actor and reciever
-            var actorcell = maplevel.cells_tree.FindValueAt(actorpos.getAsDoubleArray2D());
-            var recievercell = maplevel.cells_tree.FindValueAt(recieverpos.getAsDoubleArray2D());
-
             Console.WriteLine("Actorpos: " + actorpos);
             Console.WriteLine("Recieverpos: " + recieverpos);
-            Console.WriteLine("actorcell: " + actorcell);
-            Console.WriteLine("recievercell: " + recievercell);
-            int stepcount = 0;
 
-            var dx = recievercell.index_X - actorcell.index_X;
-            var dy = recievercell.index_Y - actorcell.index_Y;
+            int stepcount = 0;
+            var agpx = getGridPosX(actorpos.X);
+            var agpy = getGridPosY(actorpos.Y);
+            var rgpx = getGridPosX(recieverpos.X);
+            var rgpy = getGridPosY(recieverpos.Y);
+
+            Console.WriteLine("Actorcell: x " + agpx + " y " + agpy);
+            Console.WriteLine("Recievercell: x " + rgpx + " y " + rgpy);
+            var dx = rgpx - agpx;
+            var dy = rgpy - agpy;
 
             var adx = Math.Abs(dx);
             var ady = Math.Abs(dy);
@@ -179,8 +218,8 @@ namespace CSGO_Analytics.src.math
                 es = adx; el = ady;
             }
 
-            var x = actorcell.index_X;
-            var y = actorcell.index_Y;
+            var x = agpx;
+            var y = agpy;
 
             var error = el / 2;
 
@@ -197,16 +236,65 @@ namespace CSGO_Analytics.src.math
                     x += pdx; y += pdy;
                 }
                 stepcount++;
+                if (x >= 75 || y >= 75 || x < 0 || y < 0)
+                {
+                    Console.WriteLine(x + " " + y);
+                    Console.ReadLine();
+                }
+                else
+                {
+                    Console.WriteLine(x + " " + y);
+                    MapgridCell celltest = grid[x][y];
+                    var intersectionpoint = LineIntersectsRect(actorpos, recieverpos, celltest);
+                    Console.WriteLine("Intersection: " + intersectionpoint);
+                    if (intersectionpoint != null)
+                        return intersectionpoint;
+                }
 
-                var celltest = grid[x][y];
 
-                var intersectionpoint = LineIntersectsRect(actorpos, recieverpos, celltest);
-                if (intersectionpoint != null)
-                    return intersectionpoint;
+
             }
             return null;
         }
 
+        /// <summary>
+        /// The Bresenham algorithm collection
+        /// </summary>
+        public static class Algorithms
+        {
+            private static void Swap<T>(ref T lhs, ref T rhs) { T temp; temp = lhs; lhs = rhs; rhs = temp; }
+
+            /// <summary>
+            /// The plot function delegate
+            /// </summary>
+            /// <param name="x">The x co-ord being plotted</param>
+            /// <param name="y">The y co-ord being plotted</param>
+            /// <returns>True to continue, false to stop the algorithm</returns>
+            public delegate bool PlotFunction(int x, int y);
+
+            /// <summary>
+            /// Plot the line from (x0, y0) to (x1, y10
+            /// </summary>
+            /// <param name="x0">The start x</param>
+            /// <param name="y0">The start y</param>
+            /// <param name="x1">The end x</param>
+            /// <param name="y1">The end y</param>
+            /// <param name="plot">The plotting function (if this returns false, the algorithm stops early)</param>
+            public static void Line(int x0, int y0, int x1, int y1, PlotFunction plot)
+            {
+                bool steep = Math.Abs(y1 - y0) > Math.Abs(x1 - x0);
+                if (steep) { Swap<int>(ref x0, ref y0); Swap<int>(ref x1, ref y1); }
+                if (x0 > x1) { Swap<int>(ref x0, ref x1); Swap<int>(ref y0, ref y1); }
+                int dX = (x1 - x0), dY = Math.Abs(y1 - y0), err = (dX / 2), ystep = (y0 < y1 ? 1 : -1), y = y0;
+
+                for (int x = x0; x <= x1; ++x)
+                {
+                    if (!(steep ? plot(y, x) : plot(x, y))) return;
+                    err = err - dY;
+                    if (err < 0) { y += ystep; err += dX; }
+                }
+            }
+        }
         public static EDVector3D LOSIntersectsMapBresenham(EDVector3D start, EDVector3D end, MapLevel maplevel)
         {
             return BresenhamLineStepping(start, end, maplevel);
@@ -229,14 +317,12 @@ namespace CSGO_Analytics.src.math
 
             var queriedRects = maplevel.walls_tree.GetObjects(searchrect.getAsQuadTreeRect());
 
-            foreach (var wallcell in queriedRects.OrderBy(r => Math.Abs(r.Center.X - start.X)).ThenBy(r => Math.Abs(r.Center.Y - start.Y))) //Order Rectangles by distance to the actor. 
+            foreach (var wallcell in queriedRects)//.OrderBy(r => Math.Abs(r.Center.X - start.X)).ThenBy(r => Math.Abs(r.Center.Y - start.Y))) //Order Rectangles by distance to the actor. 
             {
                 var intersection_point = LineIntersectsRect(start, end, wallcell);
                 if (intersection_point != null)
-                {
                     return intersection_point;
-                }
-            }   
+            }
             return null;
 
 
@@ -331,7 +417,7 @@ namespace CSGO_Analytics.src.math
             if (l3 != null) ps.Add(l3);
             if (l4 != null) ps.Add(l4);
             if (ps.Count == 0) return null;
-            if (ps.Count > 2) throw new Exception("Too many collisions");
+            //if (ps.Count > 2) throw new Exception("Too many collisions");
             return ps.OrderBy(point => getEuclidDistance2D(p1, point)).First(); // Return point with lowest distance to p1
         }
 
@@ -444,7 +530,77 @@ namespace CSGO_Analytics.src.math
 
             return new EDVector3D(aimX, aimY, aimZ);
         }
+        /*
+        /// <summary>
+        /// Partitions the given list around a pivot element such that all elements on left of pivot are <= pivot
+        /// and the ones at thr right are > pivot. This method can be used for sorting, N-order statistics such as
+        /// as median finding algorithms.
+        /// Pivot is selected ranodmly if random number generator is supplied else its selected as last element in the list.
+        /// Reference: Introduction to Algorithms 3rd Edition, Corman et al, pp 171
+        /// </summary>
+        private static int Partition<T>(this IList<T> list, int start, int end, Random rnd = null) where T : IComparable<T>
+        {
+            if (rnd != null)
+                list.Swap(end, rnd.Next(start, end + 1));
 
+            var pivot = list[end];
+            var lastLow = start - 1;
+            for (var i = start; i < end; i++)
+            {
+                if (list[i].CompareTo(pivot) <= 0)
+                    list.Swap(i, ++lastLow);
+            }
+            list.Swap(end, ++lastLow);
+            return lastLow;
+        }
+
+        /// <summary>
+        /// Returns Nth smallest element from the list. Here n starts from 0 so that n=0 returns minimum, n=1 returns 2nd smallest element etc.
+        /// Note: specified list would be mutated in the process.
+        /// Reference: Introduction to Algorithms 3rd Edition, Corman et al, pp 216
+        /// </summary>
+        public static T NthOrderStatistic<T>(this IList<T> list, int n, Random rnd = null) where T : IComparable<T>
+        {
+            return NthOrderStatistic(list, n, 0, list.Count - 1, rnd);
+        }
+        private static T NthOrderStatistic<T>(this IList<T> list, int n, int start, int end, Random rnd) where T : IComparable<T>
+        {
+            while (true)
+            {
+                var pivotIndex = list.Partition(start, end, rnd);
+                if (pivotIndex == n)
+                    return list[pivotIndex];
+
+                if (n < pivotIndex)
+                    end = pivotIndex - 1;
+                else
+                    start = pivotIndex + 1;
+            }
+        }
+
+        public static void Swap<T>(this IList<T> list, int i, int j)
+        {
+            if (i == j)   //This check is not required but Partition function may make many calls so its for perf reason
+                return;
+            var temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
+
+        /// <summary>
+        /// Note: specified list would be mutated in the process.
+        /// </summary>
+        public static T Median<T>(this IList<T> list) where T : IComparable<T>
+        {
+            return list.NthOrderStatistic((list.Count - 1) / 2);
+        }
+
+        public static double Median<T>(this IEnumerable<T> sequence, Func<T, double> getValue)
+        {
+            var list = sequence.Select(getValue).ToList();
+            var mid = (list.Count - 1) / 2;
+            return list.NthOrderStatistic(mid);
+        }*/
     }
 
 }

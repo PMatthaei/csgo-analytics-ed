@@ -22,7 +22,7 @@ namespace csgo_analytics_console
     class Program
     {
         private const string TEST_PATH = "E:/LRZ Sync+Share/Bacheloarbeit/Demofiles/downloaded valle";
-        private const string DUST_ESPORT_PATH = "E:/Demofiles/dust2/";
+        private const string DUST_ESPORT_PATH = "E:/CS GO Demofiles/dust2 esport/";
         private const string PATH = "E:/CS GO Demofiles/";
 
         private static EncounterDetection ed_algorithm;
@@ -39,12 +39,16 @@ namespace csgo_analytics_console
             //readFilesFromCommandline(args);
             readAllFiles();
             LOG.Info("All files on this path parsed. Press enter to quit.");
+            Console.WriteLine("All files on this path parsed. Press enter to quit.");
             Console.ReadLine();
         }
 
         private static void readAllFiles()
         {
-            foreach (string file in Directory.EnumerateFiles(PATH, "*.dem"))
+            var filelist = Directory.EnumerateFiles(PATH, "*.dem");
+            LOG.Info("Files to handle: " + filelist.Count());
+            Console.WriteLine("Files to handle: " + filelist.Count());
+            foreach (string file in filelist)
             {
                 readFile(file);
             }
@@ -88,7 +92,11 @@ namespace csgo_analytics_console
                 var jsonpath = demopath.Replace(".dem", ".json");
                 if (File.Exists(jsonpath))
                 {
-                    if (new FileInfo(jsonpath).Length == 0) return; //File was empty -> skipped parsing it but wrote json
+                    if (new FileInfo(jsonpath).Length == 0)
+                    {
+                        LOG.Info("File empty");
+                        return; //File was empty -> skipped parsing it but wrote json
+                    }
                     LOG.Info(".dem file already parsed");
                     readDemoJSON(jsonpath, ptask);
                 }
@@ -97,9 +105,9 @@ namespace csgo_analytics_console
                     using (var demoparser = new DemoParser(File.OpenRead(demopath)))
                     {
                         skipfile = skipFile(demoparser, ptask);
-                        LOG.Info("Parsing .dem file");
                         if (!skipfile)
                         {
+                            LOG.Info("Parsing .dem file");
                             using (var newdemoparser = new DemoParser(File.OpenRead(demopath)))
                             {
                                 GameStateGenerator.GenerateJSONFile(newdemoparser, ptask);
@@ -124,7 +132,6 @@ namespace csgo_analytics_console
                 return;
             }
 
-
             LOG.Info("----- Parsing and Encounter Detection was sucessful ----- ");
 
         }
@@ -137,6 +144,8 @@ namespace csgo_analytics_console
             {
                 var deserializedGamestate = Newtonsoft.Json.JsonConvert.DeserializeObject<Gamestate>(reader.ReadToEnd(), ptask.settings);
                 //reader.Close();
+                Console.WriteLine("Map: " + deserializedGamestate.meta.mapname);
+
                 string metapath = @"E:\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + deserializedGamestate.meta.mapname + ".txt";
                 //string path = @"C:\Users\Patrick\LRZ Sync+Share\Bacheloarbeit\CS GO Encounter Detection\csgo-stats-ed\CSGO Analytics\CSGO Analytics\src\views\mapviews\" + mapname + ".txt";
                 var mapmeta = MapMetaDataPropertyReader.readProperties(metapath);
@@ -149,7 +158,7 @@ namespace csgo_analytics_console
         private static bool skipFile(DemoParser demoparser, ParseTask ptask)
         {
             var mapname = GameStateGenerator.peakMapname(demoparser, ptask);
-            Console.WriteLine("Map: " + mapname);
+            LOG.Info("Map: " + mapname);
             if (!Map.SUPPORTED_MAPS.Contains(mapname))
                 return true;
 
